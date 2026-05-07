@@ -1,8 +1,10 @@
+// src/proxy.ts
 import { NextRequest, NextResponse } from "next/server";
 
 const PUBLIC_ROUTES = ["/login"];
 
-export async function middleware(req: NextRequest) {
+// ✅ must be named "proxy" exactly
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const accessToken = req.cookies.get("access_token")?.value;
   const refreshToken = req.cookies.get("refresh_token")?.value;
@@ -32,16 +34,16 @@ export async function middleware(req: NextRequest) {
       if (!res2.ok) throw new Error("Refresh failed");
 
       const data = await res2.json();
-      const res = NextResponse.next();
+      const response = NextResponse.next();
 
-      res.cookies.set("access_token", data.access_token, {
+      response.cookies.set("access_token", data.access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         maxAge: 60 * 15,
         path: "/",
       });
-      res.cookies.set("refresh_token", data.refresh_token, {
+      response.cookies.set("refresh_token", data.refresh_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
@@ -49,12 +51,12 @@ export async function middleware(req: NextRequest) {
         path: "/",
       });
 
-      return res;
+      return response;
     } catch {
-      const res = NextResponse.redirect(new URL("/login", req.url));
-      res.cookies.delete("access_token");
-      res.cookies.delete("refresh_token");
-      return res;
+      const response = NextResponse.redirect(new URL("/login", req.url));
+      response.cookies.delete("access_token");
+      response.cookies.delete("refresh_token");
+      return response;
     }
   }
 
