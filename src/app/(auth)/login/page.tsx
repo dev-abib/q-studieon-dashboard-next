@@ -3,21 +3,20 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useLogin } from "@/features/auth/hoooks/use-login";
+import { useLogin } from "@/features/auth/hooks/use-login";
 import { loginSchema } from "@/features/auth/schema/login-payload.schema";
 import { LoginFormData } from "@/features/auth/types/login.types";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 
 export default function LoginPage() {
-  const { data, mutate: loginMutation, error, isPending } = useLogin();
+  const { mutateAsync: loginMutation, isPending } = useLogin();
+
   const {
     register,
     handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -27,13 +26,16 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (values: LoginFormData) => {
-    loginMutation(values);
+    try {
+      await loginMutation(values);
+    } catch {
+      // handled in useLogin onError
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100 px-4">
       <Card className="w-full max-w-md p-8 shadow-xl rounded-2xl border border-gray-200">
-        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold tracking-tight">Admin Login</h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -42,9 +44,9 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Email */}
           <div className="space-y-1">
             <Input
+              type="email"
               placeholder="Email address"
               {...register("email")}
               className="h-11"
@@ -54,7 +56,6 @@ export default function LoginPage() {
             )}
           </div>
 
-          {/* Password */}
           <div className="space-y-1">
             <Input
               type="password"
@@ -67,13 +68,12 @@ export default function LoginPage() {
             )}
           </div>
 
-          {/* Button */}
           <Button
             type="submit"
             className="w-full h-11 rounded-xl font-medium"
-            disabled={isSubmitting}
+            disabled={isPending}
           >
-            {isSubmitting ? "Signing in..." : "Sign in"}
+            {isPending ? "Signing in..." : "Sign in"}
           </Button>
         </form>
 
