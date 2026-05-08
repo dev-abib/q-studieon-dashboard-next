@@ -1,5 +1,6 @@
-"use client"; // ✅ hooks are always client
+"use client";
 import { saveTokensAction } from "@/actions/auth-actions";
+import { queryClient } from "@/providers/query-provider";
 import { authApi } from "@/services/auth-api";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -14,6 +15,7 @@ export function useLogin() {
       toast.success(data.message);
       const { refreshToken, accessToken } = data.data.tokens;
       await saveTokensAction(accessToken, refreshToken);
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       router.push("/dashboard");
     },
     onError: (error: unknown) => {

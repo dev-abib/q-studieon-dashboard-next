@@ -1,4 +1,4 @@
-import { Admin } from "@/features/auth/types/admin.types";
+import { Admin } from "@/features/admin/types/admin.types";
 import { create } from "zustand";
 
 type AuthState = {
