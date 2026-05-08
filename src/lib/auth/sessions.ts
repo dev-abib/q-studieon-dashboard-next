@@ -1,4 +1,3 @@
-// src/lib/auth/sessions.ts
 "use server";
 import { cookies } from "next/headers";
 
@@ -9,18 +8,13 @@ const COOKIE_OPTS = {
   path: "/",
 };
 
-export async function setTokens(accessToken: string, refreshToken: string) {
-  const cookieStore = await cookies();
 
-  cookieStore.set("accessToken", accessToken, {
-    ...COOKIE_OPTS,
-    maxAge: 60 * 15,
-  });
+export async function getAccessToken() {
+  return (await cookies()).get("accessToken")?.value;
+}
 
-  cookieStore.set("refreshToken", refreshToken, {
-    ...COOKIE_OPTS,
-    maxAge: 60 * 60 * 24 * 7,
-  });
+export async function getRefreshToken() {
+  return (await cookies()).get("refreshToken")?.value;
 }
 
 export async function clearTokens() {

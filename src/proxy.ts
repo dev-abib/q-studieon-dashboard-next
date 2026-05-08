@@ -9,10 +9,6 @@ export async function proxy(req: NextRequest) {
   const accessToken = req.cookies.get("accessToken")?.value;
   const refreshToken = req.cookies.get("refreshToken")?.value;
 
-  console.log(
-    `[Proxy Middleware] ${pathname} | Access: ${!!accessToken} | Refresh: ${!!refreshToken}`,
-  );
-
   // === Public Routes ===
   if (PUBLIC_ROUTES.includes(pathname)) {
     if (accessToken) {
@@ -30,7 +26,8 @@ export async function proxy(req: NextRequest) {
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ refresh_token: refreshToken }),
+            body: JSON.stringify({}),
+            credentials: "include",
           },
         );
 

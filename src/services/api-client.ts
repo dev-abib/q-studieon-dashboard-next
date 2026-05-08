@@ -1,13 +1,10 @@
 // src/lib/api.ts
 import axios from "axios";
-import { saveTokensAction, logoutAction } from "@/actions/auth-actions";
-
-const ACCESS_COOKIE = "accessToken";
-const REFRESH_COOKIE = "refreshToken";
+import { logoutAction } from "@/actions/auth-actions";
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
-  withCredentials: true,
+  withCredentials: true, // Important: sends cookies
 });
 
 let isRefreshing = false;
@@ -23,12 +20,9 @@ const processQueue = (error: unknown) => {
   failedQueue = [];
 };
 
-// Request Interceptor
+// Request Interceptor - No need to attach token manually
 api.interceptors.request.use(config => {
   if (config.url?.includes("/auth/")) return config;
-
-  // For now, we rely on withCredentials + httpOnly cookies
-  // Backend should accept cookies
   return config;
 });
 
@@ -49,27 +43,14 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = document.cookie
-          .split("; ")
-          .find(row => row.startsWith(`${REFRESH_COOKIE}=`))
-          ?.split("=")[1];
-
-        if (!refreshToken) throw new Error("No refresh token");
-
+        // Backend will read refreshToken from cookie automatically
         const { data } = await axios.post(
           `${process.env.NEXT_PUBLIC_API_URL}/auth/admin/refresh-token`,
-          { refreshToken: refreshToken },
+          {}, 
           { withCredentials: true },
         );
 
-        const newAccess = data.accessToken;
-        const newRefresh = data.refreshToken || data.refresh_token;
-
-        await saveTokensAction(newAccess, newRefresh);
-
         processQueue(null);
-        originalRequest.headers.Authorization = `Bearer ${newAccess}`;
-
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);
