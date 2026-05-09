@@ -7,4 +7,9 @@ export const authApi = {
     const res = await api.post(`/auth/admin/login`, data);
     return res.data;
   },
+
+  logOut: async () => {
+    const res = await api.post(`auth/admin/log-out`);
+    return res.data;
+  },
 };
