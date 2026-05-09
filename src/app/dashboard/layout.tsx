@@ -23,7 +23,7 @@ export default function DashboardLayout({
       <Sidebar />
       <div className="flex pl-5 flex-col flex-1  overflow-hidden">
         {admin && <Header admin={admin} />}
-        <main className="flex-1 overflow-y-auto p-6 bg-muted/40">
+        <main className="flex-1 overflow-y-auto p-6 bg-[#f7f6f3]">
           {children}
         </main>
       </div>
