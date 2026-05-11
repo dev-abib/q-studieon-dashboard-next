@@ -57,7 +57,6 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
-/* ─── Stat card ───────────────────────────────────────────── */
 function StatCard({
   icon: Icon,
   label,
@@ -101,7 +100,7 @@ function StatCard({
   );
 }
 
-/* ─── Skeleton row ────────────────────────────────────────── */
+
 function SkeletonRow() {
   return (
     <tr className="border-b border-stone-100">
@@ -112,7 +111,7 @@ function SkeletonRow() {
   );
 }
 
-/* ─── Sort button ─────────────────────────────────────────── */
+
 type SortDir = "asc" | "desc" | null;
 
 function SortButton({
@@ -145,7 +144,6 @@ function SortButton({
   );
 }
 
-/* ─── Per-page selector ───────────────────────────────────── */
 const PER_PAGE_OPTIONS = [5, 8, 10, 20, 50];
 
 function PerPageSelect({
