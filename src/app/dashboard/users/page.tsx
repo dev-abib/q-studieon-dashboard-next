@@ -215,12 +215,10 @@ export default function Page() {
 
   return (
     <div
-      className="flex h-screen flex-col "
+      className="flex h-auto flex-col "
       style={{ fontFamily: "'DM Sans', sans-serif" }}
     >
-      {/* ── Fixed top section ── */}
       <div className="flex-none space-y-5 px-6 pb-4 pt-6">
-        {/* Header */}
         <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="mb-1.5 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.18em] text-amber-600">
@@ -233,9 +231,6 @@ export default function Page() {
             >
               User <em className="italic text-amber-600">Directory</em>
             </h1>
-            <p className="mt-1.5 text-sm font-light text-stone-400">
-              Manage all platform members from one place
-            </p>
           </div>
 
           {/* Search */}
@@ -264,15 +259,15 @@ export default function Page() {
           />
           <StatCard
             icon={ShieldCheck}
-            label="Admins"
-            value="14"
+            label="Verified users"
+            value={meta?.otpVerifiedCount?.toLocaleString() ?? "—"}
             sub="accounts"
             accent="bg-rose-50 text-rose-500"
           />
           <StatCard
             icon={TrendingUp}
-            label="This Month"
-            value="+128"
+            label="Guest users "
+            value={meta?.guestCount?.toLocaleString() ?? "—"}
             sub="joined"
             accent="bg-teal-50 text-teal-600"
           />
@@ -287,7 +282,7 @@ export default function Page() {
       </div>
 
       {/* ── Scrollable table area ── */}
-      <div className="mx-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+      <div className="mx-6 flex pb-5 max-h-[450px] flex-1 flex-col overflow-hidden rounded-2xl border border-stone-200  shadow-sm">
         {/* Table toolbar (fixed within card) */}
         <div className="flex flex-none items-center justify-between border-b border-stone-100 px-6 py-3">
           <h2
@@ -307,7 +302,7 @@ export default function Page() {
         </div>
 
         {/* Scrollable table */}
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div className=" flex-1  overflow-auto">
           <table className="w-full min-w-[680px]">
             {/* Sticky thead */}
             <thead className="sticky top-0 z-10">
