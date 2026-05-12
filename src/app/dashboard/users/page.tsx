@@ -19,7 +19,6 @@ import {
 
 import { useGetAllUsers } from "@/features/users/hooks/use.users";
 import { Admin } from "@/features/admin/types/admin.types";
-
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -116,7 +115,6 @@ type SortDir = "asc" | "desc" | null;
 
 function SortButton({
   label,
-  field,
   active,
   dir,
   onClick,
@@ -280,7 +278,7 @@ export default function Page() {
       </div>
 
       {/* ── Scrollable table area ── */}
-      <div className="mx-6 flex pb-5 max-h-[450px] flex-1 flex-col overflow-hidden rounded-2xl border border-stone-200  shadow-sm">
+      <div className="mx-6 flex pb-5 max-h-112.5 flex-1 flex-col overflow-hidden rounded-2xl border border-stone-200  shadow-sm">
         {/* Table toolbar (fixed within card) */}
         <div className="flex flex-none items-center justify-between border-b border-stone-100 px-6 py-3">
           <h2
@@ -301,7 +299,7 @@ export default function Page() {
 
         {/* Scrollable table */}
         <div className=" flex-1  overflow-auto">
-          <table className="w-full min-w-[680px]">
+          <table className="w-full min-w-170">
             {/* Sticky thead */}
             <thead className="sticky top-0 z-10">
               <tr className="border-b border-stone-100 bg-stone-50/95 backdrop-blur-sm">
@@ -346,7 +344,7 @@ export default function Page() {
                       <td className="px-6 py-3.5">
                         <div className="flex items-center gap-3">
                           <span
-                            className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-medium ring-1 ${pal.bg} ${pal.text} ${pal.ring}`}
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ring-1 ${pal.bg} ${pal.text} ${pal.ring}`}
                           >
                             {user.profilePictureURL ? (
                               <img
@@ -367,7 +365,7 @@ export default function Page() {
                       {/* Email */}
                       <td className="px-6 py-3.5">
                         <span className="flex items-center gap-1.5 text-xs text-stone-400">
-                          <Mail className="h-3.5 w-3.5 flex-shrink-0 text-stone-300" />
+                          <Mail className="h-3.5 w-3.5 shrink-0 text-stone-300" />
                           {user.email}
                         </span>
                       </td>
@@ -380,7 +378,7 @@ export default function Page() {
                       {/* Date */}
                       <td className="px-6 py-3.5">
                         <span className="flex items-center gap-1.5 text-xs tabular-nums text-stone-400">
-                          <Calendar className="h-3.5 w-3.5 flex-shrink-0 text-stone-300" />
+                          <Calendar className="h-3.5 w-3.5 shrink-0 text-stone-300" />
                           {new Date(user.createdAt).toLocaleDateString(
                             "en-US",
                             {
