@@ -23,7 +23,7 @@ import { Admin } from "@/features/admin/types/admin.types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-/* ─── Avatar colours ─────────────────────────────────────── */
+
 const AVATAR_PALETTES = [
   { bg: "bg-amber-50", text: "text-amber-700", ring: "ring-amber-200" },
   { bg: "bg-sky-50", text: "text-sky-700", ring: "ring-sky-200" },
@@ -38,7 +38,6 @@ function avatarPalette(name: string) {
   return AVATAR_PALETTES[idx];
 }
 
-/* ─── Role badge ──────────────────────────────────────────── */
 const ROLE_STYLES: Record<string, string> = {
   admin: "bg-amber-50 text-amber-800 border border-amber-200",
   mod: "bg-rose-50  text-rose-800  border border-rose-200",

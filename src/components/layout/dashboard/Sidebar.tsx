@@ -1,17 +1,26 @@
 // components/sidebar.tsx
 import Link from "next/link";
-import { LayoutDashboard, Users, Settings, BarChart } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  Settings,
+  BarChart,
+  ShieldCheck,
+} from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
-const navItems = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Users", href: "/dashboard/users", icon: Users },
-  { label: "Analytics", href: "/dashboard/analytics", icon: BarChart },
-  { label: "Settings", href: "/dashboard/settings", icon: Settings },
-];
+
 
 export function Sidebar() {
+  const navItems = [
+    { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Users", href: "/dashboard/users", icon: Users },
+    { label: "Admins", href: "/dashboard/admins", icon: ShieldCheck },
+    { label: "Analytics", href: "/dashboard/analytics", icon: BarChart },
+    { label: "Settings", href: "/dashboard/settings", icon: Settings },
+  ];
+
   return (
     <aside className="w-64 bg-white rounded-md shadow-2xl  bg-background flex flex-col">
       {/* Logo */}
