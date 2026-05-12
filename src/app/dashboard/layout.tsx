@@ -18,6 +18,7 @@ export default function DashboardLayout({
     admin = adminSchema.parse(data?.data);
   }
 
+
   return (
     <div className="flex p-10 h-screen overflow-hidden">
       <Sidebar />
