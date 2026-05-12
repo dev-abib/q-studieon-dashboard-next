@@ -10,7 +10,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { data, isLoading, error } = useCurrentUser();
+  const { data, isLoading } = useCurrentUser();
 
   let admin: Admin | null = null;
 

@@ -1,4 +1,5 @@
 import { api } from "./api-client";
+import { PasswordUpdatePayload } from "@/features/admin/types/admin.types";
 
 export const adminApi = {
   getMe: async () => {
@@ -13,8 +14,9 @@ export const adminApi = {
     });
     return res.data;
   },
-  updatePassword: async (payload: any) => {
-    const res = await api.patch(`/admin/update-admin-password`, payload);
+  updatePassword: async (payload: PasswordUpdatePayload) => {
+    const { ...data } = payload;
+    const res = await api.patch(`/admin/update-admin-password`, data);
     return res.data;
   },
 };

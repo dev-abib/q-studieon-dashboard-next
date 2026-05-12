@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { adminApi } from "@/services/admin-api";
 import { useMutation } from "@tanstack/react-query";
 import { AxiosError } from "axios";
+import { PasswordUpdatePayload } from "../types/admin.types";
 
 const passwordSchema = z
   .object({
@@ -47,7 +48,7 @@ export function PasswordForm() {
   });
 
   const { mutate: updatePassword, isPending: isUpdating } = useMutation({
-    mutationFn: adminApi.updatePassword,
+    mutationFn: (values: PasswordUpdatePayload) => adminApi.updatePassword(values),
     onSuccess: () => {
       toast.success("Password updated successfully");
       form.reset();
@@ -62,6 +63,8 @@ export function PasswordForm() {
   const onSubmit = (values: PasswordFormValues) => {
     updatePassword(values);
   };
+
+  const { isDirty } = form.formState;
 
   return (
     <Card className="border-none shadow-sm ring-1 ring-border/50 h-full">
@@ -81,7 +84,10 @@ export function PasswordForm() {
         </div>
       </CardHeader>
       <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-4 mt-10"
+        >
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
               <Lock className="h-4 w-4 text-muted-foreground" />
@@ -140,8 +146,8 @@ export function PasswordForm() {
           <div className="flex justify-end pt-4">
             <Button
               type="submit"
-              disabled={isUpdating}
-              className="p-5 cursor-pointer"
+              disabled={isUpdating || !isDirty}
+              className="p-5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Update Password

@@ -44,18 +44,14 @@ export function ProfileForm() {
 
   React.useEffect(() => {
     if (admin?.data) {
-      const { name, email, profilePictureURL } = admin.data;
+      const { name, email } = admin.data;
 
       const currentValues = form.getValues();
       if (currentValues.name !== name || currentValues.email !== email) {
         form.reset({ name, email });
       }
-
-      if (profilePictureURL && !preview) {
-        setPreview(profilePictureURL);
-      }
     }
-  }, [admin?.data, form, preview]);
+  }, [admin?.data, form]);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -87,6 +83,8 @@ export function ProfileForm() {
     },
     onSuccess: () => {
       toast.success("Profile updated successfully");
+      setPreview(null);
+      setSelectedFile(null);
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
     },
     onError: (error: AxiosError<{ message?: string }>) => {
@@ -111,6 +109,9 @@ export function ProfileForm() {
       </div>
     );
   }
+
+  const { isDirty } = form.formState;
+  const isChanged = isDirty || !!selectedFile;
 
   return (
     <Card className="border-none shadow-sm ring-1 ring-border/50 h-full">
@@ -161,7 +162,7 @@ export function ProfileForm() {
           <div className="text-center space-y-1">
             <h4 className="text-sm font-medium">Profile Picture</h4>
             <p className="text-xs text-muted-foreground">
-              Click the camera or avatar to upload (Max 2MB)
+              Click the camera or avatar to upload Photo
             </p>
           </div>
         </div>
@@ -205,8 +206,8 @@ export function ProfileForm() {
           <div className="flex justify-end pt-4">
             <Button
               type="submit"
-              disabled={isUpdating}
-              className="p-5 cursor-pointer"
+              disabled={isUpdating || !isChanged}
+              className="p-5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes
