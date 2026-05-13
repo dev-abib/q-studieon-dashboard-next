@@ -3,22 +3,26 @@
 import React from "react";
 import { ProfileForm } from "./ProfileForm";
 import { PasswordForm } from "./PasswordForm";
+import { ShieldCheck } from "lucide-react";
 
-export function SettingsLayout() {
+export default function SettingsLayout() {
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">Admin Settings</h1>
-        <p className="text-muted-foreground">
-          Update your profile information and account security.
+    <div className="space-y-10 pb-12 ">
+      <div>
+        <p className="text-xs font-medium tracking-widest text-amber-600">
+          PLATFORM CONSOLE
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight mt-2">Settings</h1>
+        <p className="text-muted-foreground mt-1">
+          Manage your account information and security
         </p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8 items-start">
-        <div className="flex-1 w-full lg:w-1/2">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="lg:col-span-3">
           <ProfileForm />
         </div>
-        <div className="flex-1 w-full lg:w-1/2">
+        <div className="lg:col-span-2">
           <PasswordForm />
         </div>
       </div>

@@ -6,19 +6,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Lock, Loader2, ShieldCheck } from "lucide-react";
+import { ShieldCheck, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { adminApi } from "@/services/admin-api";
 import { useMutation } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { PasswordUpdatePayload } from "../types/admin.types";
+import { cn } from "@/lib/utils";
 
 const passwordSchema = z
   .object({
@@ -26,9 +20,7 @@ const passwordSchema = z
     newPassword: z
       .string()
       .min(8, "New password must be at least 8 characters"),
-    confirmPassword: z
-      .string()
-      .min(8, "Confirm password must be at least 8 characters"),
+    confirmPassword: z.string().min(8, "Confirm password is required"),
   })
   .refine(data => data.newPassword === data.confirmPassword, {
     message: "Passwords don't match",
@@ -37,7 +29,33 @@ const passwordSchema = z
 
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
+function getPasswordStrength(password: string) {
+  if (!password) return { score: 0, label: "", color: "" };
+
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  const strengths = [
+    { label: "Weak", color: "bg-red-500" },
+    { label: "Fair", color: "bg-amber-500" },
+    { label: "Good", color: "bg-blue-500" },
+    { label: "Strong", color: "bg-emerald-500" },
+  ];
+
+  return {
+    score,
+    label: strengths[score - 1]?.label || "",
+    color: strengths[score - 1]?.color || "",
+  };
+}
+
 export function PasswordForm() {
+  const [newPassword, setNewPassword] = React.useState("");
+  const strength = getPasswordStrength(newPassword);
+
   const form = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
     defaultValues: {
@@ -48,10 +66,12 @@ export function PasswordForm() {
   });
 
   const { mutate: updatePassword, isPending: isUpdating } = useMutation({
-    mutationFn: (values: PasswordUpdatePayload) => adminApi.updatePassword(values),
+    mutationFn: (values: PasswordUpdatePayload) =>
+      adminApi.updatePassword(values),
     onSuccess: () => {
       toast.success("Password updated successfully");
       form.reset();
+      setNewPassword("");
     },
     onError: (error: AxiosError<{ message?: string }>) => {
       toast.error(
@@ -60,101 +80,111 @@ export function PasswordForm() {
     },
   });
 
-  const onSubmit = (values: PasswordFormValues) => {
-    updatePassword(values);
-  };
-
-  const { isDirty } = form.formState;
+  const onSubmit = (values: PasswordFormValues) => updatePassword(values);
+  const isDirty = form.formState.isDirty;
 
   return (
-    <Card className="border-none shadow-sm ring-1 ring-border/50 h-full">
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <div className="p-2 bg-primary/5 rounded-lg">
-            <ShieldCheck className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <CardTitle className="text-xl font-semibold">
-              Security Settings
-            </CardTitle>
-            <CardDescription>
-              Manage your password and security preferences.
-            </CardDescription>
-          </div>
+    <div className="bg-white rounded-3xl shadow-sm border border-stone-100 p-8 h-full">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-9 h-9 bg-amber-50 rounded-2xl flex items-center justify-center">
+          <ShieldCheck className="h-5 w-5 text-amber-600" />
         </div>
-      </CardHeader>
-      <CardContent>
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-4 mt-10"
-        >
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Lock className="h-4 w-4 text-muted-foreground" />
-              Current Password
+        <div>
+          <h2 className="text-xl font-semibold">Password & Security</h2>
+          <p className="text-sm text-stone-500">Keep your account secure</p>
+        </div>
+      </div>
+
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <div className="space-y-8">
+          {/* Current Password */}
+          <div>
+            <label className="text-xs font-medium tracking-widest text-stone-500 mb-1.5 block">
+              CURRENT PASSWORD
             </label>
             <Input
               {...form.register("currentPassword")}
               type="password"
               placeholder="••••••••"
-              className="bg-muted/30 focus-visible:ring-primary/20 p-5"
+              className="h-12 text-base"
             />
             {form.formState.errors.currentPassword && (
-              <p className="text-xs text-destructive">
+              <p className="text-red-500 text-xs mt-1.5">
                 {form.formState.errors.currentPassword.message}
               </p>
             )}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Lock className="h-4 w-4 text-muted-foreground" />
-                New Password
-              </label>
-              <Input
-                {...form.register("newPassword")}
-                type="password"
-                placeholder="••••••••"
-                className="bg-muted/30 focus-visible:ring-primary/20 p-5"
-              />
-              {form.formState.errors.newPassword && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.newPassword.message}
+          {/* New Password */}
+          <div>
+            <label className="text-xs font-medium tracking-widest text-stone-500 mb-1.5 block">
+              NEW PASSWORD
+            </label>
+            <Input
+              {...form.register("newPassword")}
+              type="password"
+              placeholder="Enter new password"
+              className="h-12 text-base"
+              onChange={e => {
+                form.register("newPassword").onChange(e);
+                setNewPassword(e.target.value);
+              }}
+            />
+
+            {newPassword && (
+              <div className="mt-4">
+                <div className="flex gap-1.5 h-1 mb-2">
+                  {[1, 2, 3, 4].map(i => (
+                    <div
+                      key={i}
+                      className={cn(
+                        "flex-1 rounded-full transition-all",
+                        i <= strength.score ? strength.color : "bg-stone-200",
+                      )}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs font-medium text-stone-500">
+                  {strength.label}
                 </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Lock className="h-4 w-4 text-muted-foreground" />
-                Confirm New Password
-              </label>
-              <Input
-                {...form.register("confirmPassword")}
-                type="password"
-                placeholder="••••••••"
-                className="bg-muted/30 focus-visible:ring-primary/20 p-5"
-              />
-              {form.formState.errors.confirmPassword && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.confirmPassword.message}
-                </p>
-              )}
-            </div>
+              </div>
+            )}
+
+            {form.formState.errors.newPassword && (
+              <p className="text-red-500 text-xs mt-1.5">
+                {form.formState.errors.newPassword.message}
+              </p>
+            )}
           </div>
 
-          <div className="flex justify-end pt-4">
-            <Button
-              type="submit"
-              disabled={isUpdating || !isDirty}
-              className="p-5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Update Password
-            </Button>
+          {/* Confirm Password */}
+          <div>
+            <label className="text-xs font-medium tracking-widest text-stone-500 mb-1.5 block">
+              CONFIRM NEW PASSWORD
+            </label>
+            <Input
+              {...form.register("confirmPassword")}
+              type="password"
+              placeholder="Confirm new password"
+              className="h-12 text-base"
+            />
+            {form.formState.errors.confirmPassword && (
+              <p className="text-red-500 text-xs mt-1.5">
+                {form.formState.errors.confirmPassword.message}
+              </p>
+            )}
           </div>
-        </form>
-      </CardContent>
-    </Card>
+        </div>
+
+        <Button
+          type="submit"
+          disabled={isUpdating || !isDirty}
+          className="w-full h-12 text-base font-medium rounded-2xl bg-stone-900 hover:bg-black"
+        >
+          {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Update Password
+        </Button>
+      </form>
+    </div>
   );
 }
