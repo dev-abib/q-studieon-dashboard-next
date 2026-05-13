@@ -1,6 +1,7 @@
 import { loginSchema } from "@/features/auth/schema/login-payload.schema";
 import { api } from "./api-client";
 import { createAdminSchema } from "@/features/auth/schema/create-admin.schema";
+import { ChangePasswordSchema } from "@/features/auth/schema/change-password.schema";
 
 export const authApi = {
   login: async (payload: unknown) => {
@@ -27,6 +28,12 @@ export const authApi = {
 
   deleteUser: async (id: string) => {
     const res = await api.delete(`/admin/delete-user/${id}`);
+    return res.data;
+  },
+
+  changePassword: async (payload: unknown) => {
+    const data = ChangePasswordSchema.parse(payload);
+    const res = await api.put(`/auth/admin/change-password`, data);
     return res.data;
   },
 };

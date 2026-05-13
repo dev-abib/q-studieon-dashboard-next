@@ -23,11 +23,6 @@ export const adminApi = {
     });
     return res.data;
   },
-  updatePassword: async (payload: PasswordUpdatePayload) => {
-    const { ...data } = payload;
-    const res = await api.patch(`/admin/update-admin-password`, data);
-    return res.data;
-  },
 
   getAllAdmin: async (params: GetAllAdminParams) => {
     const res = await api.get(`/admin/get-all-admins`, {

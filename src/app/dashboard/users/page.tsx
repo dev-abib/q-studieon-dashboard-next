@@ -25,6 +25,7 @@ import { Admin } from "@/features/admin/types/admin.types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useDeleteUser } from "@/features/auth/hooks/user-delete-user";
+import Image from "next/image";
 
 const AVATAR_PALETTES = [
   { bg: "bg-amber-50", text: "text-amber-700", ring: "ring-amber-200" },
@@ -427,7 +428,7 @@ export default function Page() {
                               className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ring-1 ${pal.bg} ${pal.text} ${pal.ring}`}
                             >
                               {user.profilePictureURL ? (
-                                <img
+                                <Image
                                   src={user.profilePictureURL}
                                   alt=""
                                   className="h-8 w-8 rounded-full object-cover"

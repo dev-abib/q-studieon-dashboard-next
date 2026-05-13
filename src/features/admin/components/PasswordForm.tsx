@@ -13,6 +13,9 @@ import { useMutation } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { PasswordUpdatePayload } from "../types/admin.types";
 import { cn } from "@/lib/utils";
+import { useChangePassword } from "@/features/auth/hooks/use-change-password";
+import { ChangePasswordInput } from "@/features/auth/types/change-pass.types";
+import { ChangePasswordSchema } from "@/features/auth/schema/change-password.schema";
 
 const passwordSchema = z
   .object({
@@ -56,31 +59,18 @@ export function PasswordForm() {
   const [newPassword, setNewPassword] = React.useState("");
   const strength = getPasswordStrength(newPassword);
 
-  const form = useForm<PasswordFormValues>({
-    resolver: zodResolver(passwordSchema),
+  const form = useForm<ChangePasswordInput>({
+    resolver: zodResolver(ChangePasswordSchema),
     defaultValues: {
-      currentPassword: "",
-      newPassword: "",
+      oldPassword: "",
+      password: "",
       confirmPassword: "",
     },
   });
 
-  const { mutate: updatePassword, isPending: isUpdating } = useMutation({
-    mutationFn: (values: PasswordUpdatePayload) =>
-      adminApi.updatePassword(values),
-    onSuccess: () => {
-      toast.success("Password updated successfully");
-      form.reset();
-      setNewPassword("");
-    },
-    onError: (error: AxiosError<{ message?: string }>) => {
-      toast.error(
-        error?.response?.data?.message || "Failed to update password",
-      );
-    },
-  });
+  const { mutate: updatePassword, isPending: isUpdating } = useChangePassword();
 
-  const onSubmit = (values: PasswordFormValues) => updatePassword(values);
+  const onSubmit = (values: ChangePasswordInput) => updatePassword(values);
   const isDirty = form.formState.isDirty;
 
   return (
@@ -103,14 +93,14 @@ export function PasswordForm() {
               CURRENT PASSWORD
             </label>
             <Input
-              {...form.register("currentPassword")}
+              {...form.register("oldPassword")}
               type="password"
               placeholder="••••••••"
               className="h-12 text-base"
             />
-            {form.formState.errors.currentPassword && (
+            {form.formState.errors.oldPassword && (
               <p className="text-red-500 text-xs mt-1.5">
-                {form.formState.errors.currentPassword.message}
+                {form.formState.errors.oldPassword.message}
               </p>
             )}
           </div>
@@ -121,12 +111,12 @@ export function PasswordForm() {
               NEW PASSWORD
             </label>
             <Input
-              {...form.register("newPassword")}
+              {...form.register("password")}
               type="password"
               placeholder="Enter new password"
               className="h-12 text-base"
               onChange={e => {
-                form.register("newPassword").onChange(e);
+                form.register("password").onChange(e);
                 setNewPassword(e.target.value);
               }}
             />
@@ -150,9 +140,9 @@ export function PasswordForm() {
               </div>
             )}
 
-            {form.formState.errors.newPassword && (
+            {form.formState.errors.password && (
               <p className="text-red-500 text-xs mt-1.5">
-                {form.formState.errors.newPassword.message}
+                {form.formState.errors.password.message}
               </p>
             )}
           </div>
