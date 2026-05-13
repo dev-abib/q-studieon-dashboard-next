@@ -1,10 +1,9 @@
-// src/lib/api.ts
 import axios from "axios";
 import { logoutAction } from "@/actions/auth-actions";
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
-  withCredentials: true, // Important: sends cookies
+  withCredentials: true, 
 });
 
 let isRefreshing = false;

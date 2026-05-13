@@ -24,4 +24,9 @@ export const authApi = {
     const res = await api.delete(`/admin/delete-admin/${id}`);
     return res.data;
   },
+
+  deleteUser: async (id: string) => {
+    const res = await api.delete(`/admin/delete-user/${id}`);
+    return res.data;
+  },
 };

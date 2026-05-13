@@ -15,13 +15,16 @@ import {
   ArrowUp,
   ArrowDown,
   ChevronDown,
+  Trash2,
+  Loader2,
+  X,
 } from "lucide-react";
 
 import { useGetAllUsers } from "@/features/users/hooks/use.users";
 import { Admin } from "@/features/admin/types/admin.types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
+import { useDeleteUser } from "@/features/auth/hooks/user-delete-user";
 
 const AVATAR_PALETTES = [
   { bg: "bg-amber-50", text: "text-amber-700", ring: "ring-amber-200" },
@@ -98,7 +101,6 @@ function StatCard({
   );
 }
 
-
 function SkeletonRow() {
   return (
     <tr className="border-b border-stone-100">
@@ -108,7 +110,6 @@ function SkeletonRow() {
     </tr>
   );
 }
-
 
 type SortDir = "asc" | "desc" | null;
 
@@ -173,12 +174,77 @@ function PerPageSelect({
 
 type SortField = "name" | "email" | "role" | "createdAt";
 
+function DeleteModal({
+  user,
+  onConfirm,
+  onCancel,
+  isLoading,
+}: {
+  user: Admin;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isLoading: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-sm">
+      <div className="relative w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-6 shadow-xl">
+        <button
+          onClick={onCancel}
+          className="absolute right-4 top-4 text-stone-400 hover:text-stone-600"
+        >
+          <X className="h-4 w-4" />
+        </button>
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-50">
+          <Trash2 className="h-5 w-5 text-rose-500" />
+        </div>
+        <h3
+          className="mt-4 text-lg font-normal text-stone-800"
+          style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+        >
+          Remove <em className="italic text-rose-500">{user.name}</em>?
+        </h3>
+        <p className="mt-1.5 text-sm text-stone-400">
+          This will permanently revoke all access for{" "}
+          <span className="font-medium text-stone-600">{user.email}</span>. This
+          action cannot be undone.
+        </p>
+        <div className="mt-6 flex justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onCancel}
+            className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50"
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            disabled={isLoading}
+            onClick={onConfirm}
+            className="h-8 rounded-lg bg-rose-500 text-xs text-white shadow-none hover:bg-rose-600 disabled:opacity-60"
+          >
+            {isLoading ? (
+              <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+            ) : (
+              <Trash2 className="mr-1.5 h-3 w-3" />
+            )}
+            Remove user
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Page() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(8);
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
+
+  const [deleteTarget, setDeleteTarget] = useState<Admin | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { data, isLoading } = useGetAllUsers({
     page,
@@ -188,6 +254,7 @@ export default function Page() {
     sortOrder: sortDir ?? undefined,
   });
 
+  const { mutate: deleteUser } = useDeleteUser();
   const users: Admin[] = data?.data?.directory ?? [];
   const meta = data?.data?.meta;
 
@@ -208,244 +275,281 @@ export default function Page() {
     setPage(1);
   }
 
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+    setDeletingId(deleteTarget.id);
+    deleteUser(deletingId as string);
+    setDeleteTarget(null);
+    setDeletingId(null);
+  }
+
   return (
-    <div
-      className="flex h-auto flex-col "
-      style={{ fontFamily: "'DM Sans', sans-serif" }}
-    >
-      <div className="flex-none space-y-5 px-6 pb-4 pt-6">
-        <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="mb-1.5 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.18em] text-amber-600">
-              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
-              Platform Console
-            </p>
-            <h1
-              className="text-3xl font-normal leading-tight text-stone-800 md:text-4xl"
-              style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
-            >
-              User <em className="italic text-amber-600">Directory</em>
-            </h1>
+    <>
+      <div
+        className="flex h-auto flex-col "
+        style={{ fontFamily: "'DM Sans', sans-serif" }}
+      >
+        <div className="flex-none space-y-5 px-6 pb-4 pt-6">
+          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="mb-1.5 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.18em] text-amber-600">
+                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
+                Platform Console
+              </p>
+              <h1
+                className="text-3xl font-normal leading-tight text-stone-800 md:text-4xl"
+                style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+              >
+                User <em className="italic text-amber-600">Directory</em>
+              </h1>
+            </div>
+
+            {/* Search */}
+            <div className="relative w-full md:w-72">
+              <Search className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" />
+              <Input
+                value={search}
+                placeholder="Search by name or email…"
+                className="h-10 rounded-xl border-stone-200 bg-white pl-9 text-sm text-stone-700 shadow-sm placeholder:text-stone-300 focus-visible:ring-amber-400"
+                onChange={e => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
           </div>
 
-          {/* Search */}
-          <div className="relative w-full md:w-72">
-            <Search className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" />
-            <Input
-              value={search}
-              placeholder="Search by name or email…"
-              className="h-10 rounded-xl border-stone-200 bg-white pl-9 text-sm text-stone-700 shadow-sm placeholder:text-stone-300 focus-visible:ring-amber-400"
-              onChange={e => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <StatCard
+              icon={Users}
+              label="Total Users"
+              value={meta?.total?.toLocaleString() ?? "—"}
+              sub="registered"
+              accent="bg-amber-50 text-amber-600"
+            />
+            <StatCard
+              icon={ShieldCheck}
+              label="Verified users"
+              value={meta?.otpVerifiedCount?.toLocaleString() ?? "—"}
+              sub="accounts"
+              accent="bg-rose-50 text-rose-500"
+            />
+            <StatCard
+              icon={TrendingUp}
+              label="Guest users "
+              value={meta?.guestCount?.toLocaleString() ?? "—"}
+              sub="joined"
+              accent="bg-teal-50 text-teal-600"
+            />
+            <StatCard
+              icon={BookOpen}
+              label="Current Page"
+              value={meta ? `${meta.page}` : "—"}
+              sub={meta ? `of ${meta.totalPages}` : undefined}
+              accent="bg-sky-50 text-sky-600"
             />
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <StatCard
-            icon={Users}
-            label="Total Users"
-            value={meta?.total?.toLocaleString() ?? "—"}
-            sub="registered"
-            accent="bg-amber-50 text-amber-600"
-          />
-          <StatCard
-            icon={ShieldCheck}
-            label="Verified users"
-            value={meta?.otpVerifiedCount?.toLocaleString() ?? "—"}
-            sub="accounts"
-            accent="bg-rose-50 text-rose-500"
-          />
-          <StatCard
-            icon={TrendingUp}
-            label="Guest users "
-            value={meta?.guestCount?.toLocaleString() ?? "—"}
-            sub="joined"
-            accent="bg-teal-50 text-teal-600"
-          />
-          <StatCard
-            icon={BookOpen}
-            label="Current Page"
-            value={meta ? `${meta.page}` : "—"}
-            sub={meta ? `of ${meta.totalPages}` : undefined}
-            accent="bg-sky-50 text-sky-600"
-          />
-        </div>
-      </div>
-
-      {/* ── Scrollable table area ── */}
-      <div className="mx-6 flex pb-5 max-h-112.5 flex-1 flex-col overflow-hidden rounded-2xl border border-stone-200  shadow-sm">
-        {/* Table toolbar (fixed within card) */}
-        <div className="flex flex-none items-center justify-between border-b border-stone-100 px-6 py-3">
-          <h2
-            className="text-base font-normal text-stone-700"
-            style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
-          >
-            All Members
-          </h2>
-          <div className="flex items-center gap-4">
-            {meta && (
-              <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs text-stone-500">
-                {meta.total?.toLocaleString()} total
-              </span>
-            )}
-            <PerPageSelect value={limit} onChange={handleLimitChange} />
+        {/* ── Scrollable table area ── */}
+        <div className="mx-6 flex pb-5 max-h-112.5 flex-1 flex-col overflow-hidden rounded-2xl border border-stone-200  shadow-sm">
+          {/* Table toolbar (fixed within card) */}
+          <div className="flex flex-none items-center justify-between border-b border-stone-100 px-6 py-3">
+            <h2
+              className="text-base font-normal text-stone-700"
+              style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+            >
+              All Members
+            </h2>
+            <div className="flex items-center gap-4">
+              {meta && (
+                <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs text-stone-500">
+                  {meta.total?.toLocaleString()} total
+                </span>
+              )}
+              <PerPageSelect value={limit} onChange={handleLimitChange} />
+            </div>
           </div>
-        </div>
 
-        {/* Scrollable table */}
-        <div className=" flex-1  overflow-auto">
-          <table className="w-full min-w-170">
-            {/* Sticky thead */}
-            <thead className="sticky top-0 z-10">
-              <tr className="border-b border-stone-100 bg-stone-50/95 backdrop-blur-sm">
-                {(
-                  [
-                    { key: "name", label: "Member" },
-                    { key: "email", label: "Email" },
-                    { key: "role", label: "Role" },
-                    { key: "createdAt", label: "Joined" },
-                  ] as { key: SortField; label: string }[]
-                ).map(col => (
-                  <th key={col.key} className="px-6 py-3 text-left">
-                    <SortButton
-                      label={col.label}
-                      field={col.key}
-                      active={sortField === col.key}
-                      dir={sortField === col.key ? sortDir : null}
-                      onClick={() => handleSort(col.key)}
-                    />
+          {/* Scrollable table */}
+          <div className=" flex-1  overflow-auto">
+            <table className="w-full min-w-170">
+              {/* Sticky thead */}
+              <thead className="sticky top-0 z-10">
+                <tr className="border-b border-stone-100 bg-stone-50/95 backdrop-blur-sm">
+                  {(
+                    [
+                      { key: "name", label: "Member" },
+                      { key: "email", label: "Email" },
+                      { key: "role", label: "Role" },
+                      { key: "createdAt", label: "Joined" },
+                    ] as { key: SortField; label: string }[]
+                  ).map(col => (
+                    <th key={col.key} className="px-6 py-3 text-left">
+                      <SortButton
+                        label={col.label}
+                        field={col.key}
+                        active={sortField === col.key}
+                        dir={sortField === col.key ? sortDir : null}
+                        onClick={() => handleSort(col.key)}
+                      />
+                    </th>
+                  ))}
+                  <th className="px-6 py-3 text-left">
+                    <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-stone-400">
+                      Actions
+                    </span>
                   </th>
-                ))}
-              </tr>
-            </thead>
+                </tr>
+              </thead>
 
-            <tbody>
-              {isLoading ? (
-                Array.from({ length: limit }).map((_, i) => (
-                  <SkeletonRow key={i} />
-                ))
-              ) : users.length > 0 ? (
-                users.map(user => {
-                  const pal = avatarPalette(user.name ?? "");
-                  const initials = (user.name ?? "??")
-                    .slice(0, 2)
-                    .toUpperCase();
-                  return (
-                    <tr
-                      key={user.id}
-                      className="group border-b border-stone-100 transition-colors last:border-none hover:bg-stone-50/70"
-                    >
-                      {/* Name */}
-                      <td className="px-6 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <span
-                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ring-1 ${pal.bg} ${pal.text} ${pal.ring}`}
-                          >
-                            {user.profilePictureURL ? (
-                              <img
-                                src={user.profilePictureURL}
-                                alt=""
-                                className="h-8 w-8 rounded-full object-cover"
-                              />
-                            ) : (
-                              initials
+              <tbody>
+                {isLoading ? (
+                  Array.from({ length: limit }).map((_, i) => (
+                    <SkeletonRow key={i} />
+                  ))
+                ) : users.length > 0 ? (
+                  users.map(user => {
+                    const pal = avatarPalette(user.name ?? "");
+                    const initials = (user.name ?? "??")
+                      .slice(0, 2)
+                      .toUpperCase();
+                    return (
+                      <tr
+                        key={user.id}
+                        className="group border-b border-stone-100 transition-colors last:border-none hover:bg-stone-50/70"
+                      >
+                        {/* Name */}
+                        <td className="px-6 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ring-1 ${pal.bg} ${pal.text} ${pal.ring}`}
+                            >
+                              {user.profilePictureURL ? (
+                                <img
+                                  src={user.profilePictureURL}
+                                  alt=""
+                                  className="h-8 w-8 rounded-full object-cover"
+                                />
+                              ) : (
+                                initials
+                              )}
+                            </span>
+                            <span className="text-sm font-normal text-stone-800">
+                              {user.name}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Email */}
+                        <td className="px-6 py-3.5">
+                          <span className="flex items-center gap-1.5 text-xs text-stone-400">
+                            <Mail className="h-3.5 w-3.5 shrink-0 text-stone-300" />
+                            {user.email}
+                          </span>
+                        </td>
+
+                        {/* Role */}
+                        <td className="px-6 py-3.5">
+                          <RoleBadge role={user.role} />
+                        </td>
+
+                        {/* Date */}
+                        <td className="px-6 py-3.5">
+                          <span className="flex items-center gap-1.5 text-xs tabular-nums text-stone-400">
+                            <Calendar className="h-3.5 w-3.5 shrink-0 text-stone-300" />
+                            {new Date(user.createdAt).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              },
                             )}
                           </span>
-                          <span className="text-sm font-normal text-stone-800">
-                            {user.name}
-                          </span>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Email */}
-                      <td className="px-6 py-3.5">
-                        <span className="flex items-center gap-1.5 text-xs text-stone-400">
-                          <Mail className="h-3.5 w-3.5 shrink-0 text-stone-300" />
-                          {user.email}
-                        </span>
-                      </td>
-
-                      {/* Role */}
-                      <td className="px-6 py-3.5">
-                        <RoleBadge role={user.role} />
-                      </td>
-
-                      {/* Date */}
-                      <td className="px-6 py-3.5">
-                        <span className="flex items-center gap-1.5 text-xs tabular-nums text-stone-400">
-                          <Calendar className="h-3.5 w-3.5 shrink-0 text-stone-300" />
-                          {new Date(user.createdAt).toLocaleDateString(
-                            "en-US",
-                            {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            },
-                          )}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="py-16 text-center text-sm text-stone-400"
-                  >
-                    No users found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* ── Fixed pagination ── */}
-      {meta && (
-        <div className="flex flex-none flex-col items-start gap-4 px-6 py-4 md:flex-row md:items-center md:justify-between">
-          <p className="text-xs font-light text-stone-400">
-            Showing page{" "}
-            <span className="font-medium text-stone-600">{meta.page}</span> of{" "}
-            <span className="font-medium text-stone-600">
-              {meta.totalPages}
-            </span>{" "}
-            &nbsp;·&nbsp;{" "}
-            <span className="font-medium text-stone-600">
-              {meta.total?.toLocaleString()}
-            </span>{" "}
-            total users
-          </p>
-
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!meta.hasPrevPage}
-              onClick={() => setPage(p => p - 1)}
-              className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50 disabled:opacity-30"
-            >
-              <ChevronLeft className="mr-1 h-3.5 w-3.5" />
-              Prev
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!meta.hasNextPage}
-              onClick={() => setPage(p => p + 1)}
-              className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50 disabled:opacity-30"
-            >
-              Next
-              <ChevronRight className="ml-1 h-3.5 w-3.5" />
-            </Button>
+                        <td className="px-6 py-3.5">
+                          <button
+                            onClick={() => {
+                              setDeleteTarget(user);
+                              setDeletingId(user.id);
+                            }}
+                            title={"Remove user"}
+                            className="flex cursor-pointer h-7 w-7 items-center justify-center rounded-lg border border-stone-200 text-stone-400 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500 disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="py-16 text-center text-sm text-stone-400"
+                    >
+                      No users found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
-    </div>
+
+        {/* ── Fixed pagination ── */}
+        {meta && (
+          <div className="flex flex-none flex-col items-start gap-4 px-6 py-4 md:flex-row md:items-center md:justify-between">
+            <p className="text-xs font-light text-stone-400">
+              Showing page{" "}
+              <span className="font-medium text-stone-600">{meta.page}</span> of{" "}
+              <span className="font-medium text-stone-600">
+                {meta.totalPages}
+              </span>{" "}
+              &nbsp;·&nbsp;{" "}
+              <span className="font-medium text-stone-600">
+                {meta.total?.toLocaleString()}
+              </span>{" "}
+              total users
+            </p>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!meta.hasPrevPage}
+                onClick={() => setPage(p => p - 1)}
+                className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50 disabled:opacity-30"
+              >
+                <ChevronLeft className="mr-1 h-3.5 w-3.5" />
+                Prev
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!meta.hasNextPage}
+                onClick={() => setPage(p => p + 1)}
+                className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50 disabled:opacity-30"
+              >
+                Next
+                <ChevronRight className="ml-1 h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {deleteTarget && (
+          <DeleteModal
+            user={deleteTarget}
+            onConfirm={handleDeleteConfirm}
+            onCancel={() => setDeleteTarget(null)}
+            isLoading={deletingId !== deleteTarget.id}
+          />
+        )}
+      </div>
+    </>
   );
 }
