@@ -13,7 +13,7 @@ export function useLogOut() {
     onSuccess: async data => {
       toast.success(data.message);
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
-      router.push("/dashboard");
+      router.push("/");
     },
     onError: (error: unknown) => {
       toast.error((error as any)?.response?.data?.message ?? "Logout failed");

@@ -12,11 +12,14 @@ export function useLogin() {
     mutationFn: authApi.login,
     onSuccess: async data => {
       toast.success(data.message);
-      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       router.push("/dashboard");
+      router.refresh();
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
     },
     onError: (error: unknown) => {
-      toast.error((error as any)?.response?.data?.message ?? "Login failed");
+      console.log(error);
+
+      toast.error((error as any)?.response?.data?.message);
     },
   });
 }

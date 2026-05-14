@@ -1,5 +1,6 @@
 // src/proxy.ts
 import { NextRequest, NextResponse } from "next/server";
+import api from "./lib/axios";
 
 const PUBLIC_ROUTES = ["/login"];
 
@@ -21,6 +22,7 @@ export async function proxy(req: NextRequest) {
   if (!accessToken) {
     if (refreshToken) {
       try {
+        // const res = api.post(`/auth/admin/refresh-token`);
         const res = await fetch(
           `${process.env.API_URL}/auth/admin/refresh-token`,
           {

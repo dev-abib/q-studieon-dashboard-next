@@ -29,9 +29,7 @@ export default function LoginPage() {
   const onSubmit = async (values: LoginFormData) => {
     try {
       await loginMutation(values);
-    } catch {
-      // handled in useLogin onError
-    }
+    } catch {}
   };
 
   return (

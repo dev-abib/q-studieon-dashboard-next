@@ -432,6 +432,8 @@ export default function Page() {
                                   src={user.profilePictureURL}
                                   alt=""
                                   className="h-8 w-8 rounded-full object-cover"
+                                  width={32}
+                                  height={32}
                                 />
                               ) : (
                                 initials
