@@ -1,11 +1,9 @@
 import axios from "axios";
-import { logoutAction, saveTokensAction } from "@/actions/auth-actions";
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   withCredentials: true,
 });
-
 
 let isRefreshing = false;
 let failedQueue: Array<{
@@ -80,16 +78,12 @@ api.interceptors.response.use(
 
         if (!newAccessToken) throw new Error("No new access token received");
 
-        // Save tokens via server action
-        await saveTokensAction(newAccessToken, newRefreshToken);
-
         processQueue(null, newAccessToken);
 
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);
-        await logoutAction();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
