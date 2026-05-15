@@ -1,4 +1,8 @@
-import axios from "axios";
+import axios, { InternalAxiosRequestConfig } from "axios";
+
+interface RetryAxiosRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -8,28 +12,30 @@ export const api = axios.create({
 let isRefreshing = false;
 
 let failedQueue: Array<{
-  resolve: () => void;
-  reject: (error: unknown) => void;
+  resolve: (value?: unknown) => void;
+  reject: (error?: unknown) => void;
 }> = [];
 
-const processQueue = (error: unknown) => {
-  failedQueue.forEach(({ resolve, reject }) =>
-    error ? reject(error) : resolve(),
-  );
+const processQueue = (error?: unknown) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve();
+    }
+  });
+
   failedQueue = [];
 };
 
-api.interceptors.request.use(config => {
-  return config;
-});
+api.interceptors.request.use(config => config);
 
 api.interceptors.response.use(
   response => response,
   async error => {
-    const originalRequest = error.config;
+    const originalRequest = error.config as RetryAxiosRequestConfig;
 
     const url = originalRequest?.url || "";
-
     const isAuthRoute = url.includes("/login") || url.includes("/logout");
 
     if (
@@ -53,7 +59,7 @@ api.interceptors.response.use(
           { withCredentials: true },
         );
 
-        processQueue(null);
+        processQueue();
 
         return api(originalRequest);
       } catch (refreshError) {
