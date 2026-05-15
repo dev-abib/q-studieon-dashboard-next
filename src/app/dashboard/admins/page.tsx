@@ -28,8 +28,9 @@ import { CreateAdminInput } from "@/features/auth/types/create-admin.types";
 import { createAdminSchema } from "@/features/auth/schema/create-admin.schema";
 import { useCreateAdmin } from "@/features/auth/hooks/use-create-admin";
 import { useDeleteAdmin } from "@/features/auth/hooks/use-delete-admin";
+import Image from "next/image";
 
-// Types 
+// Types
 interface Admin {
   id: string;
   name: string;
@@ -39,7 +40,7 @@ interface Admin {
   createdAt: string;
 }
 
-//  Avatar palette 
+//  Avatar palette
 const AVATAR_PALETTES = [
   { bg: "bg-amber-50", text: "text-amber-700", ring: "ring-amber-200" },
   { bg: "bg-sky-50", text: "text-sky-700", ring: "ring-sky-200" },
@@ -52,7 +53,7 @@ function avatarPalette(name: string) {
   return AVATAR_PALETTES[(name?.charCodeAt(0) ?? 0) % AVATAR_PALETTES.length];
 }
 
-// Role badge 
+// Role badge
 const ROLE_STYLES: Record<string, string> = {
   superadmin: "bg-amber-50 text-amber-800 border border-amber-200",
   admin: "bg-slate-50 text-slate-600 border border-slate-200",
@@ -67,7 +68,7 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
-//  Stat card 
+//  Stat card
 function StatCard({
   icon: Icon,
   label,
@@ -111,7 +112,7 @@ function StatCard({
   );
 }
 
-//  Skeleton row 
+//  Skeleton row
 function SkeletonRow() {
   return (
     <tr className="border-b border-stone-100">
@@ -122,7 +123,7 @@ function SkeletonRow() {
   );
 }
 
-//  Sort 
+//  Sort
 type SortDir = "asc" | "desc" | null;
 type SortField = "name" | "email" | "role" | "createdAt";
 
@@ -152,7 +153,7 @@ function SortButton({
   );
 }
 
-//  Per-page select 
+//  Per-page select
 const PER_PAGE_OPTIONS = [5, 8, 10, 20];
 function PerPageSelect({
   value,
@@ -182,13 +183,13 @@ function PerPageSelect({
   );
 }
 
-//  Field error helper 
+//  Field error helper
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return <p className="mt-1 text-[11px] text-rose-500">{message}</p>;
 }
 
-// Delete confirm modal 
+// Delete confirm modal
 function DeleteModal({
   admin,
   onConfirm,
@@ -250,7 +251,6 @@ function DeleteModal({
     </div>
   );
 }
-
 
 export default function Page() {
   const {
@@ -539,9 +539,19 @@ export default function Page() {
                       <td className="px-6 py-3.5">
                         <div className="flex items-center gap-3">
                           <span
-                            className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-medium ring-1 ${pal.bg} ${pal.text} ${pal.ring}`}
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ring-1 ${pal.bg} ${pal.text} ${pal.ring}`}
                           >
-                            {initials}
+                            {admin.profilePictureURL ? (
+                              <Image
+                                src={admin.profilePictureURL}
+                                alt=""
+                                className="h-8 w-8 rounded-full object-cover"
+                                width={32}
+                                height={32}
+                              />
+                            ) : (
+                              initials
+                            )}
                           </span>
                           <span className="text-sm font-normal text-stone-800">
                             {admin.name}

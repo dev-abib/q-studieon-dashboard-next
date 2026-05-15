@@ -12,9 +12,8 @@ export function useLogin() {
     mutationFn: authApi.login,
     onSuccess: async data => {
       toast.success(data.message);
-      router.push("/dashboard");
-      router.refresh();
       queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      window.location.href = "/dashboard";
     },
     onError: (error: unknown) => {
       console.log(error);

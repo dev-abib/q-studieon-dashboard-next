@@ -18,17 +18,12 @@ let failedQueue: Array<{
 
 const processQueue = (error?: unknown) => {
   failedQueue.forEach(({ resolve, reject }) => {
-    if (error) {
-      reject(error);
-    } else {
-      resolve();
-    }
+    if (error) reject(error);
+    else resolve();
   });
 
   failedQueue = [];
 };
-
-api.interceptors.request.use(config => config);
 
 api.interceptors.response.use(
   response => response,
@@ -53,6 +48,7 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
+        // 🔥 backend sets NEW cookies automatically
         await axios.post(
           `${process.env.NEXT_PUBLIC_API_URL}/auth/admin/refresh-token`,
           {},
@@ -65,9 +61,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError);
 
-        if (window.location.pathname !== "/login") {
-          window.location.href = "/login";
-        }
+        window.location.href = "/login";
 
         return Promise.reject(refreshError);
       } finally {
