@@ -6,11 +6,9 @@ import {
   Settings,
   BarChart,
   ShieldCheck,
+  BookDashed,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-
-
 
 export function Sidebar() {
   const navItems = [
@@ -19,6 +17,11 @@ export function Sidebar() {
     { label: "Admins", href: "/dashboard/admins", icon: ShieldCheck },
     { label: "Analytics", href: "/dashboard/analytics", icon: BarChart },
     { label: "Settings", href: "/dashboard/settings", icon: Settings },
+    {
+      label: "Dynamic page",
+      href: "/dashboard/dynamic-page",
+      icon: BookDashed,
+    },
   ];
 
   return (
