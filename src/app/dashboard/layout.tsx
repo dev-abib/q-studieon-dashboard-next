@@ -12,17 +12,14 @@ export default function DashboardLayout({
 }) {
   const { data, isLoading } = useCurrentUser();
 
-  let admin: Admin | null = null;
-
-  if (!isLoading) {
-    admin = adminSchema.parse(data?.data);
-  }
-
+  const admin: Admin | null = !isLoading && data?.data
+    ? adminSchema.parse(data.data)
+    : null;
 
   return (
     <div className="flex p-10 h-screen overflow-hidden">
-      <Sidebar />
-      <div className="flex pl-5 flex-col flex-1  overflow-hidden">
+      <Sidebar role={admin?.role ?? null} />
+      <div className="flex pl-5 flex-col flex-1 overflow-hidden">
         {admin && <Header admin={admin} />}
         <main className="flex-1 overflow-y-auto p-6 bg-[#f7f6f3]">
           {children}

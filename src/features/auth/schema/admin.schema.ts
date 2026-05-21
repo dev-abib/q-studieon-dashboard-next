@@ -10,7 +10,6 @@ export const adminSchema = z.object({
   isOtpVerified: z.boolean(),
   guestExpiresAt: z.string().nullable(),
   authProvider: z.string(),
-  planKey: z.string().nullable(),
   billingCycle: z.string(),
   status: z.string(),
   currentPeriodEnd: z.string().nullable(),

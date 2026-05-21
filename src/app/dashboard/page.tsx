@@ -19,39 +19,16 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-
-const revenueData = [
-  { month: "Jan", monthly: 3800, yearly: 2500 },
-  { month: "Feb", monthly: 4700, yearly: 3100 },
-  { month: "Mar", monthly: 5500, yearly: 3600 },
-  { month: "Apr", monthly: 6600, yearly: 4800 },
-  { month: "May", monthly: 6500, yearly: 2600 },
-  { month: "Jun", monthly: 600, yearly: 800 },
-  { month: "Jul", monthly: 5000, yearly: 2000 },
-  { month: "Aug", monthly: 6200, yearly: 4100 },
-  { month: "Sep", monthly: 5000, yearly: 300 },
-  { month: "Oct", monthly: 1600, yearly: 4500 },
-  { month: "Nov", monthly: 5100, yearly: 2600 },
-  { month: "Dec", monthly: 3300, yearly: 1800 },
-];
+import { useDashboardAnalytics } from "@/features/admin/hooks/user-dashboard-analytics";
 
 const revenueConfig = {
   monthly: { label: "Monthly", color: "#6C63FF" },
   yearly: { label: "Yearly", color: "#10B981" },
 };
 
-const usersData = [
-  { month: "Nov", registered: 600, guest: 1800 },
-  { month: "Dec", registered: 720, guest: 2100 },
-  { month: "Jan", registered: 850, guest: 2500 },
-  { month: "Feb", registered: 980, guest: 2900 },
-  { month: "Mar", registered: 1100, guest: 3200 },
-  { month: "Apr", registered: 1204, guest: 3617 },
-];
-
 const userConfig = {
   registered: { label: "Registered", color: "#6C63FF" },
-  guest: { label: "Guest", color: "#10B981" },
+  guests: { label: "Guests", color: "#10B981" },
 };
 
 const reportsData = [
@@ -88,67 +65,6 @@ const monthlyRevenueConfig = {
   revenue: { label: "Revenue", color: "#6C63FF" },
 };
 
-const topStats = [
-  {
-    label: "Total users",
-    value: "4,821",
-    change: "↑ 12% this month",
-    positive: true,
-    accent: "#6C63FF",
-    lightBg: "#F0EFFE",
-    icon: "👥",
-  },
-  {
-    label: "Active subscriptions",
-    value: "1,204",
-    change: "↑ 8% this month",
-    positive: true,
-    accent: "#10B981",
-    lightBg: "#ECFDF5",
-    icon: "⭐",
-  },
-  {
-    label: "Guest users",
-    value: "3,617",
-    change: "75% of total",
-    positive: null,
-    accent: "#F59E0B",
-    lightBg: "#FFFBEB",
-    icon: "👤",
-  },
-  {
-    label: "Reports today",
-    value: "342",
-    change: "↑ 5% vs yesterday",
-    positive: true,
-    accent: "#3B82F6",
-    lightBg: "#EFF6FF",
-    icon: "📄",
-  },
-];
-
-const plans = [
-  { label: "Free", count: 3034, pct: 63, color: "#94A3B8" },
-  { label: "Basic", count: 867, pct: 18, color: "#F59E0B" },
-  { label: "Pro", count: 920, pct: 19, color: "#6C63FF" },
-];
-
-const demoStats = [
-  { label: "Total revenue", value: "$43,900", sub: null, accent: "#6C63FF" },
-  {
-    label: "Monthly billing",
-    value: "$26,200",
-    sub: "60% of total",
-    accent: "#6C63FF",
-  },
-  {
-    label: "Yearly billing",
-    value: "$17,700",
-    sub: "40% of total",
-    accent: "#10B981",
-  },
-];
-
 const Card = ({
   children,
   className = "",
@@ -181,7 +97,102 @@ const CardHeader = ({
 );
 
 const Page = () => {
-  return (
+  const { data } = useDashboardAnalytics();
+
+  const getGrowthData = (growth: number = 0, suffix: string) => ({
+    change: `${
+      growth > 0 ? "↑" : growth < 0 ? "↓" : "→"
+    } ${Math.abs(growth)}% ${suffix}`,
+
+    positive: growth > 0 ? true : growth < 0 ? false : null,
+  });
+
+  const stats_data = data?.data?.cards;
+  const topStats = [
+    {
+      label: "Total users",
+      value: stats_data?.totalUsers?.count,
+
+      ...getGrowthData(stats_data?.totalUsers?.growth, "this month"),
+
+      accent: "#6C63FF",
+      lightBg: "#F0EFFE",
+      icon: "👥",
+    },
+
+    {
+      label: "Active subscriptions",
+      value: stats_data?.activeSubscriptions?.count,
+
+      ...getGrowthData(stats_data?.activeSubscriptions?.growth, "this month"),
+
+      accent: "#10B981",
+      lightBg: "#ECFDF5",
+      icon: "⭐",
+    },
+
+    {
+      label: "Guest users",
+      value: stats_data?.guestUsers?.count,
+
+      change: `${stats_data?.guestUsers?.percentOfTotal}% of total`,
+
+      positive: null,
+
+      accent: "#F59E0B",
+      lightBg: "#FFFBEB",
+      icon: "👤",
+    },
+
+    {
+      label: "Reports today",
+      value: stats_data?.reportsToday?.count,
+
+      ...getGrowthData(stats_data?.reportsToday?.growth, "vs yesterday"),
+
+      accent: "#3B82F6",
+      lightBg: "#EFF6FF",
+      icon: "📄",
+    },
+  ];
+
+  const plans = [
+    {
+      label: "Monthly",
+      count: data?.data?.subscriptionPlans?.monthly?.count,
+      pct: data?.data?.subscriptionPlans?.monthly?.percent,
+      color: "#F59E0B",
+    },
+    {
+      label: "Yearly",
+      count: data?.data?.subscriptionPlans?.yearly?.count,
+      pct: data?.data?.subscriptionPlans?.yearly?.percent,
+      color: "#6C63FF",
+    },
+  ];
+
+  const demoStats = [
+    {
+      label: "Total revenue",
+      value: data?.data?.revenueBreakdown?.totalRevenue,
+      sub: null,
+      accent: "#6C63FF",
+    },
+    {
+      label: "Monthly billing",
+      value: data?.data?.revenueBreakdown?.monthlyBilling,
+      sub: `${data?.data?.revenueBreakdown?.monthlyPercent} % of total`,
+      accent: "#6C63FF",
+    },
+    {
+      label: "Yearly billing",
+      value: data?.data?.revenueBreakdown?.yearlyBilling,
+      sub: `${data?.data?.revenueBreakdown?.yearlyPercent} % of total`,
+      accent: "#10B981",
+    },
+  ];
+
+  https: return (
     <section className="w-full flex flex-col gap-6 min-h-screen ">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -224,7 +235,10 @@ const Page = () => {
             config={monthlyRevenueConfig}
             className="h-[200px] w-full"
           >
-            <BarChart data={monthlyRevenueData} barCategoryGap="15%">
+            <BarChart
+              data={data?.data?.charts?.revenueChart}
+              barCategoryGap="15%"
+            >
               <CartesianGrid vertical={false} stroke="#F1F5F9" />
               <XAxis
                 dataKey="month"
@@ -250,7 +264,7 @@ const Page = () => {
             subtitle="Daily over last 2 weeks"
           />
           <ChartContainer config={reportsConfig} className="h-[200px] w-full">
-            <LineChart data={reportsData}>
+            <LineChart data={data?.data?.charts?.reportsChart}>
               <CartesianGrid vertical={false} stroke="#F1F5F9" />
               <XAxis
                 dataKey="day"
@@ -282,7 +296,11 @@ const Page = () => {
             subtitle="Registered vs guest · last 6 months"
           />
           <ChartContainer config={userConfig} className="h-[200px] w-full">
-            <BarChart data={usersData} barCategoryGap="15%" barGap={4}>
+            <BarChart
+              data={data?.data?.charts?.userStatsChart}
+              barCategoryGap="15%"
+              barGap={4}
+            >
               <CartesianGrid vertical={false} stroke="#F1F5F9" />
               <XAxis
                 dataKey="month"
@@ -303,7 +321,7 @@ const Page = () => {
                 fill="var(--color-registered)"
                 radius={6}
               />
-              <Bar dataKey="guest" fill="var(--color-guest)" radius={6} />
+              <Bar dataKey="guests" fill="var(--color-guests)" radius={6} />
             </BarChart>
           </ChartContainer>
         </Card>
@@ -365,9 +383,7 @@ const Page = () => {
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-gray-400">
-                      {plan.count.toLocaleString()}
-                    </span>
+                    <span className="text-xs text-gray-400">{plan.count}</span>
                     <span
                       className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
                       style={{
@@ -417,7 +433,11 @@ const Page = () => {
         </div>
 
         <ChartContainer config={revenueConfig} className="h-[260px] w-full">
-          <BarChart data={revenueData} barCategoryGap="15%" barGap={4}>
+          <BarChart
+            data={data?.data?.charts?.revenueBreakdownChart}
+            barCategoryGap="15%"
+            barGap={4}
+          >
             <CartesianGrid vertical={false} stroke="#F1F5F9" />
             <XAxis
               dataKey="month"

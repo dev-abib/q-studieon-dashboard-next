@@ -30,4 +30,9 @@ export const adminApi = {
     });
     return res.data;
   },
+
+  getDashboardAnalytics: async () => {
+    const res = await api.get("/admin/dashboard-analytics");
+    return res.data;
+  },
 };

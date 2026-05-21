@@ -10,11 +10,22 @@ import {
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-export function Sidebar() {
+type Role = "super_admin" | "admin" | "user";
+
+interface SidebarProps {
+  role: Role | string | null;
+}
+
+export function Sidebar({ role }: SidebarProps) {
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Users", href: "/dashboard/users", icon: Users },
-    { label: "Admins", href: "/dashboard/admins", icon: ShieldCheck },
+    {
+      label: "Admins",
+      href: "/dashboard/admins",
+      icon: ShieldCheck,
+      requiredRole: "super_admin" as Role,
+    },
     { label: "Analytics", href: "/dashboard/analytics", icon: BarChart },
     { label: "Settings", href: "/dashboard/settings", icon: Settings },
     {
@@ -24,20 +35,22 @@ export function Sidebar() {
     },
   ];
 
+  const visibleItems = navItems.filter(
+    item => !item.requiredRole || item.requiredRole === role,
+  );
+
   return (
-    <aside className="w-64 bg-white rounded-md shadow-2xl  bg-background flex flex-col">
+    <aside className="w-64 bg-white rounded-md shadow-2xl bg-background flex flex-col">
       {/* Logo */}
       <div className="h-16 flex items-center px-6 font-bold text-lg">
-        <h1 className="text-off-gray font-bold text-2xl  ">
-          {" "}
-          {process.env.NEXT_PUBLIC_SITE_NAME as string}{" "}
+        <h1 className="text-off-gray font-bold text-2xl">
+          {process.env.NEXT_PUBLIC_SITE_NAME as string}
         </h1>
       </div>
-      {/* <Separator /> */}
       {/* Nav Links */}
       <ScrollArea className="flex-1 px-3 py-4">
         <nav className="flex flex-col gap-1">
-          {navItems.map(({ label, href, icon: Icon }) => (
+          {visibleItems.map(({ label, href, icon: Icon }) => (
             <Link
               key={href}
               href={href}
