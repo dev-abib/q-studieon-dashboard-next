@@ -15,38 +15,19 @@ import {
   Globe,
   BadgeCheck,
   FileBarChart2,
-  AlertTriangle,
+  ChevronLeft,
   Loader2,
 } from "lucide-react";
 import { useUserDetails } from "@/features/admin/hooks/use-get-user-details";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Admin } from "@/features/admin/types/admin.types";
+import { useDeleteUser } from "@/features/auth/hooks/user-delete-user";
+import { useRouter } from "next/navigation";
 
-interface UserData {
-  id: string;
-  name: string;
-  email: string;
-  profilePictureURL: string | null;
-  isPaid: boolean;
-  isGuest: boolean | null;
-  isOtpVerified: boolean;
-  guestExpiresAt: string | null;
-  authProvider: string;
-  billingCycle: string;
-  status: string;
-  stripeCustomerId: string;
-  stripeSubscriptionId: string;
-  currentPeriodEnd: string | null;
-  role: string;
-  createdAt: string;
-  updatedAt: string;
-  termsAndConditions: boolean;
-  blockedUntil: string | null;
-  guestIp: string | null;
-  guestDeviceId: string | null;
-  isResetRequest: boolean;
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
 
 const formatDate = (iso: string | null): string =>
   iso
@@ -67,122 +48,76 @@ const getInitials = (name: string): string =>
     .toUpperCase()
     .slice(0, 2);
 
-const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+const cap = (s: string): string =>
+  s ? s.charAt(0).toUpperCase() + s.slice(1) : "—";
+
+const AVATAR_PALETTES = [
+  { bg: "bg-amber-50", text: "text-amber-700", ring: "ring-amber-200" },
+  { bg: "bg-sky-50",   text: "text-sky-700",   ring: "ring-sky-200"   },
+  { bg: "bg-rose-50",  text: "text-rose-700",  ring: "ring-rose-200"  },
+  { bg: "bg-teal-50",  text: "text-teal-700",  ring: "ring-teal-200"  },
+  { bg: "bg-violet-50",text: "text-violet-700",ring: "ring-violet-200"},
+  { bg: "bg-orange-50",text: "text-orange-700",ring: "ring-orange-200"},
+];
+
+function avatarPalette(name: string) {
+  const idx = (name?.charCodeAt(0) ?? 0) % AVATAR_PALETTES.length;
+  return AVATAR_PALETTES[idx];
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Skeleton — matches dashboard shimmer style
+// Skeleton
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ShimmerStyle = () => (
-  <style>{`
-    @keyframes shimmer {
-      0%   { background-position: -600px 0; }
-      100% { background-position:  600px 0; }
-    }
-    .sk {
-      border-radius: 8px;
-      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-      background-size: 600px 100%;
-      animation: shimmer 1.4s infinite linear;
-    }
-    .dark .sk {
-      background: linear-gradient(90deg, #1e293b 25%, #273348 50%, #1e293b 75%);
-      background-size: 600px 100%;
-    }
-  `}</style>
-);
-
-const Sk = ({
-  className = "",
-  style = {},
-}: {
-  className?: string;
-  style?: React.CSSProperties;
-}) => <div className={`sk ${className}`} style={style} />;
-
-const SkeletonLoader = () => {
-  const statBgs = ["#ECFDF5", "#FFFBEB", "#F0EFFE", "#EFF6FF"];
-  return (
-    <section className="w-full flex flex-col gap-6 min-h-screen">
-      <ShimmerStyle />
-
-      {/* heading */}
-      <div className="flex flex-col gap-2">
-        <Sk className="h-7 w-40 rounded-lg" />
-        <Sk className="h-4 w-52 rounded-full" />
-      </div>
-
-      {/* profile card */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
-        <div className="flex items-center gap-4">
-          <Sk className="w-20 h-20 rounded-2xl shrink-0" />
-          <div className="flex-1 flex flex-col gap-2.5">
-            <Sk className="h-7 w-56 rounded-lg" />
-            <Sk className="h-4 w-44 rounded-full" />
-            <Sk className="h-3 w-72 rounded-full" />
-          </div>
+const SkeletonLoader = () => (
+  <div
+    className="flex flex-col gap-5 pb-10 pt-6"
+    style={{ fontFamily: "'DM Sans', sans-serif" }}
+  >
+    <div className="flex flex-col gap-1.5">
+      <div className="h-3 w-28 animate-pulse rounded-full bg-stone-100" />
+      <div className="h-8 w-52 animate-pulse rounded-lg bg-stone-100" />
+    </div>
+    <div className="rounded-xl border border-stone-100 bg-white p-5 shadow-sm">
+      <div className="flex items-center gap-4">
+        <div className="h-14 w-14 animate-pulse rounded-full bg-stone-100" />
+        <div className="flex flex-1 flex-col gap-2">
+          <div className="h-5 w-48 animate-pulse rounded-lg bg-stone-100" />
+          <div className="h-3 w-36 animate-pulse rounded-full bg-stone-100" />
+          <div className="h-3 w-64 animate-pulse rounded-full bg-stone-100" />
         </div>
       </div>
-
-      {/* stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {statBgs.map((bg, i) => (
-          <div
-            key={i}
-            className="rounded-2xl shadow-sm p-5 flex flex-col gap-3"
-            style={{ background: bg }}
-          >
-            <div className="flex justify-between items-center">
-              <Sk className="h-3 w-24 rounded-full" />
-              <Sk className="h-5 w-5 rounded-full" />
-            </div>
-            <Sk className="h-9 w-20 rounded-lg" />
-          </div>
-        ))}
-      </div>
-
-      {/* info cards 2×2 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {[0, 1, 2, 3].map(i => (
-          <div
-            key={i}
-            className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5"
-          >
-            <div className="flex flex-col gap-1.5 mb-4">
-              <Sk className="h-3.5 w-32 rounded-full" />
-              <Sk className="h-3 w-44 rounded-full" />
-            </div>
-            {[0, 1, 2, 3, 4].map(j => (
-              <div
-                key={j}
-                className="flex justify-between items-center py-2.5 border-b border-gray-100 dark:border-gray-800 last:border-0"
-              >
-                <Sk className="h-3 w-28 rounded-full" />
-                <Sk className="h-3 w-32 rounded-full" />
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-
-      {/* actions card */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
-        <div className="flex flex-col gap-1.5 mb-4">
-          <Sk className="h-3.5 w-24 rounded-full" />
-          <Sk className="h-3 w-40 rounded-full" />
+    </div>
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      {[0, 1, 2, 3].map(i => (
+        <div key={i} className="flex flex-col gap-3 rounded-xl border border-stone-100 bg-white px-5 py-4 shadow-sm">
+          <div className="h-8 w-8 animate-pulse rounded-lg bg-stone-100" />
+          <div className="h-3 w-20 animate-pulse rounded-full bg-stone-100" />
+          <div className="h-6 w-16 animate-pulse rounded-lg bg-stone-100" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {[0, 1, 2, 3].map(i => (
-            <Sk key={i} className="h-14 w-full rounded-2xl" />
+      ))}
+    </div>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {[0, 1, 2, 3].map(i => (
+        <div key={i} className="rounded-xl border border-stone-100 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex flex-col gap-1.5">
+            <div className="h-3 w-28 animate-pulse rounded-full bg-stone-100" />
+            <div className="h-2.5 w-40 animate-pulse rounded-full bg-stone-100" />
+          </div>
+          {[0, 1, 2, 3, 4].map(j => (
+            <div key={j} className="flex justify-between border-b border-stone-100 py-2.5 last:border-0">
+              <div className="h-2.5 w-24 animate-pulse rounded-full bg-stone-100" />
+              <div className="h-2.5 w-32 animate-pulse rounded-full bg-stone-100" />
+            </div>
           ))}
         </div>
-      </div>
-    </section>
-  );
-};
+      ))}
+    </div>
+  </div>
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shared UI
+// Shared primitives
 // ─────────────────────────────────────────────────────────────────────────────
 
 const Card = ({
@@ -192,25 +127,20 @@ const Card = ({
   children: React.ReactNode;
   className?: string;
 }) => (
-  <div
-    className={`bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5 ${className}`}
-  >
+  <div className={`rounded-xl border border-stone-100 bg-white shadow-sm ${className}`}>
     {children}
   </div>
 );
 
-const CardHeader = ({
-  title,
-  subtitle,
-}: {
-  title: string;
-  subtitle: string;
-}) => (
-  <div className="mb-4">
-    <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+const SectionHeader = ({ title, subtitle }: { title: string; subtitle: string }) => (
+  <div className="mb-4 border-b border-stone-100 px-5 py-4">
+    <p
+      className="text-base font-normal text-stone-700"
+      style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+    >
       {title}
     </p>
-    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+    <p className="mt-0.5 text-[11px] font-normal tracking-wide text-stone-400">
       {subtitle}
     </p>
   </div>
@@ -229,42 +159,98 @@ const InfoRow = ({
   valueColor?: string;
   icon?: React.ElementType;
 }) => (
-  <div className="flex items-center justify-between py-2.5 border-b border-gray-100 dark:border-gray-800 last:border-0 gap-4">
-    <span className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 shrink-0">
-      {Icon && <Icon size={12} className="shrink-0" />}
+  <div className="flex items-center justify-between gap-4 border-b border-stone-100 px-5 py-2.5 last:border-0">
+    <span className="flex shrink-0 items-center gap-1.5 text-xs text-stone-400">
+      {Icon && <Icon size={12} className="shrink-0 text-stone-300" />}
       {label}
     </span>
     <span
-      className={`text-xs font-medium text-right truncate max-w-[58%] ${mono ? "font-mono" : ""}`}
-      style={{ color: valueColor }}
+      className={`max-w-[58%] truncate text-right text-xs font-medium text-stone-700 ${mono ? "font-mono" : ""}`}
+      style={valueColor ? { color: valueColor } : undefined}
     >
       {value}
     </span>
   </div>
 );
 
-const Badge = ({
+const ROLE_STYLES: Record<string, string> = {
+  admin: "bg-amber-50 text-amber-800 border border-amber-200",
+  mod:   "bg-rose-50 text-rose-800 border border-rose-200",
+  user:  "bg-slate-50 text-slate-600 border border-slate-200",
+};
+
+function RoleBadge({ role }: { role: string }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded px-2 py-0.5 text-[10.5px] font-medium capitalize tracking-wide ${
+        ROLE_STYLES[role] ?? ROLE_STYLES.user
+      }`}
+    >
+      {role}
+    </span>
+  );
+}
+
+function StatusPill({ label, positive }: { label: string; positive: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded px-2 py-0.5 text-[10.5px] font-medium tracking-wide ${
+        positive
+          ? "border border-teal-200 bg-teal-50 text-teal-700"
+          : "border border-stone-200 bg-stone-50 text-stone-500"
+      }`}
+    >
+      {label}
+    </span>
+  );
+}
+
+function StatCard({
+  icon: Icon,
   label,
+  value,
+  sub,
   accent,
-  lightBg,
 }: {
+  icon: React.ElementType;
   label: string;
+  value: string;
+  sub?: string;
   accent: string;
-  lightBg: string;
-}) => (
-  <span
-    className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
-    style={{ background: lightBg, color: accent }}
-  >
-    {label}
-  </span>
-);
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-stone-100 bg-white px-5 py-4 shadow-sm">
+      <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${accent}`}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <div>
+        <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
+          {label}
+        </p>
+        <p
+          className="mt-0.5 text-2xl font-normal leading-none text-stone-800"
+          style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+        >
+          {value}
+          {sub && (
+            <span
+              className="ml-1.5 text-xs font-normal text-amber-600"
+              style={{ fontFamily: "'DM Sans', sans-serif" }}
+            >
+              {sub}
+            </span>
+          )}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Modal primitives
+// Modals
 // ─────────────────────────────────────────────────────────────────────────────
 
-const Modal = ({
+function BaseModal({
   open,
   onClose,
   title,
@@ -276,54 +262,53 @@ const Modal = ({
   title: string;
   subtitle?: string;
   children: React.ReactNode;
-}) => {
+}) {
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4 backdrop-blur-sm"
       onClick={e => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
-        <div className="flex items-start justify-between p-5 border-b border-gray-100 dark:border-gray-800">
+      <div className="flex w-full max-w-lg flex-col rounded-2xl border border-stone-200 bg-white shadow-xl">
+        <div className="flex items-start justify-between border-b border-stone-100 px-5 py-4">
           <div>
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+            <p
+              className="text-base font-normal text-stone-800"
+              style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+            >
               {title}
             </p>
             {subtitle && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                {subtitle}
-              </p>
+              <p className="mt-0.5 text-[11px] text-stone-400">{subtitle}</p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 text-stone-400 transition-colors hover:bg-stone-50 hover:text-stone-600"
           >
-            <X size={16} />
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
-        <div className="overflow-y-auto flex-1 p-5">{children}</div>
+        <div className="overflow-y-auto p-5">{children}</div>
       </div>
     </div>
   );
-};
+}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Action modals
-// ─────────────────────────────────────────────────────────────────────────────
-
-const MessageModal = ({
+function MessageModal({
   open,
   onClose,
   user,
 }: {
   open: boolean;
   onClose: () => void;
-  user: UserData;
-}) => {
+  user: Admin;
+}) {
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [sent, setSent] = useState(false);
+  const pal = avatarPalette(user.name ?? "");
+  const initials = getInitials(user.name ?? "??");
 
   const handleSend = () => {
     if (!subject.trim() || !message.trim()) return;
@@ -337,34 +322,31 @@ const MessageModal = ({
   };
 
   return (
-    <Modal
+    <BaseModal
       open={open}
       onClose={onClose}
       title="Message User"
-      subtitle={`To ${user.name}`}
+      subtitle={`Send a message to ${user.name}`}
     >
       {sent ? (
-        <div className="flex flex-col items-center justify-center py-12 gap-4">
-          <CheckCircle2 size={52} className="text-emerald-500" />
-          <p className="text-lg font-semibold text-emerald-600">
-            Message Sent Successfully
+        <div className="flex flex-col items-center justify-center gap-3 py-12">
+          <CheckCircle2 className="h-12 w-12 text-teal-500" />
+          <p
+            className="text-lg font-normal text-teal-700"
+            style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+          >
+            Message sent successfully
           </p>
         </div>
       ) : (
-        <div className="space-y-5">
-          <div
-            className="p-4 rounded-xl flex items-center gap-3"
-            style={{ background: "#F0EFFE" }}
-          >
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm"
-              style={{ background: "#6C63FF20", color: "#6C63FF" }}
-            >
-              {getInitials(user.name)}
-            </div>
+        <div className="flex flex-col gap-4">
+          <div className={`flex items-center gap-3 rounded-xl p-3 ring-1 ${pal.bg} ${pal.ring}`}>
+            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ring-1 ${pal.bg} ${pal.text} ${pal.ring}`}>
+              {initials}
+            </span>
             <div>
-              <p className="font-medium text-gray-800">{user.name}</p>
-              <p className="text-sm text-gray-500">{user.email}</p>
+              <p className="text-sm font-medium text-stone-800">{user.name}</p>
+              <p className="text-xs text-stone-400">{user.email}</p>
             </div>
           </div>
 
@@ -373,116 +355,143 @@ const MessageModal = ({
             value={subject}
             onChange={e => setSubject(e.target.value)}
             placeholder="Subject"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:border-[#6C63FF] outline-none text-sm"
+            className="h-9 w-full rounded-lg border border-stone-200 px-3 text-sm text-stone-700 placeholder:text-stone-300 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-300"
           />
 
           <textarea
             value={message}
             onChange={e => setMessage(e.target.value)}
-            rows={6}
-            placeholder="Write your message..."
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 focus:border-[#6C63FF] outline-none resize-none text-sm"
+            rows={5}
+            placeholder="Write your message…"
+            className="w-full resize-none rounded-lg border border-stone-200 px-3 py-2.5 text-sm text-stone-700 placeholder:text-stone-300 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-300"
           />
 
-          <button
-            onClick={handleSend}
-            disabled={!subject.trim() || !message.trim()}
-            className="w-full py-3 rounded-xl font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-opacity"
-            style={{ backgroundColor: "#6C63FF" }}
-          >
-            <Mail size={16} /> Send Message
-          </button>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={!subject.trim() || !message.trim()}
+              onClick={handleSend}
+              className="h-8 rounded-lg bg-amber-500 text-xs text-white shadow-none hover:bg-amber-600 disabled:opacity-50"
+            >
+              <Mail className="mr-1.5 h-3 w-3" />
+              Send message
+            </Button>
+          </div>
         </div>
       )}
-    </Modal>
+    </BaseModal>
   );
-};
+}
 
-const SubscriptionModal = ({
+function SubscriptionModal({
   open,
   onClose,
   user,
 }: {
   open: boolean;
   onClose: () => void;
-  user: UserData;
-}) => (
-  <Modal open={open} onClose={onClose} title="Subscription Details">
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="p-4 rounded-xl" style={{ background: "#ECFDF5" }}>
-          <p className="text-xs" style={{ color: "#10B981" }}>
-            Status
-          </p>
-          <p className="text-2xl font-bold mt-1" style={{ color: "#10B981" }}>
-            {user.isPaid ? "Paid" : "Free"}
-          </p>
+  user: Admin;
+}) {
+  return (
+    <BaseModal
+      open={open}
+      onClose={onClose}
+      title="Subscription Details"
+      subtitle="Billing and plan information"
+    >
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1 rounded-xl border border-teal-100 bg-teal-50 p-4">
+            <p className="text-[10px] font-medium uppercase tracking-widest text-teal-500">
+              Status
+            </p>
+            <p
+              className="text-2xl font-normal text-teal-700"
+              style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+            >
+              {user.isPaid ? "Paid" : "Free"}
+            </p>
+          </div>
+          <div className="flex flex-col gap-1 rounded-xl border border-amber-100 bg-amber-50 p-4">
+            <p className="text-[10px] font-medium uppercase tracking-widest text-amber-500">
+              Cycle
+            </p>
+            <p
+              className="text-2xl font-normal text-amber-700"
+              style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+            >
+              {cap(user.billingCycle)}
+            </p>
+          </div>
         </div>
-        <div className="p-4 rounded-xl" style={{ background: "#FFFBEB" }}>
-          <p className="text-xs" style={{ color: "#F59E0B" }}>
-            Cycle
-          </p>
-          <p className="text-2xl font-bold mt-1" style={{ color: "#F59E0B" }}>
-            {cap(user.billingCycle)}
-          </p>
+
+        <div className="rounded-xl border border-stone-100">
+          <InfoRow
+            label="Stripe Customer ID"
+            value={user.stripeCustomerId ?? "—"}
+            mono
+            icon={CreditCard}
+          />
+          <InfoRow
+            label="Subscription ID"
+            value={user.stripeSubscriptionId ?? "—"}
+            mono
+            icon={RefreshCw}
+          />
+          <InfoRow
+            label="Period End"
+            value={user.currentPeriodEnd ? formatDate(user.currentPeriodEnd) : "—"}
+            icon={Calendar}
+          />
         </div>
       </div>
+    </BaseModal>
+  );
+}
 
-      <div className="border p-3 border-gray-100 dark:border-gray-700 rounded-xl overflow-hidden">
-        <InfoRow
-          label="Stripe Customer ID"
-          value={user.stripeCustomerId}
-          mono
-          icon={CreditCard}
-        />
-        <InfoRow
-          label="Subscription ID"
-          value={user.stripeSubscriptionId}
-          mono
-          icon={RefreshCw}
-        />
-        <InfoRow
-          label="Period End"
-          value={
-            user.currentPeriodEnd ? formatDate(user.currentPeriodEnd) : "—"
-          }
-          icon={Calendar}
-        />
+function ActivityModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return (
+    <BaseModal
+      open={open}
+      onClose={onClose}
+      title="Activity Reports"
+      subtitle="Usage and event history"
+    >
+      <div className="flex flex-col items-center justify-center gap-2 py-12 text-stone-400">
+        <FileBarChart2 className="h-8 w-8 text-stone-200" />
+        <p className="text-sm">Activity reports coming soon</p>
       </div>
-    </div>
-  </Modal>
-);
-
-const ActivityModal = ({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) => (
-  <Modal open={open} onClose={onClose} title="Activity Reports">
-    <div className="text-center py-12 text-gray-400 text-sm">
-      Activity reports coming soon
-    </div>
-  </Modal>
-);
+    </BaseModal>
+  );
+}
 
 function DeleteModal({
   user,
+  open,
   onConfirm,
-  onCancel,
+  onClose,
   isLoading,
 }: {
   user: Admin;
+  open: boolean;
+  onClose: () => void;
   onConfirm: () => void;
-  onCancel: () => void;
   isLoading: boolean;
 }) {
+  if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-sm">
       <div className="relative w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-6 shadow-xl">
         <button
-          onClick={onCancel}
+          onClick={onClose}
           className="absolute right-4 top-4 text-stone-400 hover:text-stone-600"
         >
           <X className="h-4 w-4" />
@@ -505,7 +514,7 @@ function DeleteModal({
           <Button
             variant="outline"
             size="sm"
-            onClick={onCancel}
+            onClick={onClose}
             className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50"
           >
             Cancel
@@ -542,295 +551,274 @@ const Page = () => {
   const openModal = (name: string) => setModal(name);
   const closeModal = () => setModal(null);
 
+  const { mutateAsync: deleteUser, isPending } = useDeleteUser();
+  const router = useRouter();
+
+  async function handleDeleteConfirm() {
+    if (!user) return;
+    try {
+      await deleteUser(user.id);
+      closeModal();
+      router.replace("/dashboard/users");
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   if (isLoading) return <SkeletonLoader />;
 
   if (error || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <p className="text-red-500 text-xl font-semibold">
+          <p
+            className="text-xl font-normal text-rose-500"
+            style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+          >
             Failed to load user data
           </p>
-          <p className="text-gray-400 text-sm mt-2">Please try again later</p>
+          <p className="mt-1 text-sm text-stone-400">Please try again later</p>
         </div>
       </div>
     );
   }
 
-  const topStats = [
+  const pal = avatarPalette(user.name ?? "");
+  const initials = getInitials(user.name ?? "??");
+
+  const statCards = [
     {
+      icon: CheckCircle2,
       label: "Account status",
       value: cap(user.status),
-      accent: "#10B981",
-      lightBg: "#ECFDF5",
-      icon: CheckCircle2,
+      accent: "bg-teal-50 text-teal-600",
     },
     {
+      icon: RefreshCw,
       label: "Billing cycle",
       value: cap(user.billingCycle),
-      accent: "#F59E0B",
-      lightBg: "#FFFBEB",
-      icon: RefreshCw,
+      accent: "bg-amber-50 text-amber-600",
     },
     {
+      icon: BadgeCheck,
       label: "Subscription",
       value: user.isPaid ? "Paid" : "Free",
-      accent: "#6C63FF",
-      lightBg: "#F0EFFE",
-      icon: BadgeCheck,
+      sub: user.isPaid ? "active" : undefined,
+      accent: "bg-violet-50 text-violet-600",
     },
     {
+      icon: ShieldCheck,
       label: "Role",
       value: cap(user.role),
-      accent: "#3B82F6",
-      lightBg: "#EFF6FF",
-      icon: ShieldCheck,
+      accent: "bg-sky-50 text-sky-600",
     },
   ];
 
   return (
-    <section className="w-full flex flex-col gap-6 min-h-screen pb-10">
-      {/* ── heading ── */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          User Details
-        </h1>
-        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-          Profile and account information
-        </p>
+    <div
+      className="flex flex-col gap-5 pb-10 pt-6"
+      style={{ fontFamily: "'DM Sans', sans-serif" }}
+    >
+      {/* ── Heading ── */}
+      <div className="flex items-end justify-between">
+        <div>
+          <p className="mb-1.5 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.18em] text-amber-600">
+            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
+            Platform Console
+          </p>
+          <h1
+            className="text-3xl font-normal leading-tight text-stone-800 md:text-4xl"
+            style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+          >
+            User <em className="italic text-amber-600">Details</em>
+          </h1>
+        </div>
+        <button
+          onClick={() => router.back()}
+          className="flex h-8 items-center gap-1.5 rounded-lg border border-stone-200 px-3 text-xs text-stone-500 transition-colors hover:bg-stone-50 hover:text-stone-700"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+          Back
+        </button>
       </div>
 
-      {/* ── profile card ── */}
+      {/* ── Profile card ── */}
       <Card>
-        <div className="flex items-center gap-4">
-          <div
-            className="w-20 h-20 rounded-2xl flex items-center justify-center text-2xl font-bold shrink-0 overflow-hidden"
-            style={{ background: "#F0EFFE", color: "#6C63FF" }}
+        <div className="flex items-center gap-4 p-5">
+          <span
+            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-sm font-medium ring-1 overflow-hidden ${pal.bg} ${pal.text} ${pal.ring}`}
           >
             {user.profilePictureURL ? (
               <img
                 src={user.profilePictureURL}
                 alt={user.name}
-                className="w-full h-full object-cover"
+                className="h-full w-full object-cover"
               />
             ) : (
-              getInitials(user.name)
+              initials
             )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          </span>
+
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2
+                className="text-xl font-normal text-stone-800"
+                style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+              >
                 {user.name}
               </h2>
-              {user.isOtpVerified && (
-                <Badge
-                  label="OTP Verified"
-                  accent="#10B981"
-                  lightBg="#ECFDF5"
-                />
-              )}
-              {user.isResetRequest && (
-                <Badge
-                  label="Reset Pending"
-                  accent="#F59E0B"
-                  lightBg="#FFFBEB"
-                />
-              )}
+              <RoleBadge role={user.role} />
+              {user.isOtpVerified && <StatusPill label="OTP Verified" positive />}
+              {user.isResetRequest && <StatusPill label="Reset Pending" positive={false} />}
             </div>
-            <p className="text-gray-500 mt-1 text-sm">{user.email}</p>
-            <p className="text-xs font-mono text-gray-400 mt-1">{user.id}</p>
+            <p className="flex items-center gap-1.5 text-xs text-stone-400">
+              <Mail className="h-3 w-3 text-stone-300" />
+              {user.email}
+            </p>
+            <p className="font-mono text-[10px] text-stone-300">{user.id}</p>
           </div>
         </div>
       </Card>
 
-      {/* ── top stat cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {topStats.map((stat, idx) => (
-          <div
-            key={idx}
-            className="rounded-2xl shadow-md p-5 flex flex-col gap-2"
-            style={{ background: stat.lightBg }}
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-gray-500">{stat.label}</p>
-              <stat.icon size={18} style={{ color: stat.accent }} />
-            </div>
-            <p className="text-3xl font-bold" style={{ color: stat.accent }}>
-              {stat.value}
-            </p>
-          </div>
+      {/* ── Stat cards ── */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {statCards.map((s, i) => (
+          <StatCard key={i} {...s} />
         ))}
       </div>
 
-      {/* ── info 2×2 grid ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* ── Info 2×2 grid ── */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader title="Account Info" subtitle="Core identity fields" />
+          <SectionHeader title="Account Info" subtitle="Core identity fields" />
           <InfoRow label="Name" value={user.name} icon={User} />
           <InfoRow label="Email" value={user.email} icon={Mail} />
-          <InfoRow
-            label="Auth Provider"
-            value={cap(user.authProvider)}
-            icon={Cpu}
-          />
+          <InfoRow label="Auth Provider" value={cap(user.authProvider)} icon={Cpu} />
           <InfoRow
             label="OTP Verified"
             value={user.isOtpVerified ? "Yes" : "No"}
-            valueColor={user.isOtpVerified ? "#10B981" : "#EF4444"}
+            valueColor={user.isOtpVerified ? "#0d9488" : "#ef4444"}
             icon={ShieldCheck}
           />
           <InfoRow
             label="Terms Accepted"
             value={user.termsAndConditions ? "Yes" : "No"}
-            valueColor={user.termsAndConditions ? "#10B981" : "#EF4444"}
+            valueColor={user.termsAndConditions ? "#0d9488" : "#ef4444"}
             icon={BadgeCheck}
           />
         </Card>
 
         <Card>
-          <CardHeader title="Subscription" subtitle="Billing & Plan" />
+          <SectionHeader title="Subscription" subtitle="Billing & plan" />
           <InfoRow
             label="Is Paid"
             value={user.isPaid ? "Yes" : "No"}
-            valueColor={user.isPaid ? "#10B981" : "#6B7280"}
+            valueColor={user.isPaid ? "#0d9488" : "#78716c"}
             icon={CreditCard}
           />
-          <InfoRow
-            label="Billing Cycle"
-            value={cap(user.billingCycle)}
-            icon={RefreshCw}
-          />
+          <InfoRow label="Billing Cycle" value={cap(user.billingCycle)} icon={RefreshCw} />
           <InfoRow
             label="Period End"
-            value={
-              user.currentPeriodEnd ? formatDate(user.currentPeriodEnd) : "—"
-            }
+            value={user.currentPeriodEnd ? formatDate(user.currentPeriodEnd) : "—"}
             icon={Calendar}
           />
           <InfoRow
             label="Stripe Customer ID"
-            value={user.stripeCustomerId}
+            value={user.stripeCustomerId ?? "—"}
             mono
             icon={CreditCard}
           />
           <InfoRow
             label="Subscription ID"
-            value={user.stripeSubscriptionId}
+            value={user.stripeSubscriptionId ?? "—"}
             mono
             icon={RefreshCw}
           />
         </Card>
 
         <Card>
-          <CardHeader title="Guest Info" subtitle="Temporary session data" />
-          <InfoRow
-            label="Is Guest"
-            value={user.isGuest === null ? "No" : user.isGuest ? "Yes" : "No"}
-            icon={User}
-          />
+          <SectionHeader title="Guest Info" subtitle="Temporary session data" />
+          <InfoRow label="Is Guest" value={user.isGuest ? "Yes" : "No"} icon={User} />
           <InfoRow
             label="Guest Expires"
             value={user.guestExpiresAt ? formatDate(user.guestExpiresAt) : "—"}
             icon={Clock}
           />
-          <InfoRow
-            label="Guest IP"
-            value={user.guestIp ?? "—"}
-            mono
-            icon={Globe}
-          />
-          <InfoRow
-            label="Device ID"
-            value={user.guestDeviceId ?? "—"}
-            mono
-            icon={Cpu}
-          />
+          <InfoRow label="Guest IP" value={user.guestIp ?? "—"} mono icon={Globe} />
+          <InfoRow label="Device ID" value={user.guestDeviceId ?? "—"} mono icon={Cpu} />
         </Card>
 
         <Card>
-          <CardHeader title="Timestamps" subtitle="Activity timeline" />
-          <InfoRow
-            label="Created At"
-            value={formatDate(user.createdAt)}
-            icon={Calendar}
-          />
-          <InfoRow
-            label="Updated At"
-            value={formatDate(user.updatedAt)}
-            icon={Clock}
-          />
+          <SectionHeader title="Timestamps" subtitle="Activity timeline" />
+          <InfoRow label="Created At" value={formatDate(user.createdAt)} icon={Calendar} />
+          <InfoRow label="Updated At" value={formatDate(user.updatedAt)} icon={Clock} />
           <InfoRow
             label="Blocked Until"
-            value={
-              user.blockedUntil ? formatDate(user.blockedUntil) : "Not blocked"
-            }
-            valueColor={user.blockedUntil ? "#EF4444" : "#10B981"}
+            value={user.blockedUntil ? formatDate(user.blockedUntil) : "Not blocked"}
+            valueColor={user.blockedUntil ? "#ef4444" : "#0d9488"}
             icon={ShieldCheck}
           />
         </Card>
       </div>
 
-      {/* ── actions ── */}
+      {/* ── Actions ── */}
       <Card>
-        <CardHeader title="Actions" subtitle="Manage this account" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <SectionHeader title="Actions" subtitle="Manage this account" />
+        <div className="grid grid-cols-1 gap-3 px-5 pb-5 md:grid-cols-2">
           <button
             onClick={() => openModal("message")}
-            className="flex items-center gap-3 p-4 rounded-2xl transition-all text-left text-sm font-medium"
-            style={{ background: "#F0EFFE", color: "#6C63FF" }}
-            onMouseEnter={e => (e.currentTarget.style.background = "#e5e0fd")}
-            onMouseLeave={e => (e.currentTarget.style.background = "#F0EFFE")}
+            className="flex items-center gap-3 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3.5 text-left text-sm font-medium text-amber-700 transition-colors hover:bg-amber-100"
           >
-            <Mail size={18} /> Message User
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+              <Mail className="h-4 w-4" />
+            </span>
+            Message User
           </button>
+
           <button
             onClick={() => openModal("subscription")}
-            className="flex items-center gap-3 p-4 rounded-2xl transition-all text-left text-sm font-medium"
-            style={{ background: "#ECFDF5", color: "#10B981" }}
-            onMouseEnter={e => (e.currentTarget.style.background = "#d1fae5")}
-            onMouseLeave={e => (e.currentTarget.style.background = "#ECFDF5")}
+            className="flex items-center gap-3 rounded-xl border border-teal-100 bg-teal-50 px-4 py-3.5 text-left text-sm font-medium text-teal-700 transition-colors hover:bg-teal-100"
           >
-            <CreditCard size={18} /> View Subscription
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-100 text-teal-600">
+              <CreditCard className="h-4 w-4" />
+            </span>
+            View Subscription
           </button>
+
           <button
             onClick={() => openModal("activity")}
-            className="flex items-center gap-3 p-4 rounded-2xl transition-all text-left text-sm font-medium"
-            style={{ background: "#FFFBEB", color: "#F59E0B" }}
-            onMouseEnter={e => (e.currentTarget.style.background = "#fef3c7")}
-            onMouseLeave={e => (e.currentTarget.style.background = "#FFFBEB")}
+            className="flex items-center gap-3 rounded-xl border border-sky-100 bg-sky-50 px-4 py-3.5 text-left text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100"
           >
-            <FileBarChart2 size={18} /> Activity Reports
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-sky-600">
+              <FileBarChart2 className="h-4 w-4" />
+            </span>
+            Activity Reports
           </button>
+
           <button
             onClick={() => openModal("delete")}
-            className="flex items-center gap-3 p-4 rounded-2xl transition-all text-left text-sm font-medium"
-            style={{ background: "#FEF2F2", color: "#EF4444" }}
-            onMouseEnter={e => (e.currentTarget.style.background = "#fee2e2")}
-            onMouseLeave={e => (e.currentTarget.style.background = "#FEF2F2")}
+            className="flex items-center gap-3 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3.5 text-left text-sm font-medium text-rose-600 transition-colors hover:bg-rose-100"
           >
-            <Trash2 size={18} /> Delete User
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-100 text-rose-500">
+              <Trash2 className="h-4 w-4" />
+            </span>
+            Delete User
           </button>
         </div>
       </Card>
 
-      {/* ── modals ── */}
-      <MessageModal
-        open={modal === "message"}
-        onClose={closeModal}
-        user={user}
-      />
-      <SubscriptionModal
-        open={modal === "subscription"}
-        onClose={closeModal}
-        user={user}
-      />
+      {/* ── Modals ── */}
+      <MessageModal open={modal === "message"} onClose={closeModal} user={user} />
+      <SubscriptionModal open={modal === "subscription"} onClose={closeModal} user={user} />
       <ActivityModal open={modal === "activity"} onClose={closeModal} />
       <DeleteModal
-        open={modal === "subscription"}
-        onClose={closeModal}
         user={user}
+        open={modal === "delete"}
+        onConfirm={handleDeleteConfirm}
+        onClose={closeModal}
+        isLoading={isPending}
       />
-    </section>
+    </div>
   );
 };
 
