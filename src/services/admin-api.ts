@@ -40,4 +40,10 @@ export const adminApi = {
     const res = await api.get(`/admin/user/${id}`);
     return res.data;
   },
+
+  sendAdminMail: async (payload: unknown) => {
+    const res = await api.post(`/admin/admin-mail`, payload);
+
+    return res.data;
+  },
 };
