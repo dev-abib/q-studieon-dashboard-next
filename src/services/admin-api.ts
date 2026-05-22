@@ -35,4 +35,9 @@ export const adminApi = {
     const res = await api.get("/admin/dashboard-analytics");
     return res.data;
   },
+
+  getUserDetails: async (id: string) => {
+    const res = await api.get(`/admin/user/${id}`);
+    return res.data;
+  },
 };

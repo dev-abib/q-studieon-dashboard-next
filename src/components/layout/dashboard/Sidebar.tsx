@@ -26,7 +26,6 @@ export function Sidebar({ role }: SidebarProps) {
       icon: ShieldCheck,
       requiredRole: "super_admin" as Role,
     },
-    { label: "Analytics", href: "/dashboard/analytics", icon: BarChart },
     { label: "Settings", href: "/dashboard/settings", icon: Settings },
     {
       label: "Dynamic page",

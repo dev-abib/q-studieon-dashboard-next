@@ -21,6 +21,206 @@ import {
 } from "@/components/ui/chart";
 import { useDashboardAnalytics } from "@/features/admin/hooks/user-dashboard-analytics";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Skeleton helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ShimmerStyle = () => (
+  <style>{`
+    @keyframes shimmer {
+      0%   { background-position: -600px 0; }
+      100% { background-position:  600px 0; }
+    }
+    .sk {
+      border-radius: 8px;
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.4s infinite linear;
+    }
+    .dark .sk {
+      background: linear-gradient(90deg, #1e293b 25%, #273348 50%, #1e293b 75%);
+      background-size: 600px 100%;
+    }
+  `}</style>
+);
+
+const Sk = ({
+  className = "",
+  style = {},
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) => <div className={`sk ${className}`} style={style} />;
+
+const SkCard = ({ children }: { children: React.ReactNode }) => (
+  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
+    {children}
+  </div>
+);
+
+const StatCardSkeleton = ({ lightBg }: { lightBg: string }) => (
+  <div
+    className="rounded-2xl shadow-md p-5 flex flex-col gap-3"
+    style={{ background: lightBg }}
+  >
+    <div className="flex items-center justify-between">
+      <Sk className="h-3 w-24 rounded-full" />
+      <Sk className="h-6 w-6 rounded-full" />
+    </div>
+    <Sk className="h-9 w-20 rounded-lg" />
+    <Sk className="h-3 w-28 rounded-full" />
+  </div>
+);
+
+const ChartCardSkeleton = ({
+  chartHeight = 200,
+  children,
+}: {
+  chartHeight?: number;
+  children?: React.ReactNode;
+}) => (
+  <SkCard>
+    <div className="mb-4 flex flex-col gap-1.5">
+      <Sk className="h-3.5 w-36 rounded-full" />
+      <Sk className="h-3 w-48 rounded-full" />
+    </div>
+    {children ?? (
+      <div
+        className="w-full flex items-end gap-2 px-1"
+        style={{ height: chartHeight }}
+      >
+        {[65, 80, 55, 90, 70, 85, 60, 95, 75, 88, 50, 78].map((h, i) => (
+          <Sk
+            key={i}
+            className="flex-1 rounded-md"
+            style={{ height: `${h}%` }}
+          />
+        ))}
+      </div>
+    )}
+  </SkCard>
+);
+
+const PieChartSkeleton = () => (
+  <SkCard>
+    <div className="mb-4 flex flex-col gap-1.5">
+      <Sk className="h-3.5 w-40 rounded-full" />
+      <Sk className="h-3 w-52 rounded-full" />
+    </div>
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-center items-center" style={{ height: 160 }}>
+        <div className="relative w-[160px] h-[160px]">
+          <Sk className="w-full h-full rounded-full" />
+          <div
+            className="absolute rounded-full bg-white dark:bg-gray-900"
+            style={{
+              width: 90,
+              height: 90,
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%,-50%)",
+            }}
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-3">
+        {[0, 1].map(i => (
+          <div key={i} className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sk className="w-3 h-3 rounded-full" />
+              <Sk className="h-3 w-16 rounded-full" />
+            </div>
+            <div className="flex items-center gap-3">
+              <Sk className="h-3 w-10 rounded-full" />
+              <Sk className="h-5 w-12 rounded-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </SkCard>
+);
+
+const RevenueBreakdownSkeleton = () => (
+  <SkCard>
+    <div className="flex flex-col gap-1 mb-5">
+      <Sk className="h-3.5 w-40 rounded-full" />
+      <Sk className="h-3 w-60 rounded-full" />
+    </div>
+    <div className="grid grid-cols-3 gap-4 mb-6">
+      {[0, 1, 2].map(i => (
+        <div
+          key={i}
+          className="rounded-xl p-4 shadow-sm bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-col gap-2"
+        >
+          <Sk className="h-3 w-24 rounded-full" />
+          <Sk className="h-8 w-32 rounded-lg" />
+          <Sk className="h-3 w-20 rounded-full" />
+        </div>
+      ))}
+    </div>
+    <div className="w-full flex items-end gap-3 px-1" style={{ height: 260 }}>
+      {[70, 55, 85, 60, 90, 75, 80, 65, 95, 50, 88, 72].map((h, i) => (
+        <Sk key={i} className="flex-1 rounded-md" style={{ height: `${h}%` }} />
+      ))}
+    </div>
+  </SkCard>
+);
+
+const DashboardSkeleton = () => {
+  const statBgs = ["#F0EFFE", "#ECFDF5", "#FFFBEB", "#EFF6FF"];
+  return (
+    <section className="w-full flex flex-col gap-6 min-h-screen">
+      <ShimmerStyle />
+
+      {/* heading */}
+      <div className="flex flex-col gap-2">
+        <Sk className="h-7 w-36 rounded-lg" />
+        <Sk className="h-4 w-48 rounded-full" />
+      </div>
+
+      {/* stat cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {statBgs.map((bg, i) => (
+          <StatCardSkeleton key={i} lightBg={bg} />
+        ))}
+      </div>
+
+      {/* 2×2 chart grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ChartCardSkeleton chartHeight={200} />
+
+        <ChartCardSkeleton chartHeight={200}>
+          <div
+            className="w-full flex items-end gap-0 px-1"
+            style={{ height: 200 }}
+          >
+            {[55, 65, 60, 75, 85, 60, 55, 90, 95, 80, 100, 105, 110, 115].map(
+              (h, i) => (
+                <Sk
+                  key={i}
+                  className="flex-1"
+                  style={{ height: `${h * 0.8}%`, borderRadius: "4px 4px 0 0" }}
+                />
+              ),
+            )}
+          </div>
+        </ChartCardSkeleton>
+
+        <ChartCardSkeleton chartHeight={200} />
+        <PieChartSkeleton />
+      </div>
+
+      {/* revenue breakdown */}
+      <RevenueBreakdownSkeleton />
+    </section>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Chart configs
+// ─────────────────────────────────────────────────────────────────────────────
+
 const revenueConfig = {
   monthly: { label: "Monthly", color: "#6C63FF" },
   yearly: { label: "Yearly", color: "#10B981" },
@@ -31,39 +231,17 @@ const userConfig = {
   guests: { label: "Guests", color: "#10B981" },
 };
 
-const reportsData = [
-  { day: "Apr 28", reports: 180 },
-  { day: "Apr 29", reports: 210 },
-  { day: "Apr 30", reports: 195 },
-  { day: "May 1", reports: 240 },
-  { day: "May 2", reports: 280 },
-  { day: "May 3", reports: 190 },
-  { day: "May 4", reports: 170 },
-  { day: "May 5", reports: 310 },
-  { day: "May 6", reports: 340 },
-  { day: "May 7", reports: 290 },
-  { day: "May 8", reports: 360 },
-  { day: "May 9", reports: 380 },
-  { day: "May 10", reports: 400 },
-  { day: "May 11", reports: 420 },
-];
-
 const reportsConfig = {
   reports: { label: "Reports", color: "#10B981" },
 };
 
-const monthlyRevenueData = [
-  { month: "Nov", revenue: 4200 },
-  { month: "Dec", revenue: 5100 },
-  { month: "Jan", revenue: 6300 },
-  { month: "Feb", revenue: 7800 },
-  { month: "Mar", revenue: 9100 },
-  { month: "Apr", revenue: 11400 },
-];
-
 const monthlyRevenueConfig = {
   revenue: { label: "Revenue", color: "#6C63FF" },
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared UI components
+// ─────────────────────────────────────────────────────────────────────────────
 
 const Card = ({
   children,
@@ -96,14 +274,19 @@ const CardHeader = ({
   </div>
 );
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Page
+// ─────────────────────────────────────────────────────────────────────────────
+
 const Page = () => {
-  const { data } = useDashboardAnalytics();
+  const { data, isLoading } = useDashboardAnalytics();
+
+  if (isLoading) return <DashboardSkeleton />;
 
   const getGrowthData = (growth: number = 0, suffix: string) => ({
     change: `${
       growth > 0 ? "↑" : growth < 0 ? "↓" : "→"
     } ${Math.abs(growth)}% ${suffix}`,
-
     positive: growth > 0 ? true : growth < 0 ? false : null,
   });
 
@@ -112,44 +295,32 @@ const Page = () => {
     {
       label: "Total users",
       value: stats_data?.totalUsers?.count,
-
       ...getGrowthData(stats_data?.totalUsers?.growth, "this month"),
-
       accent: "#6C63FF",
       lightBg: "#F0EFFE",
       icon: "👥",
     },
-
     {
       label: "Active subscriptions",
       value: stats_data?.activeSubscriptions?.count,
-
       ...getGrowthData(stats_data?.activeSubscriptions?.growth, "this month"),
-
       accent: "#10B981",
       lightBg: "#ECFDF5",
       icon: "⭐",
     },
-
     {
       label: "Guest users",
       value: stats_data?.guestUsers?.count,
-
       change: `${stats_data?.guestUsers?.percentOfTotal}% of total`,
-
       positive: null,
-
       accent: "#F59E0B",
       lightBg: "#FFFBEB",
       icon: "👤",
     },
-
     {
       label: "Reports today",
       value: stats_data?.reportsToday?.count,
-
       ...getGrowthData(stats_data?.reportsToday?.growth, "vs yesterday"),
-
       accent: "#3B82F6",
       lightBg: "#EFF6FF",
       icon: "📄",
@@ -174,26 +345,26 @@ const Page = () => {
   const demoStats = [
     {
       label: "Total revenue",
-      value: data?.data?.revenueBreakdown?.totalRevenue,
+      value: `${data?.data?.revenueBreakdown?.totalRevenue} usd`,
       sub: null,
       accent: "#6C63FF",
     },
     {
       label: "Monthly billing",
-      value: data?.data?.revenueBreakdown?.monthlyBilling,
+      value: `${data?.data?.revenueBreakdown?.monthlyBilling} usd`,
       sub: `${data?.data?.revenueBreakdown?.monthlyPercent} % of total`,
       accent: "#6C63FF",
     },
     {
       label: "Yearly billing",
-      value: data?.data?.revenueBreakdown?.yearlyBilling,
+      value: `${data?.data?.revenueBreakdown?.yearlyBilling} usd`,
       sub: `${data?.data?.revenueBreakdown?.yearlyPercent} % of total`,
       accent: "#10B981",
     },
   ];
 
-  https: return (
-    <section className="w-full flex flex-col gap-6 min-h-screen ">
+  return (
+    <section className="w-full flex flex-col gap-6 min-h-screen">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           Dashboard
@@ -203,6 +374,7 @@ const Page = () => {
         </p>
       </div>
 
+      {/* ── top stat cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {topStats.map((stat, idx) => (
           <div
@@ -228,6 +400,7 @@ const Page = () => {
         ))}
       </div>
 
+      {/* ── 2×2 chart grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader title="Monthly revenue" subtitle="Last 6 months · USD" />
@@ -401,6 +574,7 @@ const Page = () => {
         </Card>
       </div>
 
+      {/* ── revenue breakdown ── */}
       <Card>
         <div className="flex flex-col gap-1 mb-5">
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">

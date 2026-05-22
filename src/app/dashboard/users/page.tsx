@@ -18,6 +18,7 @@ import {
   Trash2,
   Loader2,
   X,
+  Eye,
 } from "lucide-react";
 
 import { useGetAllUsers } from "@/features/users/hooks/use.users";
@@ -26,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useDeleteUser } from "@/features/auth/hooks/user-delete-user";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 const AVATAR_PALETTES = [
   { bg: "bg-amber-50", text: "text-amber-700", ring: "ring-amber-200" },
@@ -243,6 +245,7 @@ export default function Page() {
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
+  const router = useRouter();
 
   const [deleteTarget, setDeleteTarget] = useState<Admin | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -290,7 +293,7 @@ export default function Page() {
         className="flex h-auto flex-col "
         style={{ fontFamily: "'DM Sans', sans-serif" }}
       >
-        <div className="flex-none space-y-5 px-6 pb-4 pt-6">
+        <div className="flex-none space-y-5  pb-4 pt-6">
           <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="mb-1.5 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.18em] text-amber-600">
@@ -354,7 +357,7 @@ export default function Page() {
         </div>
 
         {/* ── Scrollable table area ── */}
-        <div className="mx-6 flex pb-5 max-h-112.5 flex-1 flex-col overflow-hidden rounded-2xl border border-stone-200  shadow-sm">
+        <div className=" flex pb-5 max-h-112.5 flex-1 flex-col overflow-hidden rounded-2xl border border-stone-200  shadow-sm">
           {/* Table toolbar (fixed within card) */}
           <div className="flex flex-none items-center justify-between border-b border-stone-100 px-6 py-3">
             <h2
@@ -400,6 +403,11 @@ export default function Page() {
                   <th className="px-6 py-3 text-left">
                     <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-stone-400">
                       Actions
+                    </span>
+                  </th>
+                  <th className="px-6 py-3 text-left">
+                    <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-stone-400">
+                      view user
                     </span>
                   </th>
                 </tr>
@@ -483,6 +491,17 @@ export default function Page() {
                             className="flex cursor-pointer h-7 w-7 items-center justify-center rounded-lg border border-stone-200 text-stone-400 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500 disabled:cursor-not-allowed disabled:opacity-30"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                        <td className="px-6 py-3.5">
+                          <button
+                            onClick={() => {
+                              router.push(`/dashboard/users/${user?.id}`);
+                            }}
+                            title={"See user details"}
+                            className="flex cursor-pointer h-7 w-7 items-center justify-center rounded-lg border border-stone-200 text-stone-400 transition-colors hover:border-[#e576008f] hover:bg-[#f3953863] hover:text-[#e57800] disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
                           </button>
                         </td>
                       </tr>
