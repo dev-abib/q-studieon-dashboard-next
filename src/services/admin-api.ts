@@ -1,5 +1,5 @@
+import { AdminMailSchema } from "@/features/auth/schema/send-mail.schema";
 import { api } from "./api-client";
-import { PasswordUpdatePayload } from "@/features/admin/types/admin.types";
 
 type GetAllAdminParams = {
   page?: number;
@@ -42,7 +42,8 @@ export const adminApi = {
   },
 
   sendAdminMail: async (payload: unknown) => {
-    const res = await api.post(`/admin/admin-mail`, payload);
+    const data = AdminMailSchema.parse(payload);
+    const res = await api.post(`/admin/admin-mail`, data);
 
     return res.data;
   },

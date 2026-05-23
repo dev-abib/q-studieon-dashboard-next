@@ -24,6 +24,9 @@ import { Button } from "@/components/ui/button";
 import { Admin } from "@/features/admin/types/admin.types";
 import { useDeleteUser } from "@/features/auth/hooks/user-delete-user";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { useSendAdminMail } from "@/features/admin/hooks/use-send-admin-mail";
+import { toast } from "sonner";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -53,11 +56,11 @@ const cap = (s: string): string =>
 
 const AVATAR_PALETTES = [
   { bg: "bg-amber-50", text: "text-amber-700", ring: "ring-amber-200" },
-  { bg: "bg-sky-50",   text: "text-sky-700",   ring: "ring-sky-200"   },
-  { bg: "bg-rose-50",  text: "text-rose-700",  ring: "ring-rose-200"  },
-  { bg: "bg-teal-50",  text: "text-teal-700",  ring: "ring-teal-200"  },
-  { bg: "bg-violet-50",text: "text-violet-700",ring: "ring-violet-200"},
-  { bg: "bg-orange-50",text: "text-orange-700",ring: "ring-orange-200"},
+  { bg: "bg-sky-50", text: "text-sky-700", ring: "ring-sky-200" },
+  { bg: "bg-rose-50", text: "text-rose-700", ring: "ring-rose-200" },
+  { bg: "bg-teal-50", text: "text-teal-700", ring: "ring-teal-200" },
+  { bg: "bg-violet-50", text: "text-violet-700", ring: "ring-violet-200" },
+  { bg: "bg-orange-50", text: "text-orange-700", ring: "ring-orange-200" },
 ];
 
 function avatarPalette(name: string) {
@@ -90,7 +93,10 @@ const SkeletonLoader = () => (
     </div>
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
       {[0, 1, 2, 3].map(i => (
-        <div key={i} className="flex flex-col gap-3 rounded-xl border border-stone-100 bg-white px-5 py-4 shadow-sm">
+        <div
+          key={i}
+          className="flex flex-col gap-3 rounded-xl border border-stone-100 bg-white px-5 py-4 shadow-sm"
+        >
           <div className="h-8 w-8 animate-pulse rounded-lg bg-stone-100" />
           <div className="h-3 w-20 animate-pulse rounded-full bg-stone-100" />
           <div className="h-6 w-16 animate-pulse rounded-lg bg-stone-100" />
@@ -99,13 +105,19 @@ const SkeletonLoader = () => (
     </div>
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {[0, 1, 2, 3].map(i => (
-        <div key={i} className="rounded-xl border border-stone-100 bg-white p-5 shadow-sm">
+        <div
+          key={i}
+          className="rounded-xl border border-stone-100 bg-white p-5 shadow-sm"
+        >
           <div className="mb-4 flex flex-col gap-1.5">
             <div className="h-3 w-28 animate-pulse rounded-full bg-stone-100" />
             <div className="h-2.5 w-40 animate-pulse rounded-full bg-stone-100" />
           </div>
           {[0, 1, 2, 3, 4].map(j => (
-            <div key={j} className="flex justify-between border-b border-stone-100 py-2.5 last:border-0">
+            <div
+              key={j}
+              className="flex justify-between border-b border-stone-100 py-2.5 last:border-0"
+            >
               <div className="h-2.5 w-24 animate-pulse rounded-full bg-stone-100" />
               <div className="h-2.5 w-32 animate-pulse rounded-full bg-stone-100" />
             </div>
@@ -127,12 +139,20 @@ const Card = ({
   children: React.ReactNode;
   className?: string;
 }) => (
-  <div className={`rounded-xl border border-stone-100 bg-white shadow-sm ${className}`}>
+  <div
+    className={`rounded-xl border border-stone-100 bg-white shadow-sm ${className}`}
+  >
     {children}
   </div>
 );
 
-const SectionHeader = ({ title, subtitle }: { title: string; subtitle: string }) => (
+const SectionHeader = ({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle: string;
+}) => (
   <div className="mb-4 border-b border-stone-100 px-5 py-4">
     <p
       className="text-base font-normal text-stone-700"
@@ -175,8 +195,8 @@ const InfoRow = ({
 
 const ROLE_STYLES: Record<string, string> = {
   admin: "bg-amber-50 text-amber-800 border border-amber-200",
-  mod:   "bg-rose-50 text-rose-800 border border-rose-200",
-  user:  "bg-slate-50 text-slate-600 border border-slate-200",
+  mod: "bg-rose-50 text-rose-800 border border-rose-200",
+  user: "bg-slate-50 text-slate-600 border border-slate-200",
 };
 
 function RoleBadge({ role }: { role: string }) {
@@ -220,7 +240,9 @@ function StatCard({
 }) {
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-stone-100 bg-white px-5 py-4 shadow-sm">
-      <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${accent}`}>
+      <div
+        className={`flex h-8 w-8 items-center justify-center rounded-lg ${accent}`}
+      >
         <Icon className="h-4 w-4" />
       </div>
       <div>
@@ -309,16 +331,31 @@ function MessageModal({
   const [sent, setSent] = useState(false);
   const pal = avatarPalette(user.name ?? "");
   const initials = getInitials(user.name ?? "??");
+  const { mutateAsync: sendMail, isPending } = useSendAdminMail();
 
-  const handleSend = () => {
-    if (!subject.trim() || !message.trim()) return;
-    setSent(true);
-    setTimeout(() => {
-      setSent(false);
-      setSubject("");
-      setMessage("");
+  const handleSend = async () => {
+    if (user.isGuest) {
+      return toast.error("You can't send message to a guest");
       onClose();
-    }, 1400);
+    }
+    if (!subject.trim() || !message.trim() || !user.email) return;
+
+    try {
+      await sendMail({
+        email: user.email,
+        subject: subject.trim(),
+        message: message.trim(),
+      });
+      setSent(true);
+      setTimeout(() => {
+        setSent(false);
+        setSubject("");
+        setMessage("");
+        onClose();
+      }, 1400);
+    } catch (error: unknown) {
+      toast.error("Failed to send mail");
+    }
   };
 
   return (
@@ -340,8 +377,12 @@ function MessageModal({
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <div className={`flex items-center gap-3 rounded-xl p-3 ring-1 ${pal.bg} ${pal.ring}`}>
-            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ring-1 ${pal.bg} ${pal.text} ${pal.ring}`}>
+          <div
+            className={`flex items-center gap-3 rounded-xl p-3 ring-1 ${pal.bg} ${pal.ring}`}
+          >
+            <span
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ring-1 ${pal.bg} ${pal.text} ${pal.ring}`}
+            >
               {initials}
             </span>
             <div>
@@ -376,10 +417,8 @@ function MessageModal({
               Cancel
             </Button>
             <Button
-              size="sm"
-              disabled={!subject.trim() || !message.trim()}
+              disabled={!subject.trim() || !message.trim() || !!user.isGuest}
               onClick={handleSend}
-              className="h-8 rounded-lg bg-amber-500 text-xs text-white shadow-none hover:bg-amber-600 disabled:opacity-50"
             >
               <Mail className="mr-1.5 h-3 w-3" />
               Send message
@@ -448,7 +487,9 @@ function SubscriptionModal({
           />
           <InfoRow
             label="Period End"
-            value={user.currentPeriodEnd ? formatDate(user.currentPeriodEnd) : "—"}
+            value={
+              user.currentPeriodEnd ? formatDate(user.currentPeriodEnd) : "—"
+            }
             icon={Calendar}
           />
         </div>
@@ -457,7 +498,13 @@ function SubscriptionModal({
   );
 }
 
-function ActivityModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function ActivityModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   return (
     <BaseModal
       open={open}
@@ -649,7 +696,7 @@ const Page = () => {
             className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-sm font-medium ring-1 overflow-hidden ${pal.bg} ${pal.text} ${pal.ring}`}
           >
             {user.profilePictureURL ? (
-              <img
+              <Image
                 src={user.profilePictureURL}
                 alt={user.name}
                 className="h-full w-full object-cover"
@@ -668,8 +715,12 @@ const Page = () => {
                 {user.name}
               </h2>
               <RoleBadge role={user.role} />
-              {user.isOtpVerified && <StatusPill label="OTP Verified" positive />}
-              {user.isResetRequest && <StatusPill label="Reset Pending" positive={false} />}
+              {user.isOtpVerified && (
+                <StatusPill label="OTP Verified" positive />
+              )}
+              {user.isResetRequest && (
+                <StatusPill label="Reset Pending" positive={false} />
+              )}
             </div>
             <p className="flex items-center gap-1.5 text-xs text-stone-400">
               <Mail className="h-3 w-3 text-stone-300" />
@@ -693,7 +744,11 @@ const Page = () => {
           <SectionHeader title="Account Info" subtitle="Core identity fields" />
           <InfoRow label="Name" value={user.name} icon={User} />
           <InfoRow label="Email" value={user.email} icon={Mail} />
-          <InfoRow label="Auth Provider" value={cap(user.authProvider)} icon={Cpu} />
+          <InfoRow
+            label="Auth Provider"
+            value={cap(user.authProvider)}
+            icon={Cpu}
+          />
           <InfoRow
             label="OTP Verified"
             value={user.isOtpVerified ? "Yes" : "No"}
@@ -716,10 +771,16 @@ const Page = () => {
             valueColor={user.isPaid ? "#0d9488" : "#78716c"}
             icon={CreditCard}
           />
-          <InfoRow label="Billing Cycle" value={cap(user.billingCycle)} icon={RefreshCw} />
+          <InfoRow
+            label="Billing Cycle"
+            value={cap(user.billingCycle)}
+            icon={RefreshCw}
+          />
           <InfoRow
             label="Period End"
-            value={user.currentPeriodEnd ? formatDate(user.currentPeriodEnd) : "—"}
+            value={
+              user.currentPeriodEnd ? formatDate(user.currentPeriodEnd) : "—"
+            }
             icon={Calendar}
           />
           <InfoRow
@@ -738,23 +799,47 @@ const Page = () => {
 
         <Card>
           <SectionHeader title="Guest Info" subtitle="Temporary session data" />
-          <InfoRow label="Is Guest" value={user.isGuest ? "Yes" : "No"} icon={User} />
+          <InfoRow
+            label="Is Guest"
+            value={user.isGuest ? "Yes" : "No"}
+            icon={User}
+          />
           <InfoRow
             label="Guest Expires"
             value={user.guestExpiresAt ? formatDate(user.guestExpiresAt) : "—"}
             icon={Clock}
           />
-          <InfoRow label="Guest IP" value={user.guestIp ?? "—"} mono icon={Globe} />
-          <InfoRow label="Device ID" value={user.guestDeviceId ?? "—"} mono icon={Cpu} />
+          <InfoRow
+            label="Guest IP"
+            value={user.guestIp ?? "—"}
+            mono
+            icon={Globe}
+          />
+          <InfoRow
+            label="Device ID"
+            value={user.guestDeviceId ?? "—"}
+            mono
+            icon={Cpu}
+          />
         </Card>
 
         <Card>
           <SectionHeader title="Timestamps" subtitle="Activity timeline" />
-          <InfoRow label="Created At" value={formatDate(user.createdAt)} icon={Calendar} />
-          <InfoRow label="Updated At" value={formatDate(user.updatedAt)} icon={Clock} />
+          <InfoRow
+            label="Created At"
+            value={formatDate(user.createdAt)}
+            icon={Calendar}
+          />
+          <InfoRow
+            label="Updated At"
+            value={formatDate(user.updatedAt)}
+            icon={Clock}
+          />
           <InfoRow
             label="Blocked Until"
-            value={user.blockedUntil ? formatDate(user.blockedUntil) : "Not blocked"}
+            value={
+              user.blockedUntil ? formatDate(user.blockedUntil) : "Not blocked"
+            }
             valueColor={user.blockedUntil ? "#ef4444" : "#0d9488"}
             icon={ShieldCheck}
           />
@@ -808,8 +893,16 @@ const Page = () => {
       </Card>
 
       {/* ── Modals ── */}
-      <MessageModal open={modal === "message"} onClose={closeModal} user={user} />
-      <SubscriptionModal open={modal === "subscription"} onClose={closeModal} user={user} />
+      <MessageModal
+        open={modal === "message"}
+        onClose={closeModal}
+        user={user}
+      />
+      <SubscriptionModal
+        open={modal === "subscription"}
+        onClose={closeModal}
+        user={user}
+      />
       <ActivityModal open={modal === "activity"} onClose={closeModal} />
       <DeleteModal
         user={user}
