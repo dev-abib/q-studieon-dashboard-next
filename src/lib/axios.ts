@@ -6,7 +6,7 @@ interface RetryAxiosRequestConfig extends InternalAxiosRequestConfig {
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
-  withCredentials: true, // this sends cookies automatically
+  withCredentials: true,
 });
 
 let isRefreshing = false;
@@ -45,7 +45,6 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        // backend sets new cookies automatically
         await axios.post(
           `${process.env.NEXT_PUBLIC_API_URL}/auth/admin/refresh-token`,
           {},
