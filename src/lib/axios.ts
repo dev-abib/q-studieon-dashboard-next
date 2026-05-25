@@ -26,7 +26,7 @@ api.interceptors.request.use(async config => {
   try {
     const token = document.cookie
       .split("; ")
-      .find(row => row.startsWith("access_token="))
+      .find(row => row.startsWith("accessToken="))
       ?.split("=")[1];
 
     if (token) {
@@ -60,7 +60,7 @@ api.interceptors.response.use(
       try {
         const refreshToken = document.cookie
           .split("; ")
-          .find(row => row.startsWith("refresh_token="))
+          .find(row => row.startsWith("refreshToken="))
           ?.split("=")[1];
 
         if (!refreshToken) {
