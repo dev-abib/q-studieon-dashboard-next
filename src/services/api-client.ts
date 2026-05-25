@@ -10,7 +10,6 @@ export const api = axios.create({
 });
 
 let isRefreshing = false;
-
 let failedQueue: Array<{
   resolve: (value?: unknown) => void;
   reject: (error?: unknown) => void;
@@ -21,7 +20,6 @@ const processQueue = (error?: unknown) => {
     if (error) reject(error);
     else resolve();
   });
-
   failedQueue = [];
 };
 
@@ -29,7 +27,6 @@ api.interceptors.response.use(
   response => response,
   async error => {
     const originalRequest = error.config as RetryAxiosRequestConfig;
-
     const url = originalRequest?.url || "";
     const isAuthRoute = url.includes("/login") || url.includes("/logout");
 
@@ -48,7 +45,6 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        // 🔥 backend sets NEW cookies automatically
         await axios.post(
           `${process.env.NEXT_PUBLIC_API_URL}/auth/admin/refresh-token`,
           {},
@@ -56,13 +52,10 @@ api.interceptors.response.use(
         );
 
         processQueue();
-
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);
-
         window.location.href = "/login";
-
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

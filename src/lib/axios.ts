@@ -1,89 +1,62 @@
-import axios from "axios";
+import axios, { InternalAxiosRequestConfig } from "axios";
+
+interface RetryAxiosRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
-  withCredentials: true,
+  withCredentials: true, // this sends cookies automatically
 });
 
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (value?: unknown) => void;
-  reject: (reason?: unknown) => void;
+  reject: (error?: unknown) => void;
 }> = [];
 
-const processQueue = (error: unknown, token: string | null = null) => {
+const processQueue = (error?: unknown) => {
   failedQueue.forEach(({ resolve, reject }) => {
     if (error) reject(error);
-    else resolve(token);
+    else resolve();
   });
   failedQueue = [];
 };
 
-// Request Interceptor
-api.interceptors.request.use(async config => {
-  if (config.url?.includes("/auth/")) return config;
-
-  try {
-    const token = document.cookie
-      .split("; ")
-      .find(row => row.startsWith("accessToken="))
-      ?.split("=")[1];
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  } catch (err) {
-    console.warn("Failed to read access token from cookie");
-  }
-
-  return config;
-});
-
-// Response Interceptor
 api.interceptors.response.use(
   response => response,
   async error => {
-    const originalRequest = error.config;
+    const originalRequest = error.config as RetryAxiosRequestConfig;
+    const url = originalRequest?.url || "";
+    const isAuthRoute = url.includes("/login") || url.includes("/logout");
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest?._retry &&
+      !isAuthRoute
+    ) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        })
-          .then(() => api(originalRequest))
-          .catch(err => Promise.reject(err));
+        }).then(() => api(originalRequest));
       }
 
-      originalRequest._retry = true;
       isRefreshing = true;
+      originalRequest._retry = true;
 
       try {
-        const refreshToken = document.cookie
-          .split("; ")
-          .find(row => row.startsWith("refreshToken="))
-          ?.split("=")[1];
-
-        if (!refreshToken) {
-          throw new Error("No refresh token available");
-        }
-
-        const { data } = await axios.post(
+        // backend sets new cookies automatically
+        await axios.post(
           `${process.env.NEXT_PUBLIC_API_URL}/auth/admin/refresh-token`,
-          { refresh_token: refreshToken },
+          {},
           { withCredentials: true },
         );
 
-        const newAccessToken = data.accessToken || data.access_token;
-        const newRefreshToken = data.refreshToken || data.refresh_token;
-
-        if (!newAccessToken) throw new Error("No new access token received");
-
-        processQueue(null, newAccessToken);
-
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        processQueue();
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);
+        window.location.href = "/login";
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
