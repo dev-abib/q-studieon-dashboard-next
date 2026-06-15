@@ -7,6 +7,7 @@ import {
   BarChart,
   ShieldCheck,
   BookDashed,
+  HelpCircle,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -31,6 +32,11 @@ export function Sidebar({ role }: SidebarProps) {
       label: "Dynamic page",
       href: "/dashboard/dynamic-page",
       icon: BookDashed,
+    },
+    {
+      label: "Questions",
+      href: "/dashboard/questions",
+      icon: HelpCircle,
     },
   ];
 
