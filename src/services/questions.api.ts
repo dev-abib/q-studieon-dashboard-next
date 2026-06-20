@@ -3,15 +3,16 @@ import { api } from "./api-client";
 export type GetAllQuestionsParams = {
   page?: number;
   limit?: number;
-  sortBy?: "text" | "slug" | "createdAt";
+  sortBy?: "text" | "createdAt";
   sortOrder?: "asc" | "desc";
   search?: string;
+  categoryId?: string;
 };
 
 export type CreateQuestionPayload = {
   text: string;
-  slug: string;
   options: string[];
+  categoryId: string;
 };
 
 export type UpdateQuestionPayload = Partial<CreateQuestionPayload>;
@@ -26,11 +27,6 @@ export const questionsApi = {
 
   getQuestionById: async (id: string) => {
     const res = await api.get(`/questions/${id}`);
-    return res.data;
-  },
-
-  getQuestionsBySlug: async (slug: string) => {
-    const res = await api.get(`/questions/by-slug/${slug}`);
     return res.data;
   },
 
