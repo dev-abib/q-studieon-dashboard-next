@@ -13,6 +13,5 @@
   "/dashboard/users/page": "app/dashboard/users/page.js",
   "/favicon.ico/route": "app/favicon.ico/route.js",
   "/page": "app/page.js",
-  "/page/[slug]/page": "app/page/[slug]/page.js",
-  "/pages/page": "app/pages/page.js"
+  "/page/[slug]/page": "app/page/[slug]/page.js"
 }

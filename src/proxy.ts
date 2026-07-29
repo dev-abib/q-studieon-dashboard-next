@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_ROUTES = ["/login", "/pages"];
+const PUBLIC_ROUTES = ["/login"];
 const PUBLIC_PREFIXES = ["/page/"];
 
 export async function proxy(req: NextRequest) {

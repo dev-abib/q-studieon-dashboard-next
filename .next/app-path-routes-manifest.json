@@ -13,6 +13,5 @@
   "/dashboard/users/page": "/dashboard/users",
   "/favicon.ico/route": "/favicon.ico",
   "/page": "/",
-  "/page/[slug]/page": "/page/[slug]",
-  "/pages/page": "/pages"
+  "/page/[slug]/page": "/page/[slug]"
 }
