@@ -1,0 +1,18 @@
+{
+  "/(auth)/login/page": "/login",
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/dashboard/admins/page": "/dashboard/admins",
+  "/dashboard/categories/page": "/dashboard/categories",
+  "/dashboard/dynamic-page/page": "/dashboard/dynamic-page",
+  "/dashboard/insights/page": "/dashboard/insights",
+  "/dashboard/page": "/dashboard",
+  "/dashboard/questions/page": "/dashboard/questions",
+  "/dashboard/settings/page": "/dashboard/settings",
+  "/dashboard/users/[id]/page": "/dashboard/users/[id]",
+  "/dashboard/users/page": "/dashboard/users",
+  "/favicon.ico/route": "/favicon.ico",
+  "/page": "/",
+  "/page/[slug]/page": "/page/[slug]",
+  "/pages/page": "/pages"
+}
