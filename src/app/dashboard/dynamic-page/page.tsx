@@ -29,6 +29,7 @@ import {
   ListOrdered,
   Minus,
   Palette,
+  Copy,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,7 @@ import { useGetAllPages } from "@/features/dynamic-page/hooks/use-get-all-dynami
 import { useCreatePage } from "@/features/dynamic-page/hooks/use-create-page";
 import { useUpdatePage } from "@/features/dynamic-page/hooks/use-update-page";
 import { useDeletePage } from "@/features/dynamic-page/hooks/use-delete-page";
+import { toast } from "sonner";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 interface DynamicPage {
@@ -44,6 +46,8 @@ interface DynamicPage {
   title: string;
   slug: string;
   description: string;
+  isPublished: boolean;
+  createdAt?: string;
 }
 
 // ─── Zod Schema ────────────────────────────────────────────────────────────────
@@ -63,6 +67,7 @@ const pageSchema = z.object({
       val => val.replace(/<[^>]+>/g, "").trim().length > 0,
       "Content cannot be empty",
     ),
+  isPublished: z.boolean().optional(),
 });
 
 type PageFormValues = z.infer<typeof pageSchema>;
@@ -540,6 +545,7 @@ function PageFormModal({
       title: initial?.title ?? "",
       slug: initial?.slug ?? "",
       description: initial?.description ?? "",
+      isPublished: initial?.isPublished ?? false,
     },
   });
 
@@ -662,6 +668,44 @@ function PageFormModal({
             />
             <FieldError message={errors.description?.message} />
           </div>
+
+          {/* Publish toggle */}
+          <div className="flex items-center justify-between rounded-xl border border-stone-100 bg-stone-50/50 px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${
+                watch('isPublished') ? 'bg-teal-50' : 'bg-stone-100'
+              }`}>
+                <Globe className={`h-3.5 w-3.5 ${
+                  watch('isPublished') ? 'text-teal-500' : 'text-stone-400'
+                }`} />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-stone-700">
+                  {watch('isPublished') ? 'Published' : 'Draft'}
+                </p>
+                <p className="text-[10px] text-stone-400">
+                  {watch('isPublished')
+                    ? 'This page is visible to everyone'
+                    : 'Only admins can see this page'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={watch('isPublished')}
+              onClick={() => setValue('isPublished', !watch('isPublished'), { shouldDirty: true })}
+              className={`relative inline-flex h-6 w-10 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ${
+                watch('isPublished') ? 'bg-teal-500' : 'bg-stone-200'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ${
+                  watch('isPublished') ? 'translate-x-4' : 'translate-x-0.5'
+                }`}
+              />
+            </button>
+          </div>
         </div>
 
         {/* Footer */}
@@ -769,6 +813,8 @@ function PreviewModal({
   page: DynamicPage;
   onClose: () => void;
 }) {
+  const publicUrl = `${window.location.origin}/page/${page.slug}`;
+
   return (
     <ModalBackdrop onClose={onClose} wide>
       <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
@@ -786,13 +832,24 @@ function PreviewModal({
             <p className="font-mono text-[10px] text-stone-400">/{page.slug}</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          <a
+            href={publicUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-[11px] text-sky-600 transition-colors hover:bg-sky-50"
+          >
+            <ExternalLink className="h-3 w-3" />
+            Open public
+          </a>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
       {/* Render the stored HTML safely — the content was authored by an
           admin via the rich editor, not by end-users, so dangerouslySetInnerHTML
@@ -812,17 +869,40 @@ function PageCard({
   onEdit,
   onDelete,
   onPreview,
+  onCopyLink,
+  onTogglePublish,
 }: {
   page: DynamicPage;
   onEdit: () => void;
   onDelete: () => void;
   onPreview: () => void;
+  onCopyLink: () => void;
+  onTogglePublish: () => void;
 }) {
   // Strip HTML tags for the preview snippet
   const plainText = page.description.replace(/<[^>]+>/g, "").slice(0, 100);
+  const publicUrl = `${window.location.origin}/page/${page.slug}`;
 
   return (
     <div className="group relative flex flex-col gap-3 rounded-2xl border border-stone-100 bg-white px-5 py-4 shadow-sm transition-all duration-200 hover:border-stone-200 hover:shadow-md">
+      {/* Published/Draft badge */}
+      <div className="absolute right-4 top-4 flex items-center gap-1.5">
+        <span
+          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
+            page.isPublished
+              ? "bg-teal-50 text-teal-600"
+              : "bg-stone-100 text-stone-500"
+          }`}
+        >
+          <span
+            className={`inline-block h-1.5 w-1.5 rounded-full ${
+              page.isPublished ? "bg-teal-500" : "bg-stone-400"
+            }`}
+          />
+          {page.isPublished ? "Published" : "Draft"}
+        </span>
+      </div>
+
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 transition-colors group-hover:bg-amber-100">
@@ -874,16 +954,49 @@ function PageCard({
       </p>
 
       <div className="flex items-center justify-between border-t border-stone-50 pt-2">
-        <span className="rounded-full bg-stone-50 px-2 py-0.5 font-mono text-[10px] text-stone-400">
-          {page.id.slice(0, 8)}…
-        </span>
-        <button
-          type="button"
-          onClick={onEdit}
-          className="flex items-center gap-1 text-[10px] text-stone-400 transition-colors hover:text-amber-500"
-        >
-          Edit content <ExternalLink className="h-2.5 w-2.5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onCopyLink}
+            title="Copy public link"
+            className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] text-stone-400 transition-colors hover:bg-teal-50 hover:text-teal-600"
+          >
+            <Copy className="h-3 w-3" />
+            Copy link
+          </button>
+          {page.isPublished && (
+            <a
+              href={publicUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open public page"
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] text-stone-400 transition-colors hover:bg-sky-50 hover:text-sky-600"
+            >
+              <ExternalLink className="h-3 w-3" />
+              View public
+            </a>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {!page.isPublished && (
+            <button
+              type="button"
+              onClick={onTogglePublish}
+              title="Publish"
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] text-stone-400 transition-colors hover:bg-teal-50 hover:text-teal-600"
+            >
+              <Globe className="h-3 w-3" />
+              Publish
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onEdit}
+            className="flex items-center gap-1 text-[10px] text-stone-400 transition-colors hover:text-amber-500"
+          >
+            Edit <ExternalLink className="h-2.5 w-2.5" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -999,7 +1112,10 @@ export default function DynamicPagesPage() {
                   className="text-xl font-normal leading-none text-stone-800"
                   style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
                 >
-                  {meta?.total ?? "—"}
+                  {pages.filter(p => p.isPublished).length}{" "}
+                  <span className="text-xs font-normal text-stone-400">
+                    / {meta?.total ?? "—"}
+                  </span>
                 </p>
               </div>
             </div>
@@ -1023,6 +1139,19 @@ export default function DynamicPagesPage() {
                   onEdit={() => setFormTarget(p)}
                   onDelete={() => setDeleteTarget(p)}
                   onPreview={() => setPreviewTarget(p)}
+                  onCopyLink={() => {
+                    const url = `${window.location.origin}/page/${p.slug}`;
+                    navigator.clipboard.writeText(url).catch(() => {
+                      toast.error("Failed to copy link");
+                    });
+                    toast.success("Public link copied!");
+                  }}
+                  onTogglePublish={() => {
+                    updatePage(
+                      { slug: p.slug, payload: { isPublished: !p.isPublished } },
+                      { onSuccess: () => toast.success(p.isPublished ? "Page unpublished" : "Page published") },
+                    );
+                  }}
                 />
               ))}
             </div>

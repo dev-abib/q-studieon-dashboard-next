@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_ROUTES = ["/login"];
+const PUBLIC_ROUTES = ["/login", "/pages"];
+const PUBLIC_PREFIXES = ["/page/"];
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  const isPublicRoute =
+    PUBLIC_ROUTES.includes(pathname) ||
+    PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+
   const accessToken = req.cookies.get("accessToken")?.value;
 
-  if (PUBLIC_ROUTES.includes(pathname)) {
+  if (isPublicRoute) {
     if (accessToken) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }

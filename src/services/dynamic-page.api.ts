@@ -8,12 +8,14 @@ export type GetAllPagesParams = {
   sortBy?: "title" | "slug" | "createdAt";
   sortOrder?: "asc" | "desc";
   search?: string;
+  published?: boolean;
 };
 
 type CreatePagePayload = {
   title: string;
   slug: string;
   description: string;
+  isPublished?: boolean;
 };
 
 type UpdatePagePayload = Partial<CreatePagePayload>;

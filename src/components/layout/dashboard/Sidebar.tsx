@@ -10,6 +10,7 @@ import {
   HelpCircle,
   BookMarked,
   Lightbulb,
+  Globe,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -49,6 +50,11 @@ export function Sidebar({ role }: SidebarProps) {
       label: "Insights",
       href: "/dashboard/insights",
       icon: Lightbulb,
+    },
+    {
+      label: "Public Pages",
+      href: "/pages",
+      icon: Globe,
     },
   ];
 
