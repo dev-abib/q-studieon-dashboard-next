@@ -83,6 +83,12 @@
       "namedRegex": "^/dashboard/dynamic\\-page(?:/)?$"
     },
     {
+      "page": "/dashboard/faqs",
+      "regex": "^/dashboard/faqs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/faqs(?:/)?$"
+    },
+    {
       "page": "/dashboard/insights",
       "regex": "^/dashboard/insights(?:/)?$",
       "routeKeys": {},

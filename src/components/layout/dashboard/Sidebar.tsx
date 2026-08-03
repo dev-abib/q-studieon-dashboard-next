@@ -4,12 +4,12 @@ import {
   LayoutDashboard,
   Users,
   Settings,
-  BarChart,
   ShieldCheck,
   BookDashed,
   HelpCircle,
   BookMarked,
   Lightbulb,
+  MessageCircleQuestion,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -50,7 +50,11 @@ export function Sidebar({ role }: SidebarProps) {
       href: "/dashboard/insights",
       icon: Lightbulb,
     },
-
+    {
+      label: "FAQs",
+      href: "/dashboard/faqs",
+      icon: MessageCircleQuestion,
+    },
   ];
 
   const visibleItems = navItems.filter(

@@ -5,6 +5,7 @@
   "/dashboard/admins/page": "app/dashboard/admins/page.js",
   "/dashboard/categories/page": "app/dashboard/categories/page.js",
   "/dashboard/dynamic-page/page": "app/dashboard/dynamic-page/page.js",
+  "/dashboard/faqs/page": "app/dashboard/faqs/page.js",
   "/dashboard/insights/page": "app/dashboard/insights/page.js",
   "/dashboard/page": "app/dashboard/page.js",
   "/dashboard/questions/page": "app/dashboard/questions/page.js",
