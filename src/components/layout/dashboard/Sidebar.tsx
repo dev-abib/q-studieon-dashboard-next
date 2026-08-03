@@ -36,17 +36,17 @@ export function Sidebar({ role }: SidebarProps) {
       icon: BookDashed,
     },
     {
-      label: "Categories",
+      label: "Onsite Categories",
       href: "/dashboard/categories",
       icon: BookMarked,
     },
     {
-      label: "Questions",
+      label: "Onsite Questions",
       href: "/dashboard/questions",
       icon: HelpCircle,
     },
     {
-      label: "Insights",
+      label: "Helpful Insights",
       href: "/dashboard/insights",
       icon: Lightbulb,
     },
