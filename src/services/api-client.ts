@@ -55,6 +55,17 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);
+        // Clear stale httpOnly cookies server-side so the middleware sends the
+        // user to /login instead of bouncing back to /dashboard.
+        try {
+          await axios.post(
+            `${process.env.NEXT_PUBLIC_API_URL}/auth/admin/clear-session`,
+            {},
+            { withCredentials: true, timeout: 5000 },
+          );
+        } catch {
+          // ignore — the login flow overwrites cookies anyway
+        }
         window.location.href = "/login";
         return Promise.reject(refreshError);
       } finally {

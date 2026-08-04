@@ -20,6 +20,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { useDashboardAnalytics } from "@/features/admin/hooks/user-dashboard-analytics";
+import { useCurrentUser } from "@/features/admin/hooks/use-get-met";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Skeleton helpers
@@ -168,7 +169,7 @@ const RevenueBreakdownSkeleton = () => (
 );
 
 const DashboardSkeleton = () => {
-  const statBgs = ["#F0EFFE", "#ECFDF5", "#FFFBEB", "#EFF6FF"];
+  const statBgs = ["#F0EFFE", "#ECFDF5", "#FFFBEB", "#EFF6FF", "#F5F3FF"];
   return (
     <section className="w-full flex flex-col gap-6 min-h-screen">
       <ShimmerStyle />
@@ -180,7 +181,7 @@ const DashboardSkeleton = () => {
       </div>
 
       {/* stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {statBgs.map((bg, i) => (
           <StatCardSkeleton key={i} lightBg={bg} />
         ))}
@@ -211,6 +212,52 @@ const DashboardSkeleton = () => {
         <PieChartSkeleton />
       </div>
 
+      {/* users by role */}
+      <SkCard>
+        <div className="mb-4 flex flex-col gap-1.5">
+          <Sk className="h-3.5 w-32 rounded-full" />
+          <Sk className="h-3 w-48 rounded-full" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {[0, 1, 2, 3].map(i => (
+            <div
+              key={i}
+              className="rounded-xl p-4 shadow-sm bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-col gap-2"
+            >
+              <Sk className="h-3 w-20 rounded-full" />
+              <Sk className="h-8 w-12 rounded-lg" />
+              <Sk className="h-3 w-16 rounded-full" />
+            </div>
+          ))}
+        </div>
+        <div className="w-full flex flex-col gap-3 px-1" style={{ height: 300 }}>
+          {[0, 1, 2, 3, 4, 5].map(i => (
+            <Sk
+              key={i}
+              className="h-6 rounded-md"
+              style={{ width: `${85 - i * 9}%` }}
+            />
+          ))}
+        </div>
+
+        <div className="mt-8 mb-4 flex flex-col gap-1.5">
+          <Sk className="h-3.5 w-28 rounded-full" />
+          <Sk className="h-3 w-44 rounded-full" />
+        </div>
+        <div
+          className="w-full flex items-end gap-2 px-1"
+          style={{ height: 220 }}
+        >
+          {[60, 80, 55, 75, 90, 65].map((h, i) => (
+            <Sk
+              key={i}
+              className="flex-1 rounded-md"
+              style={{ height: `${h}%` }}
+            />
+          ))}
+        </div>
+      </SkCard>
+
       {/* revenue breakdown */}
       <RevenueBreakdownSkeleton />
     </section>
@@ -232,12 +279,44 @@ const userConfig = {
 };
 
 const reportsConfig = {
-  reports: { label: "Reports", color: "#10B981" },
+  count: { label: "Reports", color: "#10B981" },
 };
 
 const monthlyRevenueConfig = {
   revenue: { label: "Revenue", color: "#6C63FF" },
 };
+
+const roleUsersConfig = {
+  count: { label: "Users", color: "#6C63FF" },
+};
+
+const USER_ROLE_LABELS: Record<string, string> = {
+  buyer: "Buyer",
+  seller: "Seller",
+  renter: "Renter",
+  real_estate_agent: "Real Estate Agent",
+  brokerage: "Brokerage",
+  practitioner: "Practitioner",
+  home_explorer: "Home Explorer",
+  homeowner: "Homeowner",
+  investor: "Investor",
+  interior_designer: "Interior Designer",
+  architect: "Architect",
+};
+
+const ROLE_TREND_COLORS = [
+  "#6C63FF",
+  "#10B981",
+  "#F59E0B",
+  "#3B82F6",
+  "#EF4444",
+  "#8B5CF6",
+  "#14B8A6",
+  "#F97316",
+  "#EC4899",
+  "#22C55E",
+  "#EAB308",
+];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared UI components
@@ -280,6 +359,8 @@ const CardHeader = ({
 
 const Page = () => {
   const { data, isLoading } = useDashboardAnalytics();
+  const { data: userData } = useCurrentUser();
+  const isSuperAdmin = userData?.data?.role === "super_admin";
 
   if (isLoading) return <DashboardSkeleton />;
 
@@ -291,6 +372,11 @@ const Page = () => {
   });
 
   const stats_data = data?.data?.cards;
+  const reportsLast14Days =
+    data?.data?.charts?.reportsChart?.reduce(
+      (sum: number, item: { count?: number }) => sum + (item.count ?? 0),
+      0,
+    ) ?? 0;
   const topStats = [
     {
       label: "Total users",
@@ -325,6 +411,15 @@ const Page = () => {
       lightBg: "#EFF6FF",
       icon: "📄",
     },
+    {
+      label: "Reports (14 days)",
+      value: reportsLast14Days,
+      change: "last two weeks",
+      positive: null,
+      accent: "#8B5CF6",
+      lightBg: "#F5F3FF",
+      icon: "📊",
+    },
   ];
 
   const plans = [
@@ -341,6 +436,32 @@ const Page = () => {
       color: "#6C63FF",
     },
   ];
+
+  const roleDistribution: {
+    role: string;
+    count: number;
+    percent: number;
+  }[] = data?.data?.userRoles?.distribution ?? [];
+  const roleData = roleDistribution.map(item => ({
+    ...item,
+    label: USER_ROLE_LABELS[item.role] ?? item.role,
+  }));
+  const topRoles = roleData.slice(0, 4);
+
+  const roleTrendData: Record<string, number | string>[] =
+    data?.data?.charts?.userRoleTrendChart ?? [];
+  const roleTrendSeries = roleTrendData.length
+    ? (Object.keys(roleTrendData[0]) as string[]).filter(k => k !== "month")
+    : [];
+  const roleTrendConfig = Object.fromEntries(
+    roleTrendSeries.map((role, i) => [
+      role,
+      {
+        label: USER_ROLE_LABELS[role] ?? role,
+        color: ROLE_TREND_COLORS[i % ROLE_TREND_COLORS.length],
+      },
+    ]),
+  );
 
   const demoStats = [
     {
@@ -375,7 +496,7 @@ const Page = () => {
       </div>
 
       {/* ── top stat cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {topStats.map((stat, idx) => (
           <div
             key={idx}
@@ -402,34 +523,40 @@ const Page = () => {
 
       {/* ── 2×2 chart grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader title="Monthly revenue" subtitle="Last 6 months · USD" />
-          <ChartContainer
-            config={monthlyRevenueConfig}
-            className="h-[200px] w-full"
-          >
-            <BarChart
-              data={data?.data?.charts?.revenueChart}
-              barCategoryGap="15%"
+        {isSuperAdmin && data?.data?.revenueBreakdown && (
+          <Card>
+            <CardHeader title="Monthly revenue" subtitle="Last 6 months · USD" />
+            <ChartContainer
+              config={monthlyRevenueConfig}
+              className="h-[200px] w-full"
             >
-              <CartesianGrid vertical={false} stroke="#F1F5F9" />
-              <XAxis
-                dataKey="month"
-                tickLine={false}
-                axisLine={false}
-                tick={{ fontSize: 11, fill: "#94A3B8" }}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                tick={{ fontSize: 11, fill: "#94A3B8" }}
-                tickFormatter={v => `$${v / 1000}k`}
-              />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Bar dataKey="revenue" fill="var(--color-revenue)" radius={6} />
-            </BarChart>
-          </ChartContainer>
-        </Card>
+              <BarChart
+                data={data?.data?.charts?.revenueChart}
+                barCategoryGap="15%"
+              >
+                <CartesianGrid vertical={false} stroke="#F1F5F9" />
+                <XAxis
+                  dataKey="month"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11, fill: "#94A3B8" }}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11, fill: "#94A3B8" }}
+                  tickFormatter={v => `$${v / 1000}k`}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar
+                  dataKey="revenue"
+                  fill="var(--color-revenue)"
+                  radius={6}
+                />
+              </BarChart>
+            </ChartContainer>
+          </Card>
+        )}
 
         <Card>
           <CardHeader
@@ -440,7 +567,7 @@ const Page = () => {
             <LineChart data={data?.data?.charts?.reportsChart}>
               <CartesianGrid vertical={false} stroke="#F1F5F9" />
               <XAxis
-                dataKey="day"
+                dataKey="date"
                 tickLine={false}
                 axisLine={false}
                 tick={{ fontSize: 10, fill: "#94A3B8" }}
@@ -453,8 +580,8 @@ const Page = () => {
               />
               <ChartTooltip content={<ChartTooltipContent />} />
               <Line
-                dataKey="reports"
-                stroke="var(--color-reports)"
+                dataKey="count"
+                stroke="var(--color-count)"
                 strokeWidth={5.5}
                 dot={{ r: 5, fill: "#10B981" }}
                 type="monotone"
@@ -574,64 +701,198 @@ const Page = () => {
         </Card>
       </div>
 
-      {/* ── revenue breakdown ── */}
+      {/* ── users by role ── */}
       <Card>
         <div className="flex flex-col gap-1 mb-5">
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-            Revenue breakdown
+            Users by role
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500">
-            Monthly vs yearly subscriptions · full year
+            Distribution across profile roles
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          {demoStats.map((stat, idx) => (
-            <div
-              key={idx}
-              className="rounded-xl p-4 shadow-sm bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-col gap-1"
-            >
-              <p className="text-xs text-gray-400 dark:text-gray-500">
-                {stat.label}
-              </p>
-              <p className="text-2xl font-bold" style={{ color: stat.accent }}>
-                {stat.value}
-              </p>
-              {stat.sub && (
-                <p className="text-xs text-gray-400 dark:text-gray-500">
-                  {stat.sub}
-                </p>
-              )}
+        {roleData.length === 0 ? (
+          <p className="text-sm text-gray-400 py-8 text-center">
+            No role data available yet.
+          </p>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              {topRoles.map(role => (
+                <div
+                  key={role.role}
+                  className="rounded-xl p-4 shadow-sm bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-col gap-1"
+                >
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    {role.label}
+                  </p>
+                  <p
+                    className="text-2xl font-bold"
+                    style={{ color: "#6C63FF" }}
+                  >
+                    {role.count}
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    {role.percent}% of role users
+                  </p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        <ChartContainer config={revenueConfig} className="h-[260px] w-full">
-          <BarChart
-            data={data?.data?.charts?.revenueBreakdownChart}
-            barCategoryGap="15%"
-            barGap={4}
-          >
-            <CartesianGrid vertical={false} stroke="#F1F5F9" />
-            <XAxis
-              dataKey="month"
-              tickLine={false}
-              axisLine={false}
-              tick={{ fontSize: 11, fill: "#94A3B8" }}
-            />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              tick={{ fontSize: 11, fill: "#94A3B8" }}
-              tickFormatter={v => `$${v / 1000}k`}
-            />
-            <ChartTooltip content={<ChartTooltipContent />} />
-            <ChartLegend content={<ChartLegendContent />} />
-            <Bar dataKey="monthly" fill="var(--color-monthly)" radius={4} />
-            <Bar dataKey="yearly" fill="var(--color-yearly)" radius={4} />
-          </BarChart>
-        </ChartContainer>
+            <ChartContainer
+              config={roleUsersConfig}
+              className="h-[320px] w-full"
+            >
+              <BarChart
+                data={roleData}
+                layout="vertical"
+                margin={{ left: 4, right: 8 }}
+              >
+                <CartesianGrid horizontal={false} stroke="#F1F5F9" />
+                <XAxis
+                  type="number"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11, fill: "#94A3B8" }}
+                  allowDecimals={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="label"
+                  tickLine={false}
+                  axisLine={false}
+                  width={140}
+                  tick={{ fontSize: 11, fill: "#94A3B8" }}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar
+                  dataKey="count"
+                  fill="var(--color-count)"
+                  radius={[0, 6, 6, 0]}
+                  barSize={18}
+                />
+              </BarChart>
+            </ChartContainer>
+
+            <div className="mt-8 mb-5">
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                Monthly trend
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                New users by role · last 6 months
+              </p>
+            </div>
+
+            {roleTrendSeries.length === 0 ? (
+              <p className="text-sm text-gray-400 py-8 text-center">
+                No trend data available yet.
+              </p>
+            ) : (
+              <ChartContainer
+                config={roleTrendConfig}
+                className="h-[280px] w-full"
+              >
+                <BarChart data={roleTrendData}>
+                  <CartesianGrid vertical={false} stroke="#F1F5F9" />
+                  <XAxis
+                    dataKey="month"
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 11, fill: "#94A3B8" }}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 11, fill: "#94A3B8" }}
+                    allowDecimals={false}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  {roleTrendSeries.map((role, i) => (
+                    <Bar
+                      key={role}
+                      dataKey={role}
+                      stackId="roles"
+                      fill={`var(--color-${role})`}
+                      radius={
+                        i === roleTrendSeries.length - 1
+                          ? [4, 4, 0, 0]
+                          : [0, 0, 0, 0]
+                      }
+                      barSize={32}
+                    />
+                  ))}
+                </BarChart>
+              </ChartContainer>
+            )}
+          </>
+        )}
       </Card>
+
+      {/* ── revenue breakdown (super admin only) ── */}
+      {isSuperAdmin && data?.data?.revenueBreakdown && (
+        <Card>
+          <div className="flex flex-col gap-1 mb-5">
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+              Revenue breakdown
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              Monthly vs yearly subscriptions · full year
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            {demoStats.map((stat, idx) => (
+              <div
+                key={idx}
+                className="rounded-xl p-4 shadow-sm bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-col gap-1"
+              >
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  {stat.label}
+                </p>
+                <p
+                  className="text-2xl font-bold"
+                  style={{ color: stat.accent }}
+                >
+                  {stat.value}
+                </p>
+                {stat.sub && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    {stat.sub}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <ChartContainer config={revenueConfig} className="h-[260px] w-full">
+            <BarChart
+              data={data?.data?.charts?.revenueBreakdownChart}
+              barCategoryGap="15%"
+              barGap={4}
+            >
+              <CartesianGrid vertical={false} stroke="#F1F5F9" />
+              <XAxis
+                dataKey="month"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 11, fill: "#94A3B8" }}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 11, fill: "#94A3B8" }}
+                tickFormatter={v => `$${v / 1000}k`}
+              />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <ChartLegend content={<ChartLegendContent />} />
+              <Bar dataKey="monthly" fill="var(--color-monthly)" radius={4} />
+              <Bar dataKey="yearly" fill="var(--color-yearly)" radius={4} />
+            </BarChart>
+          </ChartContainer>
+        </Card>
+      )}
     </section>
   );
 };
