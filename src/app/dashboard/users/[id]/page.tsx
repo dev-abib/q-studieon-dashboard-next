@@ -396,7 +396,7 @@ function MessageModal({
             value={subject}
             onChange={e => setSubject(e.target.value)}
             placeholder="Subject"
-            className="h-9 w-full rounded-lg border border-stone-200 px-3 text-sm text-stone-700 placeholder:text-stone-300 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-300"
+            className="h-9 w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-primary"
           />
 
           <textarea
@@ -404,7 +404,7 @@ function MessageModal({
             onChange={e => setMessage(e.target.value)}
             rows={5}
             placeholder="Write your message…"
-            className="w-full resize-none rounded-lg border border-stone-200 px-3 py-2.5 text-sm text-stone-700 placeholder:text-stone-300 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-300"
+            className="w-full resize-none rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-primary"
           />
 
           <div className="flex justify-end gap-2">
@@ -412,7 +412,7 @@ function MessageModal({
               variant="outline"
               size="sm"
               onClick={onClose}
-              className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50"
+              className="h-8 rounded-lg text-xs"
             >
               Cancel
             </Button>
@@ -459,20 +459,16 @@ function SubscriptionModal({
               {user.isPaid ? "Paid" : "Free"}
             </p>
           </div>
-          <div className="flex flex-col gap-1 rounded-xl border border-amber-100 bg-amber-50 p-4">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-amber-500">
+          <div className="flex flex-col gap-1 rounded-xl border border-primary/20 bg-primary/10 p-4">
+            <p className="text-[10px] font-medium uppercase tracking-widest text-primary">
               Cycle
             </p>
-            <p
-              className="text-2xl font-normal text-amber-700"
-              style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
-            >
+            <p className="text-2xl font-bold text-primary">
               {cap(user.billingCycle)}
             </p>
           </div>
         </div>
-
-        <div className="rounded-xl border border-stone-100">
+        <div className="rounded-xl border border-slate-100 dark:border-slate-800">
           <InfoRow
             label="Stripe Customer ID"
             value={user.stripeCustomerId ?? "—"}
@@ -669,15 +665,11 @@ const Page = () => {
       {/* ── Heading ── */}
       <div className="flex items-end justify-between">
         <div>
-          <p className="mb-1.5 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.18em] text-amber-600">
-            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
+          <p className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-primary">
             Platform Console
           </p>
-          <h1
-            className="text-3xl font-normal leading-tight text-stone-800 md:text-4xl"
-            style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
-          >
-            User <em className="italic text-amber-600">Details</em>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+            User <span className="text-primary">Details</span>
           </h1>
         </div>
         <button

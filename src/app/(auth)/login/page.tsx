@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { useLogin } from "@/features/auth/hooks/use-login";
 import { loginSchema } from "@/features/auth/schema/login-payload.schema";
 import { LoginFormData } from "@/features/auth/types/login.types";
@@ -65,8 +66,7 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <Input
-                    type="password"
+                  <PasswordInput
                     placeholder="Password"
                     {...register("password")}
                     className="h-11"
@@ -79,7 +79,7 @@ export default function LoginPage() {
                   <div className="flex justify-end pt-1">
                     <Link
                       href="/auth/forgot-password"
-                      className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-semibold"
+                      className="text-xs text-primary hover:underline font-semibold"
                     >
                       Forgot password?
                     </Link>

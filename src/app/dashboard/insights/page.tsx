@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-
+import { useState, useRef, useEffect } from "react";
 import {
   Search,
   Plus,
@@ -21,16 +20,23 @@ import {
   ArrowDown,
   ExternalLink,
   FileText,
+  AlertCircle,
+  Link as LinkIcon,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/dashboard/PageHeader";
 import { useGetAllInsights } from "@/features/insights/hooks/use-get-all-insights";
 import { useCreateInsight } from "@/features/insights/hooks/use-create-insight";
 import { useUpdateInsight } from "@/features/insights/hooks/use-update-insight";
 import { useDeleteInsight } from "@/features/insights/hooks/use-delete-insight";
 import type { Insight } from "@/features/insights/types/insight.types";
 import Image from "next/image";
+
+type SortDir = "asc" | "desc" | null;
+type SortField = "title" | "subTitle" | "createdAt";
+const PER_PAGE_OPTIONS = [5, 8, 10, 20];
 
 // ─── Stat Card ─────────────────────────────────────────────────────────────────
 function StatCard({
@@ -47,50 +53,30 @@ function StatCard({
   accent: string;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-stone-100 bg-white px-5 py-4 shadow-sm">
-      <div
-        className={`flex h-8 w-8 items-center justify-center rounded-lg ${accent}`}
-      >
-        <Icon className="h-4 w-4" />
-      </div>
-      <div>
-        <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
+    <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs flex flex-col justify-between gap-3 transition-all">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
           {label}
         </p>
-        <p
-          className="mt-0.5 text-2xl font-normal leading-none text-stone-800"
-          style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
-        >
+        <span className={`flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200/60 dark:border-slate-800 shrink-0 ${accent}`}>
+          <Icon className="h-4 w-4" />
+        </span>
+      </div>
+      <div>
+        <p className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
           {value}
-          {sub && (
-            <span
-              className="ml-1.5 text-xs font-normal text-amber-600"
-              style={{ fontFamily: "'DM Sans', sans-serif" }}
-            >
-              {sub}
-            </span>
-          )}
         </p>
+        {sub && (
+          <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">
+            {sub}
+          </p>
+        )}
       </div>
     </div>
   );
 }
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
-function SkeletonRow() {
-  return (
-    <tr className="border-b border-stone-100">
-      <td colSpan={5} className="px-6 py-4">
-        <div className="h-9 w-full animate-pulse rounded-lg bg-stone-100" />
-      </td>
-    </tr>
-  );
-}
-
-// ─── Sort ──────────────────────────────────────────────────────────────────────
-type SortDir = "asc" | "desc" | null;
-type SortField = "title" | "subTitle" | "createdAt";
-
+// ─── Sort Button ───────────────────────────────────────────────────────────────
 function SortButton({
   label,
   active,
@@ -106,22 +92,21 @@ function SortButton({
     !active || dir === null ? ArrowUpDown : dir === "asc" ? ArrowUp : ArrowDown;
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.14em] transition-colors ${
-        active ? "text-amber-600" : "text-stone-400 hover:text-stone-600"
+      className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+        active
+          ? "text-primary"
+          : "text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300"
       }`}
     >
       {label}
-      <Icon
-        className={`h-3 w-3 ${active ? "text-amber-500" : "text-stone-300"}`}
-      />
+      <Icon className="h-3 w-3" />
     </button>
   );
 }
 
-// ─── Per-page ──────────────────────────────────────────────────────────────────
-const PER_PAGE_OPTIONS = [5, 8, 10, 20];
-
+// ─── Per Page Select ───────────────────────────────────────────────────────────
 function PerPageSelect({
   value,
   onChange,
@@ -131,12 +116,14 @@ function PerPageSelect({
 }) {
   return (
     <div className="relative flex items-center gap-2">
-      <span className="text-xs text-stone-400">Rows</span>
+      <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">
+        Rows
+      </span>
       <div className="relative">
         <select
           value={value}
           onChange={e => onChange(Number(e.target.value))}
-          className="h-8 appearance-none rounded-lg border border-stone-200 bg-white pl-3 pr-7 text-xs text-stone-600 focus:outline-none focus:ring-1 focus:ring-amber-300"
+          className="h-8 appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 pl-3 pr-7 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none"
         >
           {PER_PAGE_OPTIONS.map(n => (
             <option key={n} value={n}>
@@ -144,16 +131,16 @@ function PerPageSelect({
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-stone-400" />
+        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
       </div>
     </div>
   );
 }
 
-// ─── Outside-click ─────────────────────────────────────────────────────────────
+// ─── Outside Click Hook ────────────────────────────────────────────────────────
 function useOutsideClick(
   ref: React.RefObject<HTMLElement>,
-  handler: () => void,
+  handler: () => void
 ) {
   useEffect(() => {
     function listener(e: MouseEvent) {
@@ -179,11 +166,11 @@ function ModalBackdrop({
   useOutsideClick(panelRef as React.RefObject<HTMLElement>, onClose);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/50 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-md">
       <div
         ref={panelRef}
-        className={`relative my-auto w-full rounded-2xl border border-stone-200 bg-white shadow-2xl ${
-          wide ? "max-w-lg" : "max-w-sm"
+        className={`relative my-auto w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden ${
+          wide ? "max-w-xl" : "max-w-md"
         }`}
       >
         {children}
@@ -192,13 +179,7 @@ function ModalBackdrop({
   );
 }
 
-// ─── Field Error ───────────────────────────────────────────────────────────────
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return <p className="mt-1.5 text-[11px] text-rose-500">{message}</p>;
-}
-
-// ─── Insight Form Modal (create / edit) ────────────────────────────────────────
+// ─── Insight Form Modal (Create / Edit) ────────────────────────────────────────
 function InsightFormModal({
   initial,
   onSave,
@@ -214,287 +195,209 @@ function InsightFormModal({
   const [title, setTitle] = useState(initial?.title ?? "");
   const [subTitle, setSubTitle] = useState(initial?.subTitle ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
-  const [redirectLink, setRedirectLink] = useState(
-    initial?.redirectLink ?? "",
+  const [redirectLink, setRedirectLink] = useState(initial?.redirectLink ?? "");
+
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    initial?.icon ?? null
   );
-  const [iconFile, setIconFile] = useState<File | null>(null);
-  const [iconPreview, setIconPreview] = useState<string | null>(
-    initial?.icon ?? null,
-  );
+
   const [titleError, setTitleError] = useState("");
-  const [subTitleError, setSubTitleError] = useState("");
-  const [descriptionError, setDescriptionError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setIconFile(file);
+    setImageFile(file);
     const reader = new FileReader();
-    reader.onload = () => setIconPreview(reader.result as string);
+    reader.onload = () => setImagePreview(reader.result as string);
     reader.readAsDataURL(file);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    let hasError = false;
-
     if (!title.trim()) {
-      setTitleError("Title is required");
-      hasError = true;
-    } else {
-      setTitleError("");
+      setTitleError("Insight title is required");
+      return;
     }
-
-    if (!subTitle.trim()) {
-      setSubTitleError("Subtitle is required");
-      hasError = true;
-    } else {
-      setSubTitleError("");
-    }
-
-    if (!description.trim()) {
-      setDescriptionError("Description is required");
-      hasError = true;
-    } else {
-      setDescriptionError("");
-    }
-
-    if (hasError) return;
+    setTitleError("");
 
     const formData = new FormData();
     formData.append("title", title.trim());
-    formData.append("subTitle", subTitle.trim());
-    formData.append("description", description.trim());
-    if (isEdit) {
-      // Always send redirectLink on edit so the user can clear it
-      formData.append("redirectLink", redirectLink.trim());
-    } else if (redirectLink.trim()) {
-      formData.append("redirectLink", redirectLink.trim());
-    }
-    if (iconFile) {
-      formData.append("icon", iconFile);
-    }
+    if (subTitle.trim()) formData.append("subTitle", subTitle.trim());
+    if (description.trim()) formData.append("description", description.trim());
+    if (redirectLink.trim()) formData.append("redirectLink", redirectLink.trim());
+    if (imageFile) formData.append("icon", imageFile);
+
     onSave(formData);
   };
 
   return (
     <ModalBackdrop onClose={onClose} wide>
-      <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50">
-            <Lightbulb className="h-4 w-4 text-amber-600" />
+      {/* Modal Header */}
+      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4 bg-slate-50/50 dark:bg-slate-800/30">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+            <Lightbulb className="h-5 w-5" />
           </div>
-          <h2
-            className="text-lg font-normal text-stone-800"
-            style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
-          >
-            {isEdit ? (
-              <>
-                Edit <em className="italic text-amber-600">Insight</em>
-              </>
-            ) : (
-              <>
-                New <em className="italic text-amber-600">Insight</em>
-              </>
-            )}
-          </h2>
+          <div>
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+              {isEdit ? "Edit Insight" : "Create New Insight"}
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {isEdit ? `Updating: ${initial?.title}` : "Add helpful platform tip or insight"}
+            </p>
+          </div>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
+          className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="space-y-5 px-6 py-5">
-          {/* Title */}
-          <div>
-            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-widest text-stone-400">
-              Title
-            </label>
-            <Input
-              value={title}
-              onChange={e => {
-                setTitle(e.target.value);
-                if (titleError) setTitleError("");
-              }}
-              placeholder="e.g. Property Insights"
-              className={`h-10 rounded-xl text-sm text-stone-700 shadow-none ${
-                titleError
-                  ? "border-rose-300 focus-visible:ring-rose-200"
-                  : "border-stone-200 focus-visible:ring-amber-400"
-              }`}
-            />
-            <FieldError message={titleError} />
-          </div>
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+        {/* Title */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+            Title <span className="text-primary">*</span>
+          </label>
+          <Input
+            value={title}
+            onChange={e => {
+              setTitle(e.target.value);
+              if (titleError) setTitleError("");
+            }}
+            placeholder="e.g. Market Inspection Best Practices"
+            className="h-10.5 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-primary dark:bg-slate-800/40"
+          />
+          {titleError && (
+            <p className="text-xs font-medium text-rose-500 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              {titleError}
+            </p>
+          )}
+        </div>
 
-          {/* SubTitle */}
-          <div>
-            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-widest text-stone-400">
-              Subtitle
-            </label>
-            <Input
-              value={subTitle}
-              onChange={e => {
-                setSubTitle(e.target.value);
-                if (subTitleError) setSubTitleError("");
-              }}
-              placeholder="e.g. Understand your property value"
-              className={`h-10 rounded-xl text-sm text-stone-700 shadow-none ${
-                subTitleError
-                  ? "border-rose-300 focus-visible:ring-rose-200"
-                  : "border-stone-200 focus-visible:ring-amber-400"
-              }`}
-            />
-            <FieldError message={subTitleError} />
-          </div>
+        {/* Subtitle */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+            Subtitle / Tagline
+          </label>
+          <Input
+            value={subTitle}
+            onChange={e => setSubTitle(e.target.value)}
+            placeholder="e.g. Essential guide for field surveyors"
+            className="h-10.5 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-primary dark:bg-slate-800/40"
+          />
+        </div>
 
-          {/* Description */}
-          <div>
-            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-widest text-stone-400">
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={e => {
-                setDescription(e.target.value);
-                if (descriptionError) setDescriptionError("");
-              }}
-              placeholder="Get detailed analysis of your property..."
-              rows={3}
-              className={`w-full resize-none rounded-xl border bg-white px-3.5 py-2.5 text-sm text-stone-700 shadow-none transition-colors placeholder:text-stone-300 focus:outline-none focus:ring-1 ${
-                descriptionError
-                  ? "border-rose-300 focus-visible:ring-rose-200"
-                  : "border-stone-200 focus-visible:ring-amber-400"
-              }`}
-            />
-            <FieldError message={descriptionError} />
-          </div>
+        {/* Link */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+            Resource Link (URL)
+          </label>
+          <Input
+            value={redirectLink}
+            onChange={e => setRedirectLink(e.target.value)}
+            placeholder="https://dwellr.tech/resources/survey-guide"
+            className="h-10.5 rounded-xl border-slate-200 dark:border-slate-700 text-sm font-mono focus-visible:ring-primary dark:bg-slate-800/40"
+          />
+        </div>
 
-          {/* Redirect Link */}
-          <div>
-            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-widest text-stone-400">
-              Redirect Link{" "}
-              <span className="normal-case tracking-normal text-stone-300">
-                (optional)
-              </span>
-            </label>
-            <div className="relative">
-              <ExternalLink className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" />
-              <Input
-                value={redirectLink}
-                onChange={e => setRedirectLink(e.target.value)}
-                placeholder="/properties/analysis"
-                className="h-10 rounded-xl border-stone-200 pl-9 text-sm text-stone-700 shadow-none focus-visible:ring-amber-400"
-              />
-            </div>
-          </div>
+        {/* Image Upload */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+            Cover / Banner Image
+          </label>
 
-          {/* Icon upload */}
-          <div>
-            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-widest text-stone-400">
-              Icon Image{" "}
-              <span className="normal-case tracking-normal text-stone-300">
-                (optional)
-              </span>
-            </label>
-
-            {iconPreview ? (
-              <div className="relative overflow-hidden rounded-xl border border-stone-200 bg-stone-50">
-                <div className="relative flex items-center gap-4 p-3">
-                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-stone-200 bg-white">
-                    <Image
-                      src={iconPreview}
-                      alt="Insight icon preview"
-                      className="h-full w-full object-cover"
-                      width={64}
-                      height={64}
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-stone-700">
-                      {iconFile?.name ?? "Current icon"}
-                    </p>
-                    <p className="mt-0.5 text-[10px] text-stone-400">
-                      {iconFile
-                        ? `${(iconFile.size / 1024).toFixed(1)} KB`
-                        : "Existing icon"}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIconFile(null);
-                      setIconPreview(null);
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-rose-50 hover:text-rose-500"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+          {imagePreview ? (
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 p-4 flex flex-col gap-3">
+              <div className="flex items-center gap-4">
+                <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xs">
+                  <Image
+                    src={imagePreview}
+                    alt="Insight cover preview"
+                    className="h-full w-full object-cover"
+                    width={96}
+                    height={64}
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    {imageFile?.name ?? "Current Insight Image"}
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {imageFile
+                      ? `${(imageFile.size / 1024).toFixed(1)} KB`
+                      : "Existing Cover Uploaded"}
+                  </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex w-full items-center justify-center gap-1.5 border-t border-stone-200 py-2 text-[10px] font-medium text-stone-400 transition-colors hover:bg-stone-100 hover:text-amber-600"
+                  onClick={() => {
+                    setImageFile(null);
+                    setImagePreview(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
                 >
-                  <FileImage className="h-3.5 w-3.5" />
-                  Replace image
+                  <X className="h-4 w-4" />
                 </button>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-stone-200 px-4 py-6 text-stone-400 transition-colors hover:border-amber-300 hover:bg-amber-50/30 hover:text-amber-600"
-              >
-                <ImageIcon className="h-6 w-6" />
-                <span className="text-xs font-medium">
-                  Click to upload icon
-                </span>
-                <span className="text-[10px] text-stone-300">
-                  JPEG, PNG, or WebP &middot; Max 5MB
-                </span>
-              </button>
-            )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex w-full flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700/80 px-4 py-5 text-slate-400 transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary"
+            >
+              <ImageIcon className="h-6 w-6 text-primary" />
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                Click to upload cover image
+              </span>
+            </button>
+          )}
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileChange}
+          />
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-stone-100 px-6 py-4">
+        {/* Buttons */}
+        <div className="flex justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
           <Button
             type="button"
             variant="outline"
-            size="sm"
             onClick={onClose}
             disabled={isSaving}
-            className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50"
+            className="h-10.5 px-4 rounded-xl border-slate-200 dark:border-slate-700 text-xs font-semibold"
           >
             Cancel
           </Button>
           <Button
             type="submit"
-            size="sm"
             disabled={isSaving}
-            className="h-8 rounded-lg bg-amber-500 text-xs text-white shadow-none hover:bg-amber-600 disabled:opacity-60"
+            className="h-10.5 px-5 rounded-xl bg-primary text-xs font-semibold text-primary-foreground shadow-md hover:bg-primary/90 disabled:opacity-50"
           >
             {isSaving ? (
-              <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
             ) : (
-              <Plus className="mr-1.5 h-3 w-3" />
+              <>
+                <Plus className="mr-2 h-4 w-4" />
+                {isEdit ? "Save Changes" : "Create Insight"}
+              </>
             )}
-            {isEdit ? "Save changes" : "Create insight"}
           </Button>
         </div>
       </form>
@@ -516,51 +419,33 @@ function DeleteModal({
 }) {
   return (
     <ModalBackdrop onClose={onCancel}>
-      <div className="p-6">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
-        >
-          <X className="h-4 w-4" />
-        </button>
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-50">
-          <Trash2 className="h-5 w-5 text-rose-500" />
+      <div className="p-6 flex flex-col items-center text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 border border-rose-500/20 mb-4">
+          <Trash2 className="h-7 w-7" />
         </div>
-        <h3
-          className="mt-4 text-lg font-normal text-stone-800"
-          style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
-        >
-          Delete <em className="italic text-rose-500">{insight.title}</em>?
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+          Delete Insight?
         </h3>
-        <p className="mt-1.5 text-sm leading-relaxed text-stone-400">
-          The insight &ldquo;
-          <span className="font-medium text-stone-600">{insight.title}</span>
-          &rdquo; will be permanently removed. This action cannot be undone.
+        <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+          Are you sure you want to delete <span className="font-semibold text-slate-700 dark:text-slate-300">&ldquo;{insight.title}&rdquo;</span>? This action cannot be undone.
         </p>
-        <div className="mt-6 flex justify-end gap-2">
+
+        <div className="mt-6 flex w-full gap-3">
           <Button
             type="button"
             variant="outline"
-            size="sm"
             onClick={onCancel}
-            className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50"
+            className="flex-1 h-10 rounded-xl border-slate-200 dark:border-slate-700 text-xs font-semibold"
           >
             Cancel
           </Button>
           <Button
             type="button"
-            size="sm"
-            disabled={isLoading}
             onClick={onConfirm}
-            className={`h-8 rounded-lg text-xs text-white shadow-none disabled:opacity-60 bg-rose-500 hover:bg-rose-600`}
+            disabled={isLoading}
+            className="flex-1 h-10 rounded-xl bg-rose-500 text-xs font-semibold text-white shadow-md shadow-rose-500/20 hover:bg-rose-600 disabled:opacity-50"
           >
-            {isLoading ? (
-              <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-            ) : (
-              <Trash2 className="mr-1.5 h-3 w-3" />
-            )}
-            Delete insight
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete Insight"}
           </Button>
         </div>
       </div>
@@ -568,7 +453,7 @@ function DeleteModal({
   );
 }
 
-// ─── Main Page ─────────────────────────────────────────────────────────────────
+// ─── Main Helpful Insights Component ───────────────────────────────────────────
 export default function InsightsPage() {
   const [pg, setPg] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -616,7 +501,7 @@ export default function InsightsPage() {
     } else if (formTarget) {
       updateInsight(
         { id: formTarget.id, formData },
-        { onSuccess: () => setFormTarget(null) },
+        { onSuccess: () => setFormTarget(null) }
       );
     }
   }
@@ -629,262 +514,242 @@ export default function InsightsPage() {
   }
 
   return (
-    <>
-      <div className="flex flex-col gap-6 min-h-screen">
-        {/* ── Top Header Banner ── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/60 dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 backdrop-blur-sm shadow-sm">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1">
-              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-              Knowledge & Guidance Center
-            </div>
-            <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Helpful Insights Directory
-            </h1>
+    <div className="flex flex-col gap-6">
+      {/* ── Page Header ── */}
+      <PageHeader
+        kicker="Educational Content"
+        title="Helpful Insights"
+        icon={Lightbulb}
+        description="Manage educational guides, articles, and resource cards for users"
+      >
+        <Button
+          type="button"
+          onClick={() => setFormTarget("new")}
+          className="h-10 rounded-xl bg-primary text-xs font-semibold text-primary-foreground shadow-md hover:bg-primary/90 transition-all"
+        >
+          <Plus className="mr-2 h-4 w-4" /> Add Insight
+        </Button>
+      </PageHeader>
+
+      {/* ── Stats Grid ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          icon={Lightbulb}
+          label="Total Insights"
+          value={meta?.total?.toLocaleString() ?? "—"}
+          sub="published"
+          accent="bg-primary/10 text-primary border-primary/20"
+        />
+        <StatCard
+          icon={ImageIcon}
+          label="With Banner Image"
+          value={insights.filter(i => i.icon).length.toLocaleString() ?? "—"}
+          sub="insights"
+          accent="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+        />
+        <StatCard
+          icon={LinkIcon}
+          label="External Links"
+          value={insights.filter(i => i.redirectLink).length.toLocaleString() ?? "—"}
+          sub="resources"
+          accent="bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20"
+        />
+      </div>
+
+      {/* ── Table Card Container ── */}
+      <div className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden flex flex-col">
+        {/* Table Header Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+          <div className="flex items-center gap-3">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight">
+              All Insights & Resources
+            </h2>
+            {meta && (
+              <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
+                {meta.total?.toLocaleString()} Total
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="relative w-full md:w-64">
+            <div className="relative w-full sm:w-64">
               <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 value={search}
-                placeholder="Search insights…"
-                className="h-10 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-10 text-xs focus-visible:ring-amber-500"
+                placeholder="Search insights title…"
+                className="h-10 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 pl-10 text-xs focus-visible:ring-primary"
                 onChange={e => {
                   setSearch(e.target.value);
                   setPg(1);
                 }}
               />
             </div>
-            <Button
-              type="button"
-              onClick={() => setFormTarget("new")}
-              className="rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-semibold text-xs px-4 py-2.5 shadow-md shadow-amber-500/20 hover:from-amber-600 hover:to-amber-700 shrink-0"
-            >
-              <Plus className="mr-2 h-4 w-4" /> Add Insight
-            </Button>
+            <PerPageSelect value={limit} onChange={handleLimitChange} />
           </div>
         </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <StatCard
-              icon={Lightbulb}
-              label="Total Insights"
-              value={meta?.total?.toLocaleString() ?? "—"}
-              sub="insights"
-              accent="bg-amber-50 text-amber-600"
-            />
-            <StatCard
-              icon={FileText}
-              label="With Descriptions"
-              value={
-                insights.filter(i => i.description?.length > 0).length.toLocaleString() ?? "—"
-              }
-              sub="insights"
-              accent="bg-sky-50 text-sky-600"
-            />
-            <StatCard
-              icon={ImageIcon}
-              label="With Icons"
-              value={
-                insights.filter(i => i.icon).length.toLocaleString() ?? "—"
-              }
-              sub="insights"
-              accent="bg-teal-50 text-teal-600"
-            />
-            <StatCard
-              icon={Layers}
-              label="Current Page"
-              value={meta ? `${meta.page}` : "—"}
-              sub={meta ? `of ${meta.totalPages}` : undefined}
-              accent="bg-violet-50 text-violet-600"
-            />
-          </div>
-
-        {/* ── Table ── */}
-        <div className="mx-6 mb-5 flex flex-1 flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
-          <div className="flex flex-none items-center justify-between border-b border-stone-100 px-6 py-3">
-            <h2
-              className="text-base font-normal text-stone-700"
-              style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
-            >
-              All Insights
-            </h2>
-            <div className="flex items-center gap-4">
-              {meta && (
-                <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs text-stone-500">
-                  {meta.total?.toLocaleString()} total
-                </span>
-              )}
-              <PerPageSelect value={limit} onChange={handleLimitChange} />
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-auto">
-            <table className="w-full min-w-[800px]">
-              <thead className="sticky top-0 z-10">
-                <tr className="border-b border-stone-100 bg-stone-50/95 backdrop-blur-sm">
-                  {(
-                    [
-                      { key: "title" as SortField, label: "Title" },
-                      { key: "subTitle" as SortField, label: "Subtitle" },
-                      { key: "createdAt" as SortField, label: "Created" },
-                    ] as { key: SortField; label: string }[]
-                  ).map(col => (
-                    <th key={col.key} className="px-6 py-3 text-left">
-                      <SortButton
-                        label={col.label}
-                        active={sortField === col.key}
-                        dir={sortField === col.key ? sortDir : null}
-                        onClick={() => handleSort(col.key)}
-                      />
-                    </th>
-                  ))}
-                  <th className="px-6 py-3 text-left">
-                    <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-stone-400">
-                      Redirect
-                    </span>
-                  </th>
-                  <th className="px-6 py-3 text-left">
-                    <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-stone-400">
-                      Actions
-                    </span>
-                  </th>
+        {/* Main Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[700px]">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                <th className="px-6 py-3.5">
+                  <SortButton
+                    label="Insight Title & Subtitle"
+                    active={sortField === "title"}
+                    dir={sortField === "title" ? sortDir : null}
+                    onClick={() => handleSort("title")}
+                  />
+                </th>
+                <th className="px-6 py-3.5">Resource Link</th>
+                <th className="px-6 py-3.5">
+                  <SortButton
+                    label="Created Date"
+                    active={sortField === "createdAt"}
+                    dir={sortField === "createdAt" ? sortDir : null}
+                    onClick={() => handleSort("createdAt")}
+                  />
+                </th>
+                <th className="px-6 py-3.5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan={4} className="px-6 py-4">
+                      <div className="h-8 w-full rounded-xl bg-slate-100 dark:bg-slate-800" />
+                    </td>
+                  </tr>
+                ))
+              ) : insights.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
+                    No insights found.
+                  </td>
                 </tr>
-              </thead>
-
-              <tbody>
-                {isLoading ? (
-                  Array.from({ length: limit }).map((_, i) => (
-                    <SkeletonRow key={i} />
-                  ))
-                ) : insights.length > 0 ? (
-                  insights.map(insight => (
-                    <tr
-                      key={insight.id}
-                      className="group border-b border-stone-100 transition-colors last:border-none hover:bg-stone-50/70"
-                    >
-                      <td className="px-6 py-3.5">
-                        <div className="flex items-center gap-3">
-                          {insight.icon ? (
-                            <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-stone-200">
-                              <Image
-                                src={insight.icon}
-                                alt=""
-                                className="h-full w-full object-cover"
-                                width={32}
-                                height={32}
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50">
-                              <Lightbulb className="h-4 w-4 text-amber-500" />
-                            </div>
-                          )}
-                          <span className="text-sm font-normal text-stone-800">
-                            {insight.title}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <span className="text-xs text-stone-500 line-clamp-1 max-w-[220px] block">
-                          {insight.subTitle}
-                        </span>
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <span className="text-xs tabular-nums text-stone-400">
-                          {new Date(insight.createdAt).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </span>
-                      </td>
-                      <td className="px-6 py-3.5">
-                        {insight.redirectLink ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-stone-50 px-2.5 py-1 font-mono text-[10px] text-stone-400">
-                            <ExternalLink className="h-2.5 w-2.5" />
-                            {insight.redirectLink.substring(0, 24)}
-                            {insight.redirectLink.length > 24 ? "..." : ""}
-                          </span>
+              ) : (
+                insights.map(item => (
+                  <tr
+                    key={item.id}
+                    className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                  >
+                    {/* Title & Cover */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        {item.icon ? (
+                          <div className="relative h-10 w-14 shrink-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                            <Image
+                              src={item.icon}
+                              alt=""
+                              className="h-full w-full object-cover"
+                              width={56}
+                              height={40}
+                            />
+                          </div>
                         ) : (
-                          <span className="text-[10px] text-stone-300">—</span>
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+                            <Lightbulb className="h-4 w-4" />
+                          </div>
                         )}
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => setFormTarget(insight)}
-                            title="Edit insight"
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 text-stone-400 transition-colors hover:border-amber-200 hover:bg-amber-50 hover:text-amber-500"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDeleteTarget(insight)}
-                            title="Delete insight"
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 text-stone-400 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <span className="font-bold text-slate-900 dark:text-white text-sm truncate">
+                            {item.title}
+                          </span>
+                          {item.subTitle && (
+                            <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                              {item.subTitle}
+                            </span>
+                          )}
                         </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="py-16 text-center text-sm text-stone-400"
-                    >
-                      <div className="flex flex-col items-center">
-                        <Lightbulb className="mb-2 h-6 w-6 text-stone-200" />
-                        No insights found
+                      </div>
+                    </td>
+
+                    {/* Link */}
+                    <td className="px-6 py-4">
+                      {item.redirectLink ? (
+                        <a
+                          href={item.redirectLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs font-mono text-primary hover:underline truncate max-w-[200px]"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                          {item.redirectLink}
+                        </a>
+                      ) : (
+                        <span className="text-slate-400 font-mono text-xs">—</span>
+                      )}
+                    </td>
+
+                    {/* Created Date */}
+                    <td className="px-6 py-4 font-medium text-slate-500 dark:text-slate-400">
+                      {new Date(item.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </td>
+
+                    {/* Action buttons */}
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setFormTarget(item)}
+                          title="Edit Insight"
+                          className="h-8 w-8 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteTarget(item)}
+                          title="Delete Insight"
+                          className="h-8 w-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
 
-        {/* ── Pagination ── */}
+        {/* Pagination Footer */}
         {meta && meta.totalPages > 1 && (
-          <div className="flex flex-col items-start gap-4 px-6 py-4 md:flex-row md:items-center md:justify-between">
-            <p className="text-xs font-light text-stone-400">
-              Page{" "}
-              <span className="font-medium text-stone-600">{meta.page}</span> of{" "}
-              <span className="font-medium text-stone-600">
-                {meta.totalPages}
-              </span>
-              &nbsp;·&nbsp;
-              <span className="font-medium text-stone-600">
-                {meta.total?.toLocaleString()}
-              </span>{" "}
-              total
-            </p>
-            <div className="flex gap-2">
+          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              Showing page <span className="font-bold text-slate-900 dark:text-white">{meta.page}</span> of {meta.totalPages}
+            </span>
+            <div className="flex items-center gap-2">
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 disabled={!meta.hasPrevPage}
-                onClick={() => setPg(p => p - 1)}
-                className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50 disabled:opacity-30"
+                onClick={() => setPg(p => Math.max(1, p - 1))}
+                className="h-8 px-3 rounded-lg text-xs font-semibold"
               >
-                <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Prev
+                <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Previous
               </Button>
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 disabled={!meta.hasNextPage}
                 onClick={() => setPg(p => p + 1)}
-                className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50 disabled:opacity-30"
+                className="h-8 px-3 rounded-lg text-xs font-semibold"
               >
-                Next <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
               </Button>
             </div>
           </div>
@@ -892,7 +757,7 @@ export default function InsightsPage() {
       </div>
 
       {/* ── Modals ── */}
-      {formTarget !== null && (
+      {formTarget && (
         <InsightFormModal
           initial={formTarget === "new" ? undefined : formTarget}
           onSave={handleFormSave}
@@ -909,6 +774,6 @@ export default function InsightsPage() {
           isLoading={isDeleting}
         />
       )}
-    </>
+    </div>
   );
 }

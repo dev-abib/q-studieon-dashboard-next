@@ -1,12 +1,12 @@
 "use client";
 
+import { useState, type ComponentType } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ChevronRight,
   LogOut,
   Settings,
-  User,
   HelpCircle,
   ChevronDown,
   ShieldCheck,
@@ -15,21 +15,28 @@ import {
   FileText,
   DollarSign,
   Search,
+  LayoutDashboard,
+  Users,
+  BookMarked,
+  MessageCircleQuestion,
+  Lightbulb,
+  BookDashed,
+  Sparkles,
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Title } from "@/components/typography/Title";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
 import { Admin } from "@/features/admin/types/admin.types";
 import { useLogOut } from "@/features/auth/hooks/use-logout";
+import { CommandPalette } from "@/components/layout/dashboard/CommandPalette";
+
+import { ThemeAccentPicker } from "@/components/layout/dashboard/ThemeAccentPicker";
 
 type HeaderProps = {
   admin: Admin;
@@ -47,10 +54,58 @@ const BREADCRUMB_MAP: Record<string, string> = {
   "dynamic-page": "Dynamic Pages",
 };
 
+const PAGE_ICONS: Record<string, ComponentType<{ className?: string }>> = {
+  dashboard: LayoutDashboard,
+  users: Users,
+  admins: ShieldCheck,
+  settings: Settings,
+  categories: BookMarked,
+  questions: MessageCircleQuestion,
+  insights: Lightbulb,
+  faqs: HelpCircle,
+  "dynamic-page": BookDashed,
+};
+
+const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+const SHORTCUT_LABEL = isMac ? "⌘K" : "Ctrl K";
+
+// Crisp Avatar with error fallback handling
+function HeaderAvatar({
+  src,
+  initials,
+  sizeClass = "h-8 w-8",
+  textSizeClass = "text-xs",
+}: {
+  src?: string | null;
+  initials: string;
+  sizeClass?: string;
+  textSizeClass?: string;
+}) {
+  const [imgErr, setImgErr] = useState(false);
+
+  return (
+    <div className={`relative ${sizeClass} shrink-0 overflow-hidden rounded-full ring-2 ring-primary/30 shadow-xs bg-slate-100 dark:bg-slate-800`}>
+      {src && !imgErr ? (
+        <img
+          src={src}
+          alt="Avatar"
+          onError={() => setImgErr(true)}
+          className="h-full w-full object-cover object-center transition-transform duration-200 hover:scale-105"
+        />
+      ) : (
+        <div className={`flex h-full w-full items-center justify-center bg-primary text-primary-foreground font-bold ${textSizeClass}`}>
+          {initials}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Header({ admin }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { mutate: logOutMutation, isPending } = useLogOut();
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const handleLogOut = () => {
     logOutMutation();
@@ -61,8 +116,16 @@ export function Header({ admin }: HeaderProps) {
     .filter(Boolean)
     .filter(segment => segment !== "dashboard");
 
+  const parentSegments = pathSegments.slice(0, -1);
   const currentSegment = pathSegments[pathSegments.length - 1] || "dashboard";
-  const pageTitle = BREADCRUMB_MAP[currentSegment] || currentSegment;
+
+  const resolvedSegment =
+    BREADCRUMB_MAP[currentSegment] ||
+    parentSegments[parentSegments.length - 1] ||
+    "dashboard";
+
+  const pageTitle = BREADCRUMB_MAP[resolvedSegment] || currentSegment;
+  const PageIcon = PAGE_ICONS[resolvedSegment] || LayoutDashboard;
 
   const initials = (admin.name ?? "A")
     .split(" ")
@@ -77,25 +140,25 @@ export function Header({ admin }: HeaderProps) {
         return {
           label: "Super Admin",
           icon: ShieldAlert,
-          bg: "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 border-amber-500/20",
+          bg: "bg-primary/10 text-primary border-primary/20",
         };
       case "customer_support":
         return {
           label: "Support Member",
           icon: Headphones,
-          bg: "bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border-blue-500/20",
+          bg: "bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 border-blue-500/20",
         };
       case "content_manager":
         return {
           label: "Content Manager",
           icon: FileText,
-          bg: "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-500/20",
+          bg: "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-500/20",
         };
       case "finance":
         return {
           label: "Finance Manager",
           icon: DollarSign,
-          bg: "bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400 border-purple-500/20",
+          bg: "bg-purple-500/10 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300 border-purple-500/20",
         };
       default:
         return {
@@ -110,70 +173,83 @@ export function Header({ admin }: HeaderProps) {
   const RoleBadgeIcon = roleBadge.icon;
 
   return (
-    <header className="h-16 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-100 dark:border-slate-800/80 shadow-sm mb-6 flex items-center justify-between px-6 transition-all">
-      {/* ── Breadcrumb / Page Title ── */}
-      <div className="flex items-center gap-2 text-sm">
-        <Link
-          href="/dashboard"
-          className="font-medium text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-        >
-          Dashboard
-        </Link>
-
-        {pathSegments.map((segment, index) => {
-          const href = `/dashboard/${pathSegments.slice(0, index + 1).join("/")}`;
-          const isLast = index === pathSegments.length - 1;
-          const label = BREADCRUMB_MAP[segment] || segment;
-
-          return (
-            <div key={href} className="flex items-center gap-2">
-              <ChevronRight className="h-3.5 w-3.5 text-slate-300 dark:text-slate-600" />
-              {isLast ? (
-                <h1 className="text-xl font-heading font-bold text-slate-900 dark:text-slate-100 capitalize tracking-tight">
-                  {label}
-                </h1>
-              ) : (
-                <Link
-                  href={href}
-                  className="font-medium text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors capitalize"
-                >
-                  {label}
-                </Link>
-              )}
-            </div>
-          );
-        })}
+    <header className="h-16 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm mb-6 flex items-center justify-between px-6 transition-all">
+      {/* ── Page Title / Breadcrumb ── */}
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+          <PageIcon className="h-5 w-5" />
+        </div>
+        <div className="flex flex-col min-w-0">
+          <nav className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500">
+            <Link
+              href="/dashboard"
+              className="hover:text-primary transition-colors"
+            >
+              Dashboard
+            </Link>
+            {parentSegments.map((segment, index) => {
+              const href = `/dashboard/${pathSegments
+                .slice(0, index + 1)
+                .join("/")}`;
+              return (
+                <div key={href} className="flex items-center gap-1">
+                  <ChevronRight className="h-3 w-3 text-slate-300 dark:text-slate-600" />
+                  <Link
+                    href={href}
+                    className="hover:text-primary transition-colors"
+                  >
+                    {BREADCRUMB_MAP[segment] || segment}
+                  </Link>
+                </div>
+              );
+            })}
+          </nav>
+          <h1 className="text-base font-semibold text-slate-900 dark:text-white truncate leading-tight">
+            {pageTitle}
+          </h1>
+        </div>
       </div>
 
       {/* ── Center Quick Search Pill ── */}
-      <div className="hidden lg:flex items-center gap-2 bg-slate-100/80 dark:bg-slate-800/60 px-3.5 py-1.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 text-slate-400 text-xs cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+      <button
+        type="button"
+        onClick={() => setSearchOpen(true)}
+        className="hidden lg:flex items-center gap-2 bg-slate-100/80 dark:bg-slate-800/60 px-3.5 py-1.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-slate-400 text-xs cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+      >
         <Search className="h-3.5 w-3.5 text-slate-400" />
         <span className="font-medium">Quick search...</span>
         <kbd className="ml-2 font-mono text-[10px] bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-500 font-semibold shadow-2xs">
-          ⌘K
+          {SHORTCUT_LABEL}
         </kbd>
-      </div>
+      </button>
 
-      {/* ── Right User Menu ── */}
-      <div className="flex items-center gap-3">
+      <CommandPalette
+        admin={admin}
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+      />
+
+      {/* ── Right User Menu & Theme Picker ── */}
+      <div className="flex items-center gap-2">
+        <ThemeAccentPicker />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="relative h-10 px-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition-all focus-visible:ring-0"
+              className="relative h-11 px-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition-all focus-visible:ring-0 cursor-pointer"
             >
-              <div className="relative">
-                <Avatar className="h-8 w-8 ring-2 ring-slate-100 dark:ring-slate-800">
-                  <AvatarImage src={admin.profilePictureURL || undefined} />
-                  <AvatarFallback className="bg-amber-50 text-amber-700 font-semibold text-xs">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
+              <div className="relative flex items-center">
+                <HeaderAvatar
+                  src={admin.profilePictureURL}
+                  initials={initials}
+                  sizeClass="h-8.5 w-8.5"
+                  textSizeClass="text-xs font-bold"
+                />
                 <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
               </div>
 
               <div className="hidden md:flex flex-col text-left">
-                <span className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[120px]">
+                <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[120px]">
                   {admin.name}
                 </span>
                 <span className="text-[10px] text-slate-400 font-medium capitalize">
@@ -181,35 +257,35 @@ export function Header({ admin }: HeaderProps) {
                 </span>
               </div>
 
-              <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+              <ChevronDown className="h-3.5 w-3.5 text-slate-400 ml-0.5" />
             </Button>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent
             align="end"
-            className="w-64 p-2 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xl bg-white dark:bg-slate-900"
+            className="w-72 p-2 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xl bg-white dark:bg-slate-900 backdrop-blur-xl animate-in fade-in-80 zoom-in-95 duration-150"
           >
-            {/* User Details Header */}
-            <div className="px-3 py-3 flex items-center gap-3 bg-slate-50/80 dark:bg-slate-800/50 rounded-xl mb-1">
-              <Avatar className="h-10 w-10 ring-2 ring-slate-200/60 dark:ring-slate-700">
-                <AvatarImage src={admin.profilePictureURL || undefined} />
-                <AvatarFallback className="bg-amber-50 text-amber-700 font-bold text-sm">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+            {/* User Details Header Card */}
+            <div className="px-3.5 py-3 flex items-center gap-3 bg-slate-50/80 dark:bg-slate-800/50 rounded-xl mb-1 border border-slate-100 dark:border-slate-800">
+              <HeaderAvatar
+                src={admin.profilePictureURL}
+                initials={initials}
+                sizeClass="h-10 w-10"
+                textSizeClass="text-sm font-bold"
+              />
               <div className="flex flex-col min-w-0">
-                <span className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                   {admin.name}
                 </span>
-                <span className="text-xs text-slate-400 truncate mb-1">
+                <span className="text-xs text-slate-400 truncate">
                   {admin.email}
                 </span>
-                <span
-                  className={`inline-flex items-center gap-1 w-max px-2 py-0.5 rounded-md text-[10px] font-semibold border ${roleBadge.bg}`}
-                >
-                  <RoleBadgeIcon className="h-3 w-3" />
-                  {roleBadge.label}
-                </span>
+                <div className="mt-1 flex items-center gap-1.5">
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${roleBadge.bg}`}>
+                    <RoleBadgeIcon className="h-3 w-3" />
+                    {roleBadge.label}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -218,17 +294,17 @@ export function Header({ admin }: HeaderProps) {
             {/* Menu Items */}
             <DropdownMenuItem
               onClick={() => router.push("/dashboard/settings")}
-              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded-xl cursor-pointer text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-medium rounded-xl cursor-pointer text-slate-700 dark:text-slate-200 hover:bg-primary/10 hover:text-primary transition-colors"
             >
-              <Settings className="h-4 w-4 text-slate-400" />
+              <Settings className="h-4 w-4 text-primary" />
               Settings & Profile
             </DropdownMenuItem>
 
             <DropdownMenuItem
               onClick={() => router.push("/dashboard/faqs")}
-              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded-xl cursor-pointer text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-medium rounded-xl cursor-pointer text-slate-700 dark:text-slate-200 hover:bg-primary/10 hover:text-primary transition-colors"
             >
-              <HelpCircle className="h-4 w-4 text-slate-400" />
+              <HelpCircle className="h-4 w-4 text-primary" />
               Help & Support
             </DropdownMenuItem>
 
@@ -238,7 +314,7 @@ export function Header({ admin }: HeaderProps) {
             <DropdownMenuItem
               onClick={handleLogOut}
               disabled={isPending}
-              className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-xl cursor-pointer text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+              className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-medium rounded-xl cursor-pointer text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
             >
               <LogOut className="h-4 w-4 text-rose-500" />
               {isPending ? "Logging out…" : "Log out"}

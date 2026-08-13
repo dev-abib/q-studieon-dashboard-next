@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/chart";
 import { useDashboardAnalytics } from "@/features/admin/hooks/user-dashboard-analytics";
 import { useCurrentUser } from "@/features/admin/hooks/use-get-met";
+import { PageHeader } from "@/components/layout/dashboard/PageHeader";
+import { Sparkles } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Skeleton helpers
@@ -54,7 +56,7 @@ const Sk = ({
 }) => <div className={`sk ${className}`} style={style} />;
 
 const SkCard = ({ children }: { children: React.ReactNode }) => (
-  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
+  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-5">
     {children}
   </div>
 );
@@ -113,7 +115,7 @@ const PieChartSkeleton = () => (
         <div className="relative w-[160px] h-[160px]">
           <Sk className="w-full h-full rounded-full" />
           <div
-            className="absolute rounded-full bg-white dark:bg-gray-900"
+            className="absolute rounded-full bg-white dark:bg-slate-900"
             style={{
               width: 90,
               height: 90,
@@ -152,7 +154,7 @@ const RevenueBreakdownSkeleton = () => (
       {[0, 1, 2].map(i => (
         <div
           key={i}
-          className="rounded-xl p-4 shadow-sm bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-col gap-2"
+          className="rounded-xl p-4 shadow-sm bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex flex-col gap-2"
         >
           <Sk className="h-3 w-24 rounded-full" />
           <Sk className="h-8 w-32 rounded-lg" />
@@ -222,7 +224,7 @@ const DashboardSkeleton = () => {
           {[0, 1, 2, 3].map(i => (
             <div
               key={i}
-              className="rounded-xl p-4 shadow-sm bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-col gap-2"
+              className="rounded-xl p-4 shadow-sm bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex flex-col gap-2"
             >
               <Sk className="h-3 w-20 rounded-full" />
               <Sk className="h-8 w-12 rounded-lg" />
@@ -269,25 +271,25 @@ const DashboardSkeleton = () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const revenueConfig = {
-  monthly: { label: "Monthly", color: "#6C63FF" },
-  yearly: { label: "Yearly", color: "#10B981" },
+  monthly: { label: "Monthly", color: "#f59e0b" },
+  yearly: { label: "Yearly", color: "#64748b" },
 };
 
 const userConfig = {
-  registered: { label: "Registered", color: "#6C63FF" },
-  guests: { label: "Guests", color: "#10B981" },
+  registered: { label: "Registered", color: "var(--primary)" },
+  guests: { label: "Guests", color: "#64748b" },
 };
 
 const reportsConfig = {
-  count: { label: "Reports", color: "#10B981" },
+  count: { label: "Reports", color: "var(--primary)" },
 };
 
 const monthlyRevenueConfig = {
-  revenue: { label: "Revenue", color: "#6C63FF" },
+  revenue: { label: "Revenue", color: "var(--primary)" },
 };
 
 const roleUsersConfig = {
-  count: { label: "Users", color: "#6C63FF" },
+  count: { label: "Users", color: "var(--primary)" },
 };
 
 const USER_ROLE_LABELS: Record<string, string> = {
@@ -305,17 +307,17 @@ const USER_ROLE_LABELS: Record<string, string> = {
 };
 
 const ROLE_TREND_COLORS = [
-  "#6C63FF",
-  "#10B981",
-  "#F59E0B",
-  "#3B82F6",
-  "#EF4444",
-  "#8B5CF6",
-  "#14B8A6",
-  "#F97316",
-  "#EC4899",
-  "#22C55E",
-  "#EAB308",
+  "#3B82F6", // Blue - Buyer
+  "#10B981", // Emerald - Seller
+  "#8B5CF6", // Violet - Renter
+  "#F59E0B", // Amber - Real Estate Agent
+  "#EC4899", // Pink - Brokerage
+  "#06B6D4", // Cyan - Practitioner
+  "#F97316", // Orange - Home Explorer
+  "#6366F1", // Indigo - Homeowner
+  "#14B8A6", // Teal - Investor
+  "#A855F7", // Purple - Interior Designer
+  "#64748B", // Slate - Architect
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -330,7 +332,7 @@ const Card = ({
   className?: string;
 }) => (
   <div
-    className={`bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5 ${className}`}
+    className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-5 ${className}`}
   >
     {children}
   </div>
@@ -344,10 +346,10 @@ const CardHeader = ({
   subtitle: string;
 }) => (
   <div className="mb-4">
-    <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
       {title}
     </p>
-    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
       {subtitle}
     </p>
   </div>
@@ -429,13 +431,13 @@ const Page = () => {
       label: "Monthly",
       count: data?.data?.subscriptionPlans?.monthly?.count,
       pct: data?.data?.subscriptionPlans?.monthly?.percent,
-      color: "#F59E0B",
+      color: "var(--primary)",
     },
     {
       label: "Yearly",
       count: data?.data?.subscriptionPlans?.yearly?.count,
       pct: data?.data?.subscriptionPlans?.yearly?.percent,
-      color: "#6C63FF",
+      color: "#6366f1",
     },
   ];
 
@@ -448,13 +450,26 @@ const Page = () => {
     ...item,
     label: USER_ROLE_LABELS[item.role] ?? item.role,
   }));
-  const topRoles = roleData.slice(0, 4);
 
-  const roleTrendData: Record<string, number | string>[] =
+  // ── Monthly trend — Include ALL 11 User Roles ──
+  const rawTrendData: Record<string, number | string>[] =
     data?.data?.charts?.userRoleTrendChart ?? [];
-  const roleTrendSeries = roleTrendData.length
-    ? (Object.keys(roleTrendData[0]) as string[]).filter(k => k !== "month")
-    : [];
+  const allRoleKeys = Object.keys(USER_ROLE_LABELS);
+  const rawTrendSeries = rawTrendData.length
+    ? (Object.keys(rawTrendData[0]) as string[]).filter(k => k !== "month")
+    : allRoleKeys;
+
+  // Include ALL 11 roles directly
+  const roleTrendSeries = rawTrendSeries.length > 0 ? rawTrendSeries : allRoleKeys;
+
+  const roleTrendData = rawTrendData.map(m => {
+    const point: Record<string, number | string> = { month: m.month };
+    for (const role of roleTrendSeries) {
+      point[role] = Number(m[role]) || 0;
+    }
+    return point;
+  });
+
   const roleTrendConfig = Object.fromEntries(
     roleTrendSeries.map((role, i) => [
       role,
@@ -488,67 +503,42 @@ const Page = () => {
 
   return (
     <section className="w-full flex flex-col gap-6 min-h-screen">
-      {/* ── Executive Welcome Hero Banner ── */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/40 border border-slate-800/80 p-6 md:p-8 shadow-xl">
-        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-extrabold text-xl shadow-inner">
-              {(userData?.data?.name || "A")[0]}
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">
-                  Live Executive Dashboard
-                </span>
-              </div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-                Welcome back, {userData?.data?.name || "Admin"}
-              </h1>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="px-3.5 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 text-xs font-bold text-white flex items-center gap-2">
-              <span className="text-amber-400 font-medium">Role:</span>
-              <span className="capitalize">{userData?.data?.role?.replace("_", " ") || "Admin"}</span>
-            </div>
-          </div>
+      {/* ── Welcome Header ── */}
+      <PageHeader
+        kicker="Live Executive Dashboard"
+        title={`Welcome back, ${userData?.data?.name || "Admin"}`}
+        icon={Sparkles}
+      >
+        <div className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+          <span className="text-primary font-medium">Role:</span>
+          <span className="capitalize">{userData?.data?.role?.replace("_", " ") || "Admin"}</span>
         </div>
-      </div>
+      </PageHeader>
 
       {/* ── top stat cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {topStats.map((stat, idx) => (
           <div
             key={idx}
-            className="group relative overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 p-5 flex flex-col justify-between gap-3 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 backdrop-blur-xl"
+            className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 flex flex-col justify-between gap-3 shadow-sm hover:shadow-md transition-all"
           >
-            <div
-              className="absolute top-0 left-0 right-0 h-1 transition-opacity opacity-60 group-hover:opacity-100"
-              style={{ background: stat.accent }}
-            />
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
                 {stat.label}
               </p>
-              <span
-                className="text-lg p-2.5 rounded-xl transition-transform group-hover:scale-110"
-                style={{ background: stat.lightBg }}
-              >
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 text-sm">
                 {stat.icon}
               </span>
             </div>
             <div>
-              <p className="text-3xl font-black tracking-tight text-slate-900 dark:text-white" style={{ color: stat.accent }}>
+              <p className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
                 {stat.value}
               </p>
               <p
-                className={`text-xs font-bold mt-1 ${
+                className={`text-xs font-medium mt-1 ${
                   stat.positive === true
-                    ? "text-emerald-500"
-                    : "text-slate-400"
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-slate-400 dark:text-slate-500"
                 }`}
               >
                 {stat.change}
@@ -619,8 +609,8 @@ const Page = () => {
               <Line
                 dataKey="count"
                 stroke="var(--color-count)"
-                strokeWidth={5.5}
-                dot={{ r: 5, fill: "#10B981" }}
+                strokeWidth={2.5}
+                dot={{ r: 5, fill: "var(--primary)" }}
                 type="monotone"
               />
             </LineChart>
@@ -690,11 +680,11 @@ const Page = () => {
                     if (!active || !payload?.length) return null;
                     const item = payload[0].payload;
                     return (
-                      <div className="rounded-lg border border-gray-100 bg-white dark:bg-gray-900 dark:border-gray-800 px-3 py-2 text-xs shadow-md">
-                        <p className="font-medium text-gray-800 dark:text-gray-100">
+                      <div className="rounded-lg border border-slate-100 bg-white dark:bg-slate-900 dark:border-slate-800 px-3 py-2 text-xs shadow-md">
+                        <p className="font-medium text-slate-800 dark:text-slate-100">
                           {item.label}
                         </p>
-                        <p className="text-gray-400">
+                        <p className="text-slate-400">
                           {item.count.toLocaleString()} users · {item.pct}%
                         </p>
                       </div>
@@ -715,12 +705,12 @@ const Page = () => {
                       className="w-3 h-3 rounded-full"
                       style={{ background: plan.color }}
                     />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                    <span className="text-sm text-slate-700 dark:text-slate-300">
                       {plan.label}
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-gray-400">{plan.count}</span>
+                    <span className="text-xs text-slate-400">{plan.count}</span>
                     <span
                       className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
                       style={{
@@ -740,89 +730,114 @@ const Page = () => {
 
       {/* ── users by role ── */}
       <Card>
-        <div className="flex flex-col gap-1 mb-5">
-          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-            Users by role
-          </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            Distribution across profile roles
-          </p>
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-6">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+              Users Breakdown by Role
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Active profile distribution across platform roles
+            </p>
+          </div>
+          <span className="text-xs font-medium px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+            {roleData.reduce((acc, curr) => acc + curr.count, 0)} Total Role Accounts
+          </span>
         </div>
 
         {roleData.length === 0 ? (
-          <p className="text-sm text-gray-400 py-8 text-center">
+          <p className="text-sm text-slate-400 py-8 text-center">
             No role data available yet.
           </p>
         ) : (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              {topRoles.map(role => (
-                <div
-                  key={role.role}
-                  className="rounded-xl p-4 shadow-sm bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-col gap-1"
-                >
-                  <p className="text-xs text-gray-400 dark:text-gray-500">
-                    {role.label}
-                  </p>
-                  <p
-                    className="text-2xl font-bold"
-                    style={{ color: "#6C63FF" }}
+            {/* Active Role Stat Progress Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
+              {roleData.map(role => {
+                const maxCount = Math.max(...roleData.map(r => r.count), 1);
+                const progressPct = Math.round((role.count / maxCount) * 100);
+                return (
+                  <div
+                    key={role.role}
+                    className="rounded-xl p-3.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 flex flex-col justify-between gap-2.5 transition-all hover:border-primary/40"
                   >
-                    {role.count}
-                  </p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">
-                    {role.percent}% of role users
-                  </p>
-                </div>
-              ))}
+                    <div>
+                      <p
+                        className="text-xs font-semibold text-slate-600 dark:text-slate-300 truncate"
+                        title={role.label}
+                      >
+                        {role.label}
+                      </p>
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className="text-lg font-bold text-slate-900 dark:text-white">
+                          {role.count}
+                        </span>
+                        <span className="text-[11px] font-semibold text-primary">
+                          {role.percent}%
+                        </span>
+                      </div>
+                    </div>
+                    {/* Visual Progress Bar */}
+                    <div className="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all duration-500"
+                        style={{ width: `${Math.max(progressPct, role.count > 0 ? 8 : 0)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
-            <ChartContainer
-              config={roleUsersConfig}
-              className="h-[320px] w-full"
-            >
-              <BarChart
-                data={roleData}
-                layout="vertical"
-                margin={{ left: 4, right: 8 }}
-              >
-                <CartesianGrid horizontal={false} stroke="#F1F5F9" />
-                <XAxis
-                  type="number"
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fontSize: 11, fill: "#94A3B8" }}
-                  allowDecimals={false}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="label"
-                  tickLine={false}
-                  axisLine={false}
-                  width={140}
-                  tick={{ fontSize: 11, fill: "#94A3B8" }}
-                />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar
-                  dataKey="count"
-                  fill="var(--color-count)"
-                  radius={[0, 6, 6, 0]}
-                  barSize={18}
-                />
-              </BarChart>
-            </ChartContainer>
+            {/* Crisp Column Bar Chart for Active Roles */}
+            {(() => {
+              const activeRoles = roleData.filter(r => r.count > 0);
+              const displayChartData = activeRoles.length > 0 ? activeRoles : roleData.slice(0, 6);
+              return (
+                <ChartContainer
+                  config={roleUsersConfig}
+                  className="h-[240px] w-full"
+                >
+                  <BarChart
+                    data={displayChartData}
+                    barCategoryGap="20%"
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
+                    <CartesianGrid vertical={false} stroke="#F1F5F9" />
+                    <XAxis
+                      dataKey="label"
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 11, fill: "#94A3B8" }}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 11, fill: "#94A3B8" }}
+                      allowDecimals={false}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar
+                      dataKey="count"
+                      fill="var(--primary)"
+                      radius={[8, 8, 0, 0]}
+                      maxBarSize={48}
+                    />
+                  </BarChart>
+                </ChartContainer>
+              );
+            })()}
 
             <div className="mt-8 mb-5">
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                 Monthly trend
               </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                 New users by role · last 6 months
               </p>
             </div>
 
             {roleTrendSeries.length === 0 ? (
-              <p className="text-sm text-gray-400 py-8 text-center">
+              <p className="text-sm text-slate-400 py-8 text-center">
                 No trend data available yet.
               </p>
             ) : (
@@ -871,10 +886,10 @@ const Page = () => {
       {isSuperAdmin && data?.data?.revenueBreakdown && (
         <Card>
           <div className="flex flex-col gap-1 mb-5">
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
               Revenue breakdown
             </p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">
+            <p className="text-xs text-slate-400 dark:text-slate-500">
               Monthly vs yearly subscriptions · full year
             </p>
           </div>
@@ -883,19 +898,19 @@ const Page = () => {
             {demoStats.map((stat, idx) => (
               <div
                 key={idx}
-                className="rounded-xl p-4 shadow-sm bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex flex-col gap-1"
+                className="rounded-xl p-4 shadow-sm bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex flex-col gap-1"
               >
-                <p className="text-xs text-gray-400 dark:text-gray-500">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
                   {stat.label}
                 </p>
                 <p
-                  className="text-2xl font-bold"
+                  className="text-xl font-semibold"
                   style={{ color: stat.accent }}
                 >
                   {stat.value}
                 </p>
                 {stat.sub && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
                     {stat.sub}
                   </p>
                 )}

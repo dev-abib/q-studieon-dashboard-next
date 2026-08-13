@@ -25,12 +25,13 @@ import { useGetAllUsers } from "@/features/users/hooks/use.users";
 import { Admin } from "@/features/admin/types/admin.types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/dashboard/PageHeader";
 import { useDeleteUser } from "@/features/auth/hooks/user-delete-user";
 import { useCurrentUser } from "@/features/admin/hooks/use-get-met";
 import Image from "next/image";
 
 const AVATAR_PALETTES = [
-  { bg: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
+  { bg: "bg-primary/10 text-primary border-primary/20" },
   { bg: "bg-sky-500/10 text-sky-600 border-sky-500/20" },
   { bg: "bg-rose-500/10 text-rose-600 border-rose-500/20" },
   { bg: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
@@ -57,26 +58,24 @@ function StatCard({
   accentColor: string;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 p-5 shadow-sm hover:shadow-md transition-all duration-200">
-      <div
-        className={`flex h-12 w-12 items-center justify-center rounded-xl shrink-0 ${accentColor}`}
-      >
-        <Icon className="h-6 w-6" />
-      </div>
-      <div className="flex flex-col min-w-0">
-        <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+    <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs flex flex-col justify-between gap-3 transition-all">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
           {label}
+        </p>
+        <span className={`flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200/60 dark:border-slate-800 shrink-0 ${accentColor}`}>
+          <Icon className="h-4 w-4" />
         </span>
-        <div className="flex items-baseline gap-2 mt-0.5">
-          <span className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            {value}
-          </span>
-          {sub && (
-            <span className="text-xs font-medium text-slate-400 truncate">
-              {sub}
-            </span>
-          )}
-        </div>
+      </div>
+      <div>
+        <p className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
+          {value}
+        </p>
+        {sub && (
+          <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">
+            {sub}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -103,14 +102,14 @@ function SortButton({
       onClick={onClick}
       className={`flex items-center gap-1.5 text-xs font-semibold tracking-wider uppercase transition-colors ${
         active
-          ? "text-amber-600 dark:text-amber-400"
+          ? "text-primary"
           : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
       }`}
     >
       {label}
       <Icon
         className={`h-3.5 w-3.5 ${
-          active ? "text-amber-500" : "text-slate-300 dark:text-slate-600"
+          active ? "text-primary" : "text-slate-300 dark:text-slate-600"
         }`}
       />
     </button>
@@ -142,7 +141,7 @@ function DeleteModal({
           <Trash2 className="h-6 w-6" />
         </div>
 
-        <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+        <h3 className="text-xl font-semibold text-slate-900 dark:text-white">
           Remove <span className="text-rose-500">{admin.name || admin.email}</span>?
         </h3>
 
@@ -228,31 +227,25 @@ export default function UsersPage() {
 
   return (
     <div className="flex flex-col gap-6 min-h-screen">
-      {/* ── Top Header Banner ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/60 dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 backdrop-blur-sm shadow-sm">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1">
-            <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-            Platform Directory
-          </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Users & Members Directory
-          </h1>
-        </div>
-
+      {/* ── Page Header ── */}
+      <PageHeader
+        kicker="Platform Directory"
+        title="Users & Members Directory"
+        icon={Users}
+      >
         <div className="relative w-full md:w-72">
           <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
             value={search}
             placeholder="Search by name or email…"
-            className="h-10 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-10 text-xs focus-visible:ring-amber-500"
+            className="h-10 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-10 text-xs focus-visible:ring-primary"
             onChange={e => {
               setSearch(e.target.value);
               setPage(1);
             }}
           />
         </div>
-      </div>
+      </PageHeader>
 
       {/* ── Stat Cards Grid ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -261,7 +254,7 @@ export default function UsersPage() {
           label="Total Registered Users"
           value={meta?.total?.toLocaleString() ?? "—"}
           sub="users"
-          accentColor="bg-amber-500/10 text-amber-600"
+          accentColor="bg-primary/10 text-primary"
         />
         <StatCard
           icon={UserCheck}
@@ -317,7 +310,7 @@ export default function UsersPage() {
                   />
                 </th>
                 {!isCustomerSupport && (
-                  <th className="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <th className="px-6 py-3.5 text-right text-xs font-medium uppercase tracking-wider text-slate-400">
                     Actions
                   </th>
                 )}
@@ -348,7 +341,7 @@ export default function UsersPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`h-9 w-9 rounded-xl flex items-center justify-center font-bold text-xs border ${pal.bg}`}
+                            className={`h-9 w-9 rounded-xl flex items-center justify-center font-semibold text-xs border ${pal.bg}`}
                           >
                             {u.profilePictureURL ? (
                               <Image
@@ -362,7 +355,7 @@ export default function UsersPage() {
                               initials
                             )}
                           </div>
-                          <span className="font-bold text-sm text-slate-900 dark:text-white">
+                          <span className="font-semibold text-sm text-slate-900 dark:text-white">
                             {u.name || "Anonymous User"}
                           </span>
                         </div>
@@ -422,8 +415,8 @@ export default function UsersPage() {
         {meta && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40">
             <span className="text-xs text-slate-500 dark:text-slate-400">
-              Showing page <span className="font-bold text-slate-800 dark:text-slate-200">{meta.page}</span> of{" "}
-              <span className="font-bold text-slate-800 dark:text-slate-200">{meta.totalPages}</span>
+              Showing page <span className="font-semibold text-slate-700 dark:text-slate-300">{meta.page}</span> of{" "}
+              <span className="font-semibold text-slate-700 dark:text-slate-300">{meta.totalPages}</span>
               &nbsp;·&nbsp; Total {meta.total} users
             </span>
 
@@ -433,7 +426,7 @@ export default function UsersPage() {
                 size="sm"
                 disabled={!meta.hasPrevPage}
                 onClick={() => setPage(p => p - 1)}
-                className="h-8 rounded-xl border-slate-200 text-xs font-semibold"
+                className="h-8 rounded-xl border-slate-200 text-xs font-medium"
               >
                 <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Previous
               </Button>
@@ -442,7 +435,7 @@ export default function UsersPage() {
                 size="sm"
                 disabled={!meta.hasNextPage}
                 onClick={() => setPage(p => p + 1)}
-                className="h-8 rounded-xl border-slate-200 text-xs font-semibold"
+                className="h-8 rounded-xl border-slate-200 text-xs font-medium"
               >
                 Next <ChevronRight className="ml-1 h-3.5 w-3.5" />
               </Button>

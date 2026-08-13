@@ -1,4 +1,34 @@
 @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap');
+
+/* ── Runtime font switcher ──────────────────────────────────────────────
+   --app-font is a plain CSS custom property (NOT under @theme inline),
+   so it can be overridden at runtime by adding a .font-* class to <html>.
+   body reads it via font-family: var(--app-font) in the @layer base below.
+──────────────────────────────────────────────────────────────────────── */
+:root {
+  --app-font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.font-inter           { --app-font: 'Inter', sans-serif; }
+.font-roboto          { --app-font: 'Roboto', sans-serif; }
+.font-poppins         { --app-font: 'Poppins', sans-serif; }
+.font-lato            { --app-font: 'Lato', sans-serif; }
+.font-montserrat      { --app-font: 'Montserrat', sans-serif; }
+.font-open-sans       { --app-font: 'Open Sans', sans-serif; }
+.font-source-sans-pro { --app-font: 'Source Sans Pro', sans-serif; }
+.font-nunito          { --app-font: 'Nunito', sans-serif; }
+.font-raleway         { --app-font: 'Raleway', sans-serif; }
+.font-playfair-display{ --app-font: 'Playfair Display', serif; }
 @import "../styles/designTokens.css";
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -7,6 +37,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Keep Tailwind's font-sans pointing to Jakarta for utility classes,
+     but actual body font is driven by --app-font (see above). */
   --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-heading: "Plus Jakarta Sans", sans-serif;
   --font-serif: "DM Serif Display", serif;
@@ -59,7 +91,7 @@
   --card-foreground: #0f172a;
   --popover: #ffffff;
   --popover-foreground: #0f172a;
-  --primary: #f59e0b;
+  --primary: #6366f1;
   --primary-foreground: #ffffff;
   --secondary: #f1f5f9;
   --secondary-foreground: #0f172a;
@@ -70,7 +102,7 @@
   --destructive: #ef4444;
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #f59e0b;
+  --ring: #6366f1;
   --radius: 0.75rem;
 }
 
@@ -81,7 +113,7 @@
   --card-foreground: #f8fafc;
   --popover: #111827;
   --popover-foreground: #f8fafc;
-  --primary: #f59e0b;
+  --primary: #6366f1;
   --primary-foreground: #ffffff;
   --secondary: #1e293b;
   --secondary-foreground: #f8fafc;
@@ -92,19 +124,82 @@
   --destructive: #f87171;
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.1);
+  --ring: #6366f1;
+}
+
+/* ── Dynamic Accent Palette Presets ── */
+[data-accent="indigo"] {
+  --primary: #6366f1;
+  --ring: #6366f1;
+}
+[data-accent="slate"] {
+  --primary: #475569;
+  --ring: #475569;
+}
+[data-accent="emerald"] {
+  --primary: #10b981;
+  --ring: #10b981;
+}
+[data-accent="sky"] {
+  --primary: #0284c7;
+  --ring: #0284c7;
+}
+[data-accent="violet"] {
+  --primary: #8b5cf6;
+  --ring: #8b5cf6;
+}
+[data-accent="rose"] {
+  --primary: #f43f5e;
+  --ring: #f43f5e;
+}
+[data-accent="amber"] {
+  --primary: #f59e0b;
   --ring: #f59e0b;
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
+    outline: none !important;
+  }
+  input, textarea, select, button {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  input:focus, input:focus-visible,
+  textarea:focus, textarea:focus-visible,
+  select:focus, select:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: #94a3b8 !important;
+  }
+  .dark input:focus, .dark input:focus-visible,
+  .dark textarea:focus, .dark textarea:focus-visible,
+  .dark select:focus, .dark select:focus-visible {
+    border-color: #64748b !important;
   }
   body {
-    @apply bg-background text-foreground font-sans antialiased selection:bg-amber-500/20 selection:text-amber-500;
+    /* Use the runtime CSS variable so font switching works immediately */
+    font-family: var(--app-font);
+    @apply bg-background text-foreground antialiased selection:bg-amber-500/20 selection:text-amber-500;
+    font-weight: 400;
   }
   html {
-    @apply font-sans;
+    font-family: var(--app-font);
   }
+
+  /* ── Global weight hierarchy ─────────────────────────────────────────
+     Keep weights intentional and consistent across the whole dashboard.
+     h1/h2  → semibold (600)  — prominent but not aggressive
+     h3/h4  → semibold (600)
+     h5/h6  → medium  (500)
+     p/span → normal  (400)  — default via body above
+     labels → medium  (500)  — slight emphasis, not loud
+  ─────────────────────────────────────────────────────────────────── */
+  h1, h2 { font-weight: 600; }
+  h3, h4 { font-weight: 600; }
+  h5, h6 { font-weight: 500; }
+  label  { font-weight: 500; }
 }
 
 /* Glassmorphic Cards & Ambient Glow */
@@ -155,20 +250,16 @@
 .rich-content-lg li {
   margin: 0.375rem 0;
 }
-.dark .rich-content {
-  color: #cbd5e1; /* slate-300 */
-}
 .rich-content h1,
 .rich-content h2,
 .rich-content h3,
 .rich-content h4,
 .rich-content h5,
 .rich-content h6 {
-  margin: 1.5rem 0 0.625rem;
-  font-family: "DM Serif Display", Georgia, serif;
-  font-weight: 400;
-  color: #292524; /* stone-800 */
-  line-height: 1.25;
+  margin: 1.75rem 0 0.75rem;
+  font-weight: 700;
+  color: #0f172a; /* slate-900 */
+  line-height: 1.3;
 }
 .dark .rich-content h1,
 .dark .rich-content h2,
@@ -176,7 +267,7 @@
 .dark .rich-content h4,
 .dark .rich-content h5,
 .dark .rich-content h6 {
-  color: #f1f5f9; /* slate-100 */
+  color: #f8fafc; /* slate-50 */
 }
 .rich-content h1 {
   font-size: 1.875rem;

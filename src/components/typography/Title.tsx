@@ -18,15 +18,15 @@ export const Title: React.FC<TitleProps> = ({
 }) => {
   const Tag = `h${level}` as React.ElementType;
   const sizeClass = {
-    1: 'text-5xl',
-    2: 'text-4xl',
-    3: 'text-3xl',
-    4: 'text-2xl',
-    5: 'text-xl',
-    6: 'text-lg',
+    1: 'text-3xl',
+    2: 'text-2xl',
+    3: 'text-xl',
+    4: 'text-lg',
+    5: 'text-base',
+    6: 'text-sm',
   }[level];
   return (
-    <Tag className={cn('font-heading font-medium tracking-tight', sizeClass, className)} {...rest}>
+    <Tag className={cn('font-heading font-semibold tracking-tight', sizeClass, className)} {...rest}>
       {children}
     </Tag>
   );

@@ -16,11 +16,10 @@ export const adminApi = {
   },
 
   updateProfile: async (payload: FormData) => {
-    const res = await api.put(`/admin/update-admin`, payload, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    // Do NOT set Content-Type manually: axios appends the multipart boundary
+    // itself when given FormData, and a header without the boundary breaks
+    // multer parsing on the backend.
+    const res = await api.put(`/admin/update-admin`, payload);
     return res.data;
   },
 

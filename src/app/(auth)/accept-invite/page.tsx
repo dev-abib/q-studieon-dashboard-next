@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,6 +9,7 @@ import { authApi } from "@/services/auth-api";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2, ShieldCheck, Sparkles, AlertCircle } from "lucide-react";
 import Link from "next/link";
@@ -31,7 +32,7 @@ const acceptInviteSchema = z
 
 type AcceptInviteForm = z.infer<typeof acceptInviteSchema>;
 
-export default function AcceptInvitePage() {
+function AcceptInviteForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token") || "";
@@ -91,7 +92,7 @@ export default function AcceptInvitePage() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-8 shadow-2xl">
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="h-12 w-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center mb-3">
+          <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-3">
             <Sparkles className="h-6 w-6" />
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
@@ -104,7 +105,7 @@ export default function AcceptInvitePage() {
 
         {verifying ? (
           <div className="flex flex-col items-center justify-center py-10 gap-3">
-            <Loader2 className="h-8 w-8 text-amber-500 animate-spin" />
+            <Loader2 className="h-8 w-8 text-primary animate-spin" />
             <p className="text-xs text-slate-400">Verifying invitation link…</p>
           </div>
         ) : errorMsg ? (
@@ -130,7 +131,7 @@ export default function AcceptInvitePage() {
                   {inviteData?.email}
                 </span>
               </div>
-              <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20 capitalize">
+              <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 capitalize">
                 {inviteData?.role.replace("_", " ")}
               </span>
             </div>
@@ -142,7 +143,7 @@ export default function AcceptInvitePage() {
               <Input
                 {...register("name")}
                 placeholder="Jane Smith"
-                className="h-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-amber-500"
+                className="h-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-primary"
               />
               {errors.name && (
                 <p className="text-xs text-rose-500">{errors.name.message}</p>
@@ -153,11 +154,10 @@ export default function AcceptInvitePage() {
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Create Password
               </label>
-              <Input
-                type="password"
+              <PasswordInput
                 {...register("password")}
                 placeholder="••••••••"
-                className="h-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-amber-500"
+                className="h-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-primary"
               />
               {errors.password && (
                 <p className="text-xs text-rose-500">{errors.password.message}</p>
@@ -168,11 +168,10 @@ export default function AcceptInvitePage() {
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Confirm Password
               </label>
-              <Input
-                type="password"
+              <PasswordInput
                 {...register("confirmPassword")}
                 placeholder="••••••••"
-                className="h-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-amber-500"
+                className="h-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-primary"
               />
               {errors.confirmPassword && (
                 <p className="text-xs text-rose-500">{errors.confirmPassword.message}</p>
@@ -182,7 +181,7 @@ export default function AcceptInvitePage() {
             <Button
               type="submit"
               disabled={isPending}
-              className="w-full h-11 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs shadow-md shadow-amber-500/20"
+              className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-xs"
             >
               {isPending ? (
                 <>
@@ -200,5 +199,19 @@ export default function AcceptInvitePage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AcceptInvitePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
+          <Loader2 className="h-8 w-8 text-primary animate-spin" />
+        </div>
+      }
+    >
+      <AcceptInviteForm />
+    </Suspense>
   );
 }

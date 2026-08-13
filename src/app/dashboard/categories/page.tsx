@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-
+import { useState, useRef, useEffect } from "react";
 import {
   Search,
   Plus,
@@ -20,16 +19,22 @@ import {
   ArrowUp,
   ArrowDown,
   Eye,
+  AlertCircle,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/dashboard/PageHeader";
 import { useGetAllCategories } from "@/features/categories/hooks/use-get-all-categories";
 import { useCreateCategory } from "@/features/categories/hooks/use-create-category";
 import { useUpdateCategory } from "@/features/categories/hooks/use-update-category";
 import { useDeleteCategory } from "@/features/categories/hooks/use-delete-category";
 import type { Category } from "@/features/categories/types/category.types";
 import Image from "next/image";
+
+type SortDir = "asc" | "desc" | null;
+type SortField = "name" | "slug" | "createdAt";
+const PER_PAGE_OPTIONS = [5, 8, 10, 20];
 
 // ─── Stat Card ─────────────────────────────────────────────────────────────────
 function StatCard({
@@ -46,46 +51,30 @@ function StatCard({
   accent: string;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 p-5 shadow-sm hover:shadow-md transition-all duration-200">
-      <div
-        className={`flex h-12 w-12 items-center justify-center rounded-xl shrink-0 ${accent}`}
-      >
-        <Icon className="h-6 w-6" />
-      </div>
-      <div className="flex flex-col min-w-0">
-        <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+    <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs flex flex-col justify-between gap-3 transition-all">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
           {label}
+        </p>
+        <span className={`flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200/60 dark:border-slate-800 shrink-0 ${accent}`}>
+          <Icon className="h-4 w-4" />
         </span>
-        <div className="flex items-baseline gap-2 mt-0.5">
-          <span className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            {value}
-          </span>
-          {sub && (
-            <span className="text-xs font-medium text-slate-400 truncate">
-              {sub}
-            </span>
-          )}
-        </div>
+      </div>
+      <div>
+        <p className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
+          {value}
+        </p>
+        {sub && (
+          <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">
+            {sub}
+          </p>
+        )}
       </div>
     </div>
   );
 }
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
-function SkeletonRow() {
-  return (
-    <tr className="border-b border-stone-100">
-      <td colSpan={5} className="px-6 py-4">
-        <div className="h-9 w-full animate-pulse rounded-lg bg-stone-100" />
-      </td>
-    </tr>
-  );
-}
-
-// ─── Sort ──────────────────────────────────────────────────────────────────────
-type SortDir = "asc" | "desc" | null;
-type SortField = "name" | "slug" | "createdAt";
-
+// ─── Sort Button ───────────────────────────────────────────────────────────────
 function SortButton({
   label,
   active,
@@ -101,22 +90,21 @@ function SortButton({
     !active || dir === null ? ArrowUpDown : dir === "asc" ? ArrowUp : ArrowDown;
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.14em] transition-colors ${
-        active ? "text-amber-600" : "text-stone-400 hover:text-stone-600"
+      className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+        active
+          ? "text-primary"
+          : "text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300"
       }`}
     >
       {label}
-      <Icon
-        className={`h-3 w-3 ${active ? "text-amber-500" : "text-stone-300"}`}
-      />
+      <Icon className="h-3 w-3" />
     </button>
   );
 }
 
-// ─── Per-page ──────────────────────────────────────────────────────────────────
-const PER_PAGE_OPTIONS = [5, 8, 10, 20];
-
+// ─── Per Page Select ───────────────────────────────────────────────────────────
 function PerPageSelect({
   value,
   onChange,
@@ -126,12 +114,14 @@ function PerPageSelect({
 }) {
   return (
     <div className="relative flex items-center gap-2">
-      <span className="text-xs text-stone-400">Rows</span>
+      <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">
+        Rows
+      </span>
       <div className="relative">
         <select
           value={value}
           onChange={e => onChange(Number(e.target.value))}
-          className="h-8 appearance-none rounded-lg border border-stone-200 bg-white pl-3 pr-7 text-xs text-stone-600 focus:outline-none focus:ring-1 focus:ring-amber-300"
+          className="h-8 appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 pl-3 pr-7 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none"
         >
           {PER_PAGE_OPTIONS.map(n => (
             <option key={n} value={n}>
@@ -139,16 +129,16 @@ function PerPageSelect({
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-stone-400" />
+        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
       </div>
     </div>
   );
 }
 
-// ─── Outside-click ─────────────────────────────────────────────────────────────
+// ─── Outside Click Hook ────────────────────────────────────────────────────────
 function useOutsideClick(
   ref: React.RefObject<HTMLElement>,
-  handler: () => void,
+  handler: () => void
 ) {
   useEffect(() => {
     function listener(e: MouseEvent) {
@@ -174,11 +164,11 @@ function ModalBackdrop({
   useOutsideClick(panelRef as React.RefObject<HTMLElement>, onClose);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/50 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-md">
       <div
         ref={panelRef}
-        className={`relative my-auto w-full rounded-2xl border border-stone-200 bg-white shadow-2xl ${
-          wide ? "max-w-lg" : "max-w-sm"
+        className={`relative my-auto w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden ${
+          wide ? "max-w-lg" : "max-w-md"
         }`}
       >
         {children}
@@ -187,13 +177,7 @@ function ModalBackdrop({
   );
 }
 
-// ─── Field Error ───────────────────────────────────────────────────────────────
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return <p className="mt-1.5 text-[11px] text-rose-500">{message}</p>;
-}
-
-// ─── Category Form Modal (create / edit) ──────────────────────────────────────
+// ─── Category Form Modal (Create / Edit) ──────────────────────────────────────
 function CategoryFormModal({
   initial,
   onSave,
@@ -209,7 +193,7 @@ function CategoryFormModal({
   const [name, setName] = useState(initial?.name ?? "");
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(
-    initial?.icon ?? null,
+    initial?.icon ?? null
   );
   const [nameError, setNameError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -241,159 +225,158 @@ function CategoryFormModal({
 
   return (
     <ModalBackdrop onClose={onClose}>
-      <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50">
-            <BookMarked className="h-4 w-4 text-amber-600" />
+      {/* Modal Header */}
+      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4 bg-slate-50/50 dark:bg-slate-800/30">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+            <BookMarked className="h-5 w-5" />
           </div>
-          <h2
-            className="text-lg font-normal text-stone-800"
-            style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
-          >
-            {isEdit ? (
-              <>
-                Edit <em className="italic text-amber-600">Category</em>
-              </>
-            ) : (
-              <>
-                New <em className="italic text-amber-600">Category</em>
-              </>
-            )}
-          </h2>
+          <div>
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+              {isEdit ? "Edit Category" : "New Category"}
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {isEdit ? `Updating: ${initial?.name}` : "Organize onsite reports & questions"}
+            </p>
+          </div>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
+          className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="space-y-5 px-6 py-5">
-          {/* Name */}
-          <div>
-            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-widest text-stone-400">
-              Category Name
-            </label>
-            <Input
-              value={name}
-              onChange={e => {
-                setName(e.target.value);
-                if (nameError) setNameError("");
-              }}
-              placeholder="e.g. Favorite Color"
-              className={`h-10 rounded-xl text-sm text-stone-700 shadow-none ${
-                nameError
-                  ? "border-rose-300 focus-visible:ring-rose-200"
-                  : "border-stone-200 focus-visible:ring-amber-400"
-              }`}
-            />
-            <FieldError message={nameError} />
-          </div>
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5">
+        {/* Name */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+            Category Name <span className="text-primary">*</span>
+          </label>
+          <Input
+            value={name}
+            onChange={e => {
+              setName(e.target.value);
+              if (nameError) setNameError("");
+            }}
+            placeholder="e.g. Architectural Property"
+            className="h-10.5 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-primary dark:bg-slate-800/40"
+          />
+          {nameError && (
+            <p className="text-xs font-medium text-rose-500 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              {nameError}
+            </p>
+          )}
+        </div>
 
-          {/* Icon upload */}
-          <div>
-            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-widest text-stone-400">
-              Icon Image{" "}
-              <span className="normal-case tracking-normal text-stone-300">
-                (optional)
-              </span>
-            </label>
+        {/* Icon Upload */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+            Category Icon <span className="text-xs font-normal text-slate-400">(Optional)</span>
+          </label>
 
-            {iconPreview ? (
-              <div className="relative overflow-hidden rounded-xl border border-stone-200 bg-stone-50">
-                <div className="relative flex items-center gap-4 p-3">
-                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-stone-200 bg-white">
-                    <Image
-                      src={iconPreview}
-                      alt="Category icon preview"
-                      className="h-full w-full object-cover"
-                      width={64}
-                      height={64}
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-stone-700">
-                      {iconFile?.name ?? "Current icon"}
-                    </p>
-                    <p className="mt-0.5 text-[10px] text-stone-400">
-                      {iconFile
-                        ? `${(iconFile.size / 1024).toFixed(1)} KB`
-                        : "Existing icon"}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIconFile(null);
-                      setIconPreview(null);
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-rose-50 hover:text-rose-500"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+          {iconPreview ? (
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 p-4 flex flex-col gap-3">
+              <div className="flex items-center gap-4">
+                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xs">
+                  <Image
+                    src={iconPreview}
+                    alt="Category icon preview"
+                    className="h-full w-full object-cover"
+                    width={64}
+                    height={64}
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    {iconFile?.name ?? "Current Category Icon"}
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {iconFile
+                      ? `${(iconFile.size / 1024).toFixed(1)} KB`
+                      : "Existing Icon Uploaded"}
+                  </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex w-full items-center justify-center gap-1.5 border-t border-stone-200 py-2 text-[10px] font-medium text-stone-400 transition-colors hover:bg-stone-100 hover:text-amber-600"
+                  onClick={() => {
+                    setIconFile(null);
+                    setIconPreview(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
                 >
-                  <FileImage className="h-3.5 w-3.5" />
-                  Replace image
+                  <X className="h-4 w-4" />
                 </button>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-stone-200 px-4 py-6 text-stone-400 transition-colors hover:border-amber-300 hover:bg-amber-50/30 hover:text-amber-600"
-              >
-                <ImageIcon className="h-6 w-6" />
-                <span className="text-xs font-medium">
-                  Click to upload icon
-                </span>
-                <span className="text-[10px] text-stone-300">
-                  JPEG, PNG, or WebP &middot; Max 5MB
-                </span>
-              </button>
-            )}
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-          </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="h-8.5 text-xs font-semibold rounded-xl border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <FileImage className="mr-1.5 h-3.5 w-3.5 text-primary" />
+                Replace Icon Image
+              </Button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex w-full flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700/80 px-4 py-7 text-slate-400 transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary"
+            >
+              <ImageIcon className="h-7 w-7 text-primary" />
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                Click to upload category icon
+              </span>
+              <span className="text-[11px] text-slate-400">
+                Supports JPEG, PNG, or WebP (Max 5MB)
+              </span>
+            </button>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleFileChange}
+          />
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-stone-100 px-6 py-4">
+        {/* Buttons */}
+        <div className="flex justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
           <Button
             type="button"
             variant="outline"
-            size="sm"
             onClick={onClose}
             disabled={isSaving}
-            className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50"
+            className="h-10.5 px-4 rounded-xl border-slate-200 dark:border-slate-700 text-xs font-semibold"
           >
             Cancel
           </Button>
           <Button
             type="submit"
-            size="sm"
             disabled={isSaving}
-            className="h-8 rounded-lg bg-amber-500 text-xs text-white shadow-none hover:bg-amber-600 disabled:opacity-60"
+            className="h-10.5 px-5 rounded-xl bg-primary text-xs font-semibold text-primary-foreground shadow-md hover:bg-primary/90 disabled:opacity-50"
           >
             {isSaving ? (
-              <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
             ) : (
-              <Plus className="mr-1.5 h-3 w-3" />
+              <>
+                <Plus className="mr-2 h-4 w-4" />
+                {isEdit ? "Save Changes" : "Create Category"}
+              </>
             )}
-            {isEdit ? "Save changes" : "Create category"}
           </Button>
         </div>
       </form>
@@ -415,64 +398,41 @@ function DeleteModal({
 }) {
   return (
     <ModalBackdrop onClose={onCancel}>
-      <div className="p-6">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
-        >
-          <X className="h-4 w-4" />
-        </button>
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-50">
-          <Trash2 className="h-5 w-5 text-rose-500" />
+      <div className="p-6 flex flex-col items-center text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 border border-rose-500/20 mb-4">
+          <Trash2 className="h-7 w-7" />
         </div>
-        <h3
-          className="mt-4 text-lg font-normal text-stone-800"
-          style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
-        >
-          Delete <em className="italic text-rose-500">{category.name}</em>?
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+          Delete Category?
         </h3>
-        <p className="mt-1.5 text-sm leading-relaxed text-stone-400">
+        <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
           {category._count && category._count.questions > 0 ? (
             <>
-              This category has{" "}
-              <span className="font-medium text-stone-600">
-                {category._count.questions}
-              </span>{" "}
-              question{category._count.questions !== 1 ? "s" : ""} linked to it.
-              You must remove or reassign them before deleting.
+              This category has <span className="font-semibold text-slate-700 dark:text-slate-300">{category._count.questions}</span> question{category._count.questions !== 1 ? "s" : ""} assigned to it. Please reassign them before deleting.
             </>
           ) : (
             <>
-              The category &ldquo;
-              <span className="font-medium text-stone-600">{category.name}</span>
-              &rdquo; will be permanently removed. This action cannot be undone.
+              Are you sure you want to delete <span className="font-semibold text-slate-700 dark:text-slate-300">{category.name}</span>? This action cannot be undone.
             </>
           )}
         </p>
-        <div className="mt-6 flex justify-end gap-2">
+
+        <div className="mt-6 flex w-full gap-3">
           <Button
             type="button"
             variant="outline"
-            size="sm"
             onClick={onCancel}
-            className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50"
+            className="flex-1 h-10 rounded-xl border-slate-200 dark:border-slate-700 text-xs font-semibold"
           >
             Cancel
           </Button>
           <Button
             type="button"
-            size="sm"
-            disabled={isLoading}
             onClick={onConfirm}
-            className={`h-8 rounded-lg text-xs text-white shadow-none disabled:opacity-60 bg-rose-500 hover:bg-rose-600`}
+            disabled={isLoading}
+            className="flex-1 h-10 rounded-xl bg-rose-500 text-xs font-semibold text-white shadow-md shadow-rose-500/20 hover:bg-rose-600 disabled:opacity-50"
           >
-            {isLoading ? (
-              <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-            ) : (
-              <Trash2 className="mr-1.5 h-3 w-3" />
-            )}
-            Delete category
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete Category"}
           </Button>
         </div>
       </div>
@@ -480,7 +440,7 @@ function DeleteModal({
   );
 }
 
-// ─── Main Page ─────────────────────────────────────────────────────────────────
+// ─── Main Onsite Categories Component ──────────────────────────────────────────
 export default function CategoriesPage() {
   const [pg, setPg] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -499,12 +459,9 @@ export default function CategoriesPage() {
     sortOrder: sortDir ?? undefined,
   });
 
-  const { mutate: createCategory, isPending: isCreating } =
-    useCreateCategory();
-  const { mutate: updateCategory, isPending: isUpdating } =
-    useUpdateCategory();
-  const { mutate: deleteCategory, isPending: isDeleting } =
-    useDeleteCategory();
+  const { mutate: createCategory, isPending: isCreating } = useCreateCategory();
+  const { mutate: updateCategory, isPending: isUpdating } = useUpdateCategory();
+  const { mutate: deleteCategory, isPending: isDeleting } = useDeleteCategory();
 
   const categories: Category[] = data?.data?.categories ?? [];
   const meta = data?.data?.meta;
@@ -531,7 +488,7 @@ export default function CategoriesPage() {
     } else if (formTarget) {
       updateCategory(
         { id: formTarget.id, formData },
-        { onSuccess: () => setFormTarget(null) },
+        { onSuccess: () => setFormTarget(null) }
       );
     }
   }
@@ -544,262 +501,244 @@ export default function CategoriesPage() {
   }
 
   return (
-    <>
-      <div className="flex flex-col gap-6 min-h-screen">
-        {/* ── Top Header Banner ── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/60 dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 backdrop-blur-sm shadow-sm">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1">
-              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-              Content Organization
-            </div>
-            <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Onsite Categories & Topics
-            </h1>
+    <div className="flex flex-col gap-6">
+      {/* ── Page Header ── */}
+      <PageHeader
+        kicker="Content Organization"
+        title="Onsite Categories & Topics"
+        icon={BookMarked}
+        description="Manage categories, icon assets, and report classifications"
+      >
+        <Button
+          type="button"
+          onClick={() => setFormTarget("new")}
+          className="h-10 rounded-xl bg-primary text-xs font-semibold text-primary-foreground shadow-xs hover:bg-primary/90 transition-all cursor-pointer"
+        >
+          <Plus className="mr-1.5 h-4 w-4" /> Add Category
+        </Button>
+      </PageHeader>
+
+      {/* ── Stats Grid ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          icon={BookMarked}
+          label="Total Categories"
+          value={meta?.total?.toLocaleString() ?? "—"}
+          sub="categories"
+          accent="bg-primary/10 text-primary border-primary/20"
+        />
+        <StatCard
+          icon={Eye}
+          label="Assigned Questions"
+          value={
+            categories
+              .reduce((acc, cat) => acc + (cat._count?.questions ?? 0), 0)
+              .toLocaleString() ?? "—"
+          }
+          sub="active"
+          accent="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+        />
+        <StatCard
+          icon={ImageIcon}
+          label="With Icon Asset"
+          value={categories.filter(c => c.icon).length.toLocaleString() ?? "—"}
+          sub="configured"
+          accent="bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20"
+        />
+      </div>
+
+      {/* ── Table Card Container ── */}
+      <div className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden flex flex-col">
+        {/* Table Header Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+          <div className="flex items-center gap-3">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight">
+              All Categories
+            </h2>
+            {meta && (
+              <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
+                {meta.total?.toLocaleString()} Total
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="relative w-full md:w-64">
+            {/* Search Bar */}
+            <div className="relative w-full sm:w-64">
               <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 value={search}
-                placeholder="Search categories…"
-                className="h-10 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-10 text-xs focus-visible:ring-amber-500"
+                placeholder="Search category name…"
+                className="h-10 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 pl-10 text-xs focus-visible:ring-primary"
                 onChange={e => {
                   setSearch(e.target.value);
                   setPg(1);
                 }}
               />
             </div>
-            <Button
-              type="button"
-              onClick={() => setFormTarget("new")}
-              className="rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-semibold text-xs px-4 py-2.5 shadow-md shadow-amber-500/20 hover:from-amber-600 hover:to-amber-700 shrink-0"
-            >
-              <Plus className="mr-2 h-4 w-4" /> Add Category
-            </Button>
+            <PerPageSelect value={limit} onChange={handleLimitChange} />
           </div>
         </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <StatCard
-              icon={BookMarked}
-              label="Total Categories"
-              value={meta?.total?.toLocaleString() ?? "—"}
-              sub="categories"
-              accent="bg-amber-50 text-amber-600"
-            />
-            <StatCard
-              icon={Eye}
-              label="Total Questions"
-              value={
-                categories
-                  .reduce(
-                    (acc, cat) => acc + (cat._count?.questions ?? 0),
-                    0,
-                  )
-                  .toLocaleString() ?? "—"
-              }
-              sub="across all"
-              accent="bg-sky-50 text-sky-600"
-            />
-            <StatCard
-              icon={ImageIcon}
-              label="With Icons"
-              value={
-                categories.filter(c => c.icon).length.toLocaleString() ?? "—"
-              }
-              sub="categories"
-              accent="bg-teal-50 text-teal-600"
-            />
-          <StatCard
-            icon={Layers}
-            label="Current Page"
-              value={meta ? `${meta.page}` : "—"}
-              sub={meta ? `of ${meta.totalPages}` : undefined}
-              accent="bg-violet-50 text-violet-600"
-            />
-          </div>
-
-        {/* ── Table ── */}
-        <div className="mx-6 mb-5 flex flex-1 flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
-          <div className="flex flex-none items-center justify-between border-b border-stone-100 px-6 py-3">
-            <h2
-              className="text-base font-normal text-stone-700"
-              style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
-            >
-              All Categories
-            </h2>
-            <div className="flex items-center gap-4">
-              {meta && (
-                <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs text-stone-500">
-                  {meta.total?.toLocaleString()} total
-                </span>
-              )}
-              <PerPageSelect value={limit} onChange={handleLimitChange} />
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-auto">
-            <table className="w-full min-w-[700px]">
-              <thead className="sticky top-0 z-10">
-                <tr className="border-b border-stone-100 bg-stone-50/95 backdrop-blur-sm">
-                  {(
-                    [
-                      { key: "name" as SortField, label: "Name" },
-                      { key: "slug" as SortField, label: "Slug" },
-                      { key: "createdAt" as SortField, label: "Created" },
-                    ] as { key: SortField; label: string }[]
-                  ).map(col => (
-                    <th key={col.key} className="px-6 py-3 text-left">
-                      <SortButton
-                        label={col.label}
-                        active={sortField === col.key}
-                        dir={sortField === col.key ? sortDir : null}
-                        onClick={() => handleSort(col.key)}
-                      />
-                    </th>
-                  ))}
-                  <th className="px-6 py-3 text-left">
-                    <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-stone-400">
-                      Questions
-                    </span>
-                  </th>
-                  <th className="px-6 py-3 text-left">
-                    <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-stone-400">
-                      Actions
-                    </span>
-                  </th>
+        {/* Main Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[650px]">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                <th className="px-6 py-3.5">
+                  <SortButton
+                    label="Category Name"
+                    active={sortField === "name"}
+                    dir={sortField === "name" ? sortDir : null}
+                    onClick={() => handleSort("name")}
+                  />
+                </th>
+                <th className="px-6 py-3.5">
+                  <SortButton
+                    label="Slug Path"
+                    active={sortField === "slug"}
+                    dir={sortField === "slug" ? sortDir : null}
+                    onClick={() => handleSort("slug")}
+                  />
+                </th>
+                <th className="px-6 py-3.5">
+                  <SortButton
+                    label="Created Date"
+                    active={sortField === "createdAt"}
+                    dir={sortField === "createdAt" ? sortDir : null}
+                    onClick={() => handleSort("createdAt")}
+                  />
+                </th>
+                <th className="px-6 py-3.5">Questions Count</th>
+                <th className="px-6 py-3.5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan={5} className="px-6 py-4">
+                      <div className="h-8 w-full rounded-xl bg-slate-100 dark:bg-slate-800" />
+                    </td>
+                  </tr>
+                ))
+              ) : categories.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                    No categories found.
+                  </td>
                 </tr>
-              </thead>
+              ) : (
+                categories.map(cat => (
+                  <tr
+                    key={cat.id}
+                    className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                  >
+                    {/* Category Name & Icon */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        {cat.icon ? (
+                          <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                            <Image
+                              src={cat.icon}
+                              alt=""
+                              className="h-full w-full object-cover"
+                              width={36}
+                              height={36}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+                            <BookMarked className="h-4 w-4" />
+                          </div>
+                        )}
+                        <span className="font-bold text-slate-900 dark:text-white text-sm">
+                          {cat.name}
+                        </span>
+                      </div>
+                    </td>
 
-              <tbody>
-                {isLoading ? (
-                  Array.from({ length: limit }).map((_, i) => (
-                    <SkeletonRow key={i} />
-                  ))
-                ) : categories.length > 0 ? (
-                  categories.map(cat => (
-                    <tr
-                      key={cat.id}
-                      className="group border-b border-stone-100 transition-colors last:border-none hover:bg-stone-50/70"
-                    >
-                      <td className="px-6 py-3.5">
-                        <div className="flex items-center gap-3">
-                          {cat.icon ? (
-                            <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-stone-200">
-                              <Image
-                                src={cat.icon}
-                                alt=""
-                                className="h-full w-full object-cover"
-                                width={32}
-                                height={32}
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50">
-                              <BookMarked className="h-4 w-4 text-amber-500" />
-                            </div>
-                          )}
-                          <span className="text-sm font-normal text-stone-800">
-                            {cat.name}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <span className="font-mono text-xs text-stone-400">
-                          /{cat.slug}
-                        </span>
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <span className="text-xs tabular-nums text-stone-400">
-                          {new Date(cat.createdAt).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </span>
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-stone-50 px-2.5 py-1 text-xs text-stone-500">
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400" />
-                          {cat._count?.questions ?? 0}
-                        </span>
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => setFormTarget(cat)}
-                            title="Edit category"
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 text-stone-400 transition-colors hover:border-amber-200 hover:bg-amber-50 hover:text-amber-500"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDeleteTarget(cat)}
-                            title="Delete category"
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 text-stone-400 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="py-16 text-center text-sm text-stone-400"
-                    >
-                      <div className="flex flex-col items-center">
-                        <BookMarked className="mb-2 h-6 w-6 text-stone-200" />
-                        No categories found
+                    {/* Slug */}
+                    <td className="px-6 py-4 font-mono text-primary text-xs">
+                      /{cat.slug}
+                    </td>
+
+                    {/* Created Date */}
+                    <td className="px-6 py-4 font-medium text-slate-500 dark:text-slate-400">
+                      {new Date(cat.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </td>
+
+                    {/* Questions count */}
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        {cat._count?.questions ?? 0} Questions
+                      </span>
+                    </td>
+
+                    {/* Action buttons */}
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setFormTarget(cat)}
+                          title="Edit Category"
+                          className="h-8 w-8 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteTarget(cat)}
+                          title="Delete Category"
+                          className="h-8 w-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
 
-        {/* ── Pagination ── */}
+        {/* Pagination Footer */}
         {meta && meta.totalPages > 1 && (
-          <div className="flex flex-col items-start gap-4 px-6 py-4 md:flex-row md:items-center md:justify-between">
-            <p className="text-xs font-light text-stone-400">
-              Page{" "}
-              <span className="font-medium text-stone-600">{meta.page}</span> of{" "}
-              <span className="font-medium text-stone-600">
-                {meta.totalPages}
-              </span>
-              &nbsp;·&nbsp;
-              <span className="font-medium text-stone-600">
-                {meta.total?.toLocaleString()}
-              </span>{" "}
-              total
-            </p>
-            <div className="flex gap-2">
+          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              Showing page <span className="font-bold text-slate-900 dark:text-white">{meta.page}</span> of {meta.totalPages}
+            </span>
+            <div className="flex items-center gap-2">
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 disabled={!meta.hasPrevPage}
                 onClick={() => setPg(p => p - 1)}
-                className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50 disabled:opacity-30"
+                className="h-8 px-3 rounded-lg text-xs font-semibold"
               >
-                <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Prev
+                <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Previous
               </Button>
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 disabled={!meta.hasNextPage}
                 onClick={() => setPg(p => p + 1)}
-                className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50 disabled:opacity-30"
+                className="h-8 px-3 rounded-lg text-xs font-semibold"
               >
-                Next <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
               </Button>
             </div>
           </div>
@@ -807,7 +746,7 @@ export default function CategoriesPage() {
       </div>
 
       {/* ── Modals ── */}
-      {formTarget !== null && (
+      {formTarget && (
         <CategoryFormModal
           initial={formTarget === "new" ? undefined : formTarget}
           onSave={handleFormSave}
@@ -824,6 +763,6 @@ export default function CategoriesPage() {
           isLoading={isDeleting}
         />
       )}
-    </>
+    </div>
   );
 }

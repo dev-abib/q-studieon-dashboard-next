@@ -32,7 +32,9 @@ import {
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/dashboard/PageHeader";
 import { useGetAllAdmins } from "@/features/admin/hooks/user-get-all-admins";
 import { CreateAdminInput } from "@/features/auth/types/create-admin.types";
 import { createAdminSchema } from "@/features/auth/schema/create-admin.schema";
@@ -56,7 +58,7 @@ interface Admin {
 
 // Avatar palette
 const AVATAR_PALETTES = [
-  { bg: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
+  { bg: "bg-primary/10 text-primary border-primary/20" },
   { bg: "bg-sky-500/10 text-sky-600 border-sky-500/20" },
   { bg: "bg-rose-500/10 text-rose-600 border-rose-500/20" },
   { bg: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
@@ -72,8 +74,8 @@ function avatarPalette(name: string) {
 function RoleBadge({ role, isOwner }: { role: string; isOwner?: boolean }) {
   if (isOwner) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 shadow-sm">
-        <Crown className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border bg-primary/15 text-primary border-primary/30 shadow-sm">
+        <Crown className="h-3.5 w-3.5 text-primary fill-primary" />
         Site Owner
       </span>
     );
@@ -87,7 +89,7 @@ function RoleBadge({ role, isOwner }: { role: string; isOwner?: boolean }) {
           label: "Super Admin",
           icon: ShieldAlert,
           className:
-            "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border-amber-500/20",
+            "bg-primary/10 text-primary border-primary/20",
         };
       case "customer_support":
         return {
@@ -148,26 +150,24 @@ function StatCard({
   accentColor: string;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 p-5 shadow-sm hover:shadow-md transition-all duration-200">
-      <div
-        className={`flex h-12 w-12 items-center justify-center rounded-xl shrink-0 ${accentColor}`}
-      >
-        <Icon className="h-6 w-6" />
-      </div>
-      <div className="flex flex-col min-w-0">
-        <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+    <div className="rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs flex flex-col justify-between gap-3 transition-all">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
           {label}
+        </p>
+        <span className={`flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200/60 dark:border-slate-800 shrink-0 ${accentColor}`}>
+          <Icon className="h-4 w-4" />
         </span>
-        <div className="flex items-baseline gap-2 mt-0.5">
-          <span className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            {value}
-          </span>
-          {sub && (
-            <span className="text-xs font-medium text-slate-400 truncate">
-              {sub}
-            </span>
-          )}
-        </div>
+      </div>
+      <div>
+        <p className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
+          {value}
+        </p>
+        {sub && (
+          <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">
+            {sub}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -195,14 +195,14 @@ function SortButton({
       onClick={onClick}
       className={`flex items-center gap-1.5 text-xs font-semibold tracking-wider uppercase transition-colors ${
         active
-          ? "text-amber-600 dark:text-amber-400"
+          ? "text-primary"
           : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
       }`}
     >
       {label}
       <Icon
         className={`h-3.5 w-3.5 ${
-          active ? "text-amber-500" : "text-slate-300 dark:text-slate-600"
+          active ? "text-primary" : "text-slate-300 dark:text-slate-600"
         }`}
       />
     </button>
@@ -241,7 +241,7 @@ function DeleteModal({
           <Trash2 className="h-6 w-6" />
         </div>
 
-        <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+        <h3 className="text-xl font-semibold text-slate-900 dark:text-white">
           Revoke Access for <span className="text-rose-500">{admin.name}</span>?
         </h3>
 
@@ -380,25 +380,19 @@ export default function Page() {
 
   return (
     <div className="flex flex-col gap-6 min-h-screen">
-      {/* ── Top Header Banner ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/60 dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 backdrop-blur-sm shadow-sm">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1">
-            <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-            Admin & Team Governance
-          </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Team Directory & Roles
-          </h1>
-        </div>
-
+      {/* ── Page Header ── */}
+      <PageHeader
+        kicker="Admin & Team Governance"
+        title="Team Directory & Roles"
+        icon={ShieldCheck}
+      >
         <Button
           onClick={() => setShowCreateModal(true)}
-          className="rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-semibold text-xs px-5 py-2.5 shadow-md shadow-amber-500/20 hover:from-amber-600 hover:to-amber-700 transition-all"
+          className="rounded-xl bg-primary text-primary-foreground font-semibold text-xs px-5 py-2.5 shadow-xs hover:bg-primary/90 transition-all cursor-pointer"
         >
           <UserPlus className="mr-2 h-4 w-4" /> Add / Invite Team Member
         </Button>
-      </div>
+      </PageHeader>
 
       {/* ── Stat Cards Grid ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -407,7 +401,7 @@ export default function Page() {
           label="Total Team Members"
           value={meta?.total?.toLocaleString() ?? "—"}
           sub="accounts"
-          accentColor="bg-amber-500/10 text-amber-600"
+          accentColor="bg-primary/10 text-primary"
         />
         <StatCard
           icon={UserCheck}
@@ -446,11 +440,11 @@ export default function Page() {
           <div className="relative w-full max-w-xl rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl animate-in fade-in-0 zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
                   <UserPlus className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
                     Add Team Member
                   </h2>
                   <p className="text-xs text-slate-400">
@@ -476,7 +470,7 @@ export default function Page() {
                     : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
                 }`}
               >
-                <Send className="h-3.5 w-3.5 text-amber-500" />
+                <Send className="h-3.5 w-3.5 text-primary" />
                 Send Email Invitation
               </button>
               <button
@@ -505,7 +499,7 @@ export default function Page() {
                     onChange={e => setInviteEmail(e.target.value)}
                     placeholder="member@example.com"
                     required
-                    className="h-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-amber-500"
+                    className="h-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-primary"
                   />
                   <p className="text-[11px] text-slate-400">
                     A secure invitation link will be sent to this email address.
@@ -519,7 +513,7 @@ export default function Page() {
                   <select
                     value={inviteRole}
                     onChange={e => setInviteRole(e.target.value)}
-                    className="h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="admin">Administrator (Full Operational Access)</option>
                     <option value="customer_support">
@@ -549,7 +543,7 @@ export default function Page() {
                   <Button
                     type="submit"
                     disabled={isInviting}
-                    className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs px-5 shadow-md shadow-amber-500/20"
+                    className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs px-5 shadow-xs"
                   >
                     {isInviting ? (
                       <>
@@ -577,7 +571,7 @@ export default function Page() {
                       <Input
                         {...register("name")}
                         placeholder="e.g. Sarah Connor"
-                        className="h-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-amber-500"
+                        className="h-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-primary"
                       />
                       <FieldError message={errors.name?.message} />
                     </div>
@@ -590,7 +584,7 @@ export default function Page() {
                         {...register("email")}
                         type="email"
                         placeholder="member@example.com"
-                        className="h-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-amber-500"
+                        className="h-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-primary"
                       />
                       <FieldError message={errors.email?.message} />
                     </div>
@@ -602,7 +596,7 @@ export default function Page() {
                     </label>
                     <select
                       {...register("role")}
-                      className="h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       <option value="admin">Administrator (Full Operational Access)</option>
                       <option value="customer_support">
@@ -623,11 +617,10 @@ export default function Page() {
                       <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                         Password
                       </label>
-                      <Input
+                      <PasswordInput
                         {...register("password")}
-                        type="password"
                         placeholder="••••••••"
-                        className="h-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-amber-500"
+                        className="h-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-primary"
                       />
                       <FieldError message={errors.password?.message} />
                     </div>
@@ -636,11 +629,10 @@ export default function Page() {
                       <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                         Confirm Password
                       </label>
-                      <Input
+                      <PasswordInput
                         {...register("confirmPassword")}
-                        type="password"
                         placeholder="••••••••"
-                        className="h-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-amber-500"
+                        className="h-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-primary"
                       />
                       <FieldError message={errors.confirmPassword?.message} />
                     </div>
@@ -658,7 +650,7 @@ export default function Page() {
                     <Button
                       type="submit"
                       disabled={isSubmitting}
-                      className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs px-5 shadow-md shadow-amber-500/20"
+                      className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs px-5 shadow-xs"
                     >
                       {isSubmitting ? (
                         <>
@@ -714,7 +706,7 @@ export default function Page() {
             <Input
               value={search}
               placeholder="Search by name or email…"
-              className="h-10 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-10 text-xs focus-visible:ring-amber-500"
+              className="h-10 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-10 text-xs focus-visible:ring-primary"
               onChange={e => {
                 setSearch(e.target.value);
                 setPage(1);
@@ -760,7 +752,7 @@ export default function Page() {
                     onClick={() => handleSort("createdAt")}
                   />
                 </th>
-                <th className="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <th className="px-6 py-3.5 text-right text-xs font-medium uppercase tracking-wider text-slate-400">
                   Actions
                 </th>
               </tr>
@@ -790,7 +782,7 @@ export default function Page() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`h-9 w-9 rounded-xl flex items-center justify-center font-bold text-xs border ${pal.bg}`}
+                            className={`h-9 w-9 rounded-xl flex items-center justify-center font-semibold text-xs border ${pal.bg}`}
                           >
                             {admin.profilePictureURL ? (
                               <Image
@@ -804,7 +796,7 @@ export default function Page() {
                               initials
                             )}
                           </div>
-                          <span className="font-bold text-sm text-slate-900 dark:text-white">
+                          <span className="font-semibold text-sm text-slate-900 dark:text-white">
                             {admin.name}
                           </span>
                         </div>
@@ -835,9 +827,9 @@ export default function Page() {
                         {admin.isOwner ? (
                           <span
                             title="Primary Site Owner (Protected)"
-                            className="h-8 w-8 inline-flex items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 opacity-80 cursor-not-allowed"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-xl bg-primary/10 text-primary opacity-80 cursor-not-allowed"
                           >
-                            <Lock className="h-4 w-4 text-amber-500" />
+                            <Lock className="h-4 w-4 text-primary" />
                           </span>
                         ) : (
                           <button
@@ -874,8 +866,8 @@ export default function Page() {
         {meta && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40">
             <span className="text-xs text-slate-500 dark:text-slate-400">
-              Page <span className="font-bold text-slate-800 dark:text-slate-200">{meta.page}</span> of{" "}
-              <span className="font-bold text-slate-800 dark:text-slate-200">{meta.totalPages}</span>
+              Page <span className="font-semibold text-slate-700 dark:text-slate-300">{meta.page}</span> of{" "}
+              <span className="font-semibold text-slate-700 dark:text-slate-300">{meta.totalPages}</span>
               &nbsp;·&nbsp; Total {meta.total} members
             </span>
 
@@ -885,7 +877,7 @@ export default function Page() {
                 size="sm"
                 disabled={!meta.hasPrevPage}
                 onClick={() => setPage(p => p - 1)}
-                className="h-8 rounded-xl border-slate-200 text-xs font-semibold"
+                className="h-8 rounded-xl border-slate-200 text-xs font-medium"
               >
                 <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Previous
               </Button>
@@ -894,7 +886,7 @@ export default function Page() {
                 size="sm"
                 disabled={!meta.hasNextPage}
                 onClick={() => setPage(p => p + 1)}
-                className="h-8 rounded-xl border-slate-200 text-xs font-semibold"
+                className="h-8 rounded-xl border-slate-200 text-xs font-medium"
               >
                 Next <ChevronRight className="ml-1 h-3.5 w-3.5" />
               </Button>

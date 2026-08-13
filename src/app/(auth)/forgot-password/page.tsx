@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-8 shadow-2xl">
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="h-12 w-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center mb-3">
+          <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-3">
             <ShieldAlert className="h-6 w-6" />
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
@@ -78,7 +78,7 @@ export default function ForgotPasswordPage() {
             </div>
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline mt-2"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-primary hover:underline mt-2"
             >
               <ArrowLeft className="h-3.5 w-3.5" /> Back to Sign in
             </Link>
@@ -95,7 +95,7 @@ export default function ForgotPasswordPage() {
                   type="email"
                   {...register("email")}
                   placeholder="admin@example.com"
-                  className="h-10 pl-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-amber-500"
+                  className="h-10 pl-10 rounded-xl border-slate-200 dark:border-slate-700 text-sm focus-visible:ring-primary"
                 />
               </div>
               {errors.email && (
@@ -106,7 +106,7 @@ export default function ForgotPasswordPage() {
             <Button
               type="submit"
               disabled={isPending}
-              className="w-full h-11 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs shadow-md shadow-amber-500/20"
+              className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-xs"
             >
               {isPending ? (
                 <>
