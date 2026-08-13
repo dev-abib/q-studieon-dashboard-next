@@ -360,7 +360,9 @@ const CardHeader = ({
 const Page = () => {
   const { data, isLoading } = useDashboardAnalytics();
   const { data: userData } = useCurrentUser();
-  const isSuperAdmin = userData?.data?.role === "super_admin";
+  const isSuperAdmin =
+    userData?.data?.role === "super_admin" ||
+    userData?.data?.role === "finance";
 
   if (isLoading) return <DashboardSkeleton />;
 
@@ -486,13 +488,34 @@ const Page = () => {
 
   return (
     <section className="w-full flex flex-col gap-6 min-h-screen">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          Dashboard
-        </h1>
-        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-          Welcome back, Admin
-        </p>
+      {/* ── Executive Welcome Hero Banner ── */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/40 border border-slate-800/80 p-6 md:p-8 shadow-xl">
+        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="h-14 w-14 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-extrabold text-xl shadow-inner">
+              {(userData?.data?.name || "A")[0]}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">
+                  Live Executive Dashboard
+                </span>
+              </div>
+              <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+                Welcome back, {userData?.data?.name || "Admin"}
+              </h1>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="px-3.5 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 text-xs font-bold text-white flex items-center gap-2">
+              <span className="text-amber-400 font-medium">Role:</span>
+              <span className="capitalize">{userData?.data?.role?.replace("_", " ") || "Admin"}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── top stat cards ── */}
@@ -500,23 +523,37 @@ const Page = () => {
         {topStats.map((stat, idx) => (
           <div
             key={idx}
-            className="rounded-2xl shadow-md p-5 flex flex-col gap-2"
-            style={{ background: stat.lightBg }}
+            className="group relative overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 p-5 flex flex-col justify-between gap-3 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 backdrop-blur-xl"
           >
+            <div
+              className="absolute top-0 left-0 right-0 h-1 transition-opacity opacity-60 group-hover:opacity-100"
+              style={{ background: stat.accent }}
+            />
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-gray-500">{stat.label}</p>
-              <span className="text-lg">{stat.icon}</span>
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                {stat.label}
+              </p>
+              <span
+                className="text-lg p-2.5 rounded-xl transition-transform group-hover:scale-110"
+                style={{ background: stat.lightBg }}
+              >
+                {stat.icon}
+              </span>
             </div>
-            <p className="text-3xl font-bold" style={{ color: stat.accent }}>
-              {stat.value}
-            </p>
-            <p
-              className={`text-xs font-medium ${
-                stat.positive === true ? "text-emerald-500" : "text-gray-400"
-              }`}
-            >
-              {stat.change}
-            </p>
+            <div>
+              <p className="text-3xl font-black tracking-tight text-slate-900 dark:text-white" style={{ color: stat.accent }}>
+                {stat.value}
+              </p>
+              <p
+                className={`text-xs font-bold mt-1 ${
+                  stat.positive === true
+                    ? "text-emerald-500"
+                    : "text-slate-400"
+                }`}
+              >
+                {stat.change}
+              </p>
+            </div>
           </div>
         ))}
       </div>

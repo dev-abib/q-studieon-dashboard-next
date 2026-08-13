@@ -630,49 +630,41 @@ export default function InsightsPage() {
 
   return (
     <>
-      <div
-        className="flex h-auto flex-col"
-        style={{ fontFamily: "'DM Sans', sans-serif" }}
-      >
-        {/* ── Header ── */}
-        <div className="flex-none space-y-5 px-6 pb-4 pt-6">
-          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="mb-1.5 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.18em] text-amber-600">
-                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
-                Knowledge Center
-              </p>
-              <h1
-                className="text-3xl font-normal leading-tight text-stone-800 md:text-4xl"
-                style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
-              >
-                All <em className="italic text-amber-600">Insights</em>
-              </h1>
+      <div className="flex flex-col gap-6 min-h-screen">
+        {/* ── Top Header Banner ── */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/60 dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 backdrop-blur-sm shadow-sm">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-1">
+              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+              Knowledge & Guidance Center
             </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" />
-                <Input
-                  value={search}
-                  placeholder="Search insights…"
-                  className="h-10 rounded-xl border-stone-200 bg-white pl-9 text-sm text-stone-700 shadow-sm placeholder:text-stone-300 focus-visible:ring-amber-400"
-                  onChange={e => {
-                    setSearch(e.target.value);
-                    setPg(1);
-                  }}
-                />
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => setFormTarget("new")}
-                className="h-10 rounded-xl bg-amber-500 px-4 text-sm text-white shadow-none hover:bg-amber-600"
-              >
-                <Plus className="mr-1.5 h-4 w-4" /> New Insight
-              </Button>
-            </div>
+            <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Helpful Insights Directory
+            </h1>
           </div>
+
+          <div className="flex items-center gap-3">
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                value={search}
+                placeholder="Search insights…"
+                className="h-10 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-10 text-xs focus-visible:ring-amber-500"
+                onChange={e => {
+                  setSearch(e.target.value);
+                  setPg(1);
+                }}
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={() => setFormTarget("new")}
+              className="rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-semibold text-xs px-4 py-2.5 shadow-md shadow-amber-500/20 hover:from-amber-600 hover:to-amber-700 shrink-0"
+            >
+              <Plus className="mr-2 h-4 w-4" /> Add Insight
+            </Button>
+          </div>
+        </div>
 
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -709,7 +701,6 @@ export default function InsightsPage() {
               accent="bg-violet-50 text-violet-600"
             />
           </div>
-        </div>
 
         {/* ── Table ── */}
         <div className="mx-6 mb-5 flex flex-1 flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">

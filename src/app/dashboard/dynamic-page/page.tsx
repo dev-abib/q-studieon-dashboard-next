@@ -16,6 +16,10 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -30,6 +34,7 @@ import {
   Minus,
   Palette,
   Copy,
+  Layers,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -49,6 +54,10 @@ interface DynamicPage {
   isPublished: boolean;
   createdAt?: string;
 }
+
+type PageFilter = "all" | "published" | "draft";
+type SortDir = "asc" | "desc" | null;
+type SortField = "title" | "createdAt";
 
 // ─── Zod Schema ────────────────────────────────────────────────────────────────
 const pageSchema = z.object({
@@ -72,27 +81,51 @@ const pageSchema = z.object({
 
 type PageFormValues = z.infer<typeof pageSchema>;
 
-// ─── Helper: strip one outer <div> wrapper ─────────────────────────────────────
-// The editor always emits <div>…content…</div>. When re-loading that value
-// into the contentEditable we strip the outer div so users don't see nesting.
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+// Strip one outer <div> wrapper — the editor always emits <div>…content…</div>
+// and we remove it when reloading into the contentEditable to avoid nesting.
 function unwrapDiv(html: string): string {
   const trimmed = html.trim();
-  // Match a single wrapping <div> with no attributes
   const match = trimmed.match(/^<div>([\s\S]*)<\/div>$/i);
   return match ? match[1] : trimmed;
 }
 
-// ─── Helper: ensure saved HTML is wrapped in exactly one <div> ────────────────
+// Ensure saved HTML is wrapped in exactly one <div>.
 function wrapInDiv(html: string): string {
   const trimmed = html.trim();
   if (!trimmed) return "<div></div>";
-  // Already correctly wrapped — don't double-wrap
   const match = trimmed.match(/^<div>([\s\S]*)<\/div>$/i);
   if (match) return trimmed;
   return `<div>${trimmed}</div>`;
 }
 
-// ─── Toolbar Button ────────────────────────────────────────────────────────────
+function formatDate(value?: string): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+// ─── Outside-click hook ────────────────────────────────────────────────────────
+function useOutsideClick(
+  ref: React.RefObject<HTMLElement>,
+  handler: () => void,
+) {
+  useEffect(() => {
+    function listener(e: MouseEvent) {
+      if (!ref.current || ref.current.contains(e.target as Node)) return;
+      handler();
+    }
+    document.addEventListener("mousedown", listener);
+    return () => document.removeEventListener("mousedown", listener);
+  }, [ref, handler]);
+}
+
+// ─── Rich text editor primitives ──────────────────────────────────────────────
 function ToolBtn({
   onClick,
   title,
@@ -106,12 +139,12 @@ function ToolBtn({
     <button
       type="button"
       onMouseDown={e => {
-        // Prevent the editor from losing focus/selection when clicking toolbar
+        // Keep the editor focused/selected while using the toolbar
         e.preventDefault();
         onClick();
       }}
       title={title}
-      className="flex h-7 min-w-[28px] items-center justify-center rounded px-1.5 text-xs text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-800"
+      className="flex h-7 min-w-[28px] items-center justify-center rounded px-1.5 text-xs text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100"
     >
       {children}
     </button>
@@ -119,14 +152,13 @@ function ToolBtn({
 }
 
 function Divider() {
-  return <div className="mx-0.5 h-5 w-px bg-stone-200" />;
+  return (
+    <div className="mx-0.5 h-5 w-px bg-stone-200 dark:bg-slate-700" />
+  );
 }
 
-// ─── Field Error ───────────────────────────────────────────────────────────────
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return <p className="mt-1.5 text-[11px] text-rose-500">{message}</p>;
-}
+const SELECT_CLASS =
+  "h-7 cursor-pointer rounded border border-stone-200 bg-white px-1.5 text-[11px] text-stone-600 outline-none hover:border-stone-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-500";
 
 // ─── HTML Rich Text Editor ─────────────────────────────────────────────────────
 function HtmlEditor({
@@ -140,37 +172,31 @@ function HtmlEditor({
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const colorRef = useRef<HTMLInputElement>(null);
-  // Guard flag: prevents the useEffect from overwriting innerHTML while the
-  // user is actively typing (which would reset cursor position).
+  // Prevents the sync effect from overwriting innerHTML while the user types
+  // (which would reset the cursor position).
   const isEmitting = useRef(false);
 
-  // Sync external value → editor DOM.
-  // Only runs when value changes from outside (e.g. form reset / edit load).
+  // Sync external value → editor DOM (only on external changes, e.g. reset/edit).
   useEffect(() => {
     if (!editorRef.current) return;
     if (isEmitting.current) {
-      // This update was triggered by our own emit(); skip to avoid cursor reset.
       isEmitting.current = false;
       return;
     }
     const inner = unwrapDiv(value);
-    // Avoid a no-op DOM mutation that would lose cursor position
     if (editorRef.current.innerHTML !== inner) {
       editorRef.current.innerHTML = inner;
     }
   }, [value]);
 
-  // Emit the current editor content wrapped in a single <div>
   const emit = useCallback(() => {
     if (!editorRef.current) return;
     isEmitting.current = true;
     onChange(wrapInDiv(editorRef.current.innerHTML));
   }, [onChange]);
 
-  // Execute a document.execCommand and then emit
   const exec = useCallback(
     (cmd: string, val?: string) => {
-      // Re-focus the editor before executing so the selection is preserved
       editorRef.current?.focus();
       document.execCommand(cmd, false, val ?? undefined);
       emit();
@@ -213,15 +239,14 @@ function HtmlEditor({
 
   return (
     <div
-      className={`overflow-hidden rounded-xl border bg-white shadow-sm transition-all ${
+      className={`overflow-hidden rounded-xl border bg-white shadow-sm transition-all dark:bg-slate-900 ${
         error
-          ? "border-rose-300 ring-2 ring-rose-100"
-          : "border-stone-200 focus-within:border-amber-300 focus-within:ring-2 focus-within:ring-amber-100"
+          ? "border-rose-300 ring-2 ring-rose-100 dark:border-rose-500/50 dark:ring-rose-500/10"
+          : "border-stone-200 focus-within:border-amber-300 focus-within:ring-2 focus-within:ring-amber-100 dark:border-slate-700 dark:focus-within:border-amber-500/50 dark:focus-within:ring-amber-500/10"
       }`}
     >
       {/* ── Toolbar ── */}
-      <div className="flex flex-wrap items-center gap-0.5 border-b border-stone-100 bg-stone-50 px-2 py-1.5">
-        {/* Undo / Redo */}
+      <div className="flex flex-wrap items-center gap-0.5 border-b border-stone-100 bg-stone-50 px-2 py-1.5 dark:border-slate-700 dark:bg-slate-800/60">
         <ToolBtn onClick={() => exec("undo")} title="Undo">
           <Undo className="h-3.5 w-3.5" />
         </ToolBtn>
@@ -235,11 +260,10 @@ function HtmlEditor({
           onMouseDown={e => e.stopPropagation()}
           onChange={e => {
             exec("formatBlock", e.target.value);
-            // Reset select back to placeholder so it reflects "current" state visually
             e.target.value = "p";
           }}
           defaultValue="p"
-          className="h-7 cursor-pointer rounded border border-stone-200 bg-white px-1.5 text-[11px] text-stone-600 outline-none hover:border-stone-300"
+          className={SELECT_CLASS}
         >
           <option value="p">Paragraph</option>
           <option value="h1">Heading 1</option>
@@ -255,7 +279,7 @@ function HtmlEditor({
           onMouseDown={e => e.stopPropagation()}
           onChange={e => exec("fontSize", e.target.value)}
           defaultValue="3"
-          className="h-7 cursor-pointer rounded border border-stone-200 bg-white px-1.5 text-[11px] text-stone-600 outline-none hover:border-stone-300"
+          className={SELECT_CLASS}
         >
           <option value="1">XS</option>
           <option value="2">SM</option>
@@ -269,16 +293,16 @@ function HtmlEditor({
 
         {/* Inline styles */}
         <ToolBtn onClick={() => exec("bold")} title="Bold">
-          <span className="font-bold text-[13px]">B</span>
+          <span className="text-[13px] font-bold">B</span>
         </ToolBtn>
         <ToolBtn onClick={() => exec("italic")} title="Italic">
-          <span className="italic text-[13px]">I</span>
+          <span className="text-[13px] italic">I</span>
         </ToolBtn>
         <ToolBtn onClick={() => exec("underline")} title="Underline">
-          <span className="underline text-[13px]">U</span>
+          <span className="text-[13px] underline">U</span>
         </ToolBtn>
         <ToolBtn onClick={() => exec("strikeThrough")} title="Strikethrough">
-          <span className="line-through text-[13px]">S</span>
+          <span className="text-[13px] line-through">S</span>
         </ToolBtn>
         <ToolBtn onClick={() => exec("superscript")} title="Superscript">
           <span className="text-[11px]">x²</span>
@@ -294,7 +318,6 @@ function HtmlEditor({
           <ToolBtn onClick={() => colorRef.current?.click()} title="Text Color">
             <Palette className="h-3.5 w-3.5" />
           </ToolBtn>
-          {/* Hidden native color picker — triggered programmatically */}
           <input
             ref={colorRef}
             type="color"
@@ -313,8 +336,8 @@ function HtmlEditor({
           title="Highlight"
         >
           <span
-            className="text-[11px] font-medium"
-            style={{ background: "#fef08a", padding: "0 3px", borderRadius: 2 }}
+            className="rounded-[2px] px-[3px] text-[11px] font-medium"
+            style={{ background: "#fef08a" }}
           >
             A
           </span>
@@ -365,7 +388,6 @@ function HtmlEditor({
           <LinkIcon className="h-3.5 w-3.5" />
         </ToolBtn>
         <ToolBtn onClick={() => exec("unlink")} title="Remove Link">
-          {/* Using a simple strikethrough text because emoji can be inconsistent */}
           <span className="text-[11px] line-through">url</span>
         </ToolBtn>
         <ToolBtn onClick={insertImage} title="Insert Image">
@@ -400,7 +422,6 @@ function HtmlEditor({
         onInput={emit}
         onKeyDown={e => {
           if (e.key === "Tab") {
-            // Prevent tab from moving focus away; insert non-breaking spaces instead
             e.preventDefault();
             exec("insertHTML", "&nbsp;&nbsp;&nbsp;&nbsp;");
             return;
@@ -413,17 +434,11 @@ function HtmlEditor({
             if (!selection || !selection.rangeCount) return;
 
             const range = selection.getRangeAt(0);
-
-            // Remove any selected text first
             range.deleteContents();
 
-            // Insert a <br> at the current caret position
             const br = document.createElement("br");
             range.insertNode(br);
 
-            // If the <br> is at the very end of the container (no following
-            // sibling, or only an empty text node), the browser needs a second
-            // <br> to render a visible empty line for the caret to sit on.
             const next = br.nextSibling;
             const atEnd =
               !next ||
@@ -433,10 +448,8 @@ function HtmlEditor({
             if (atEnd) {
               const trailingBr = document.createElement("br");
               br.after(trailingBr);
-              // Position caret on the new empty line (before the trailing br)
               range.setStartBefore(trailingBr);
             } else {
-              // Position caret right after the inserted br
               range.setStartAfter(br);
             }
 
@@ -446,8 +459,6 @@ function HtmlEditor({
 
             emit();
           }
-          // Shift+Enter: let the browser handle it natively (it already inserts
-          // a <br> in most engines), then emit so the value stays in sync.
         }}
         onKeyUp={e => {
           // Catch Shift+Enter's native <br> and sync it to form state
@@ -455,26 +466,20 @@ function HtmlEditor({
             emit();
           }
         }}
-        className="prose prose-sm min-h-52 max-w-none px-5 py-4 text-sm text-stone-700 outline-none"
-        style={{ fontFamily: "'DM Sans', sans-serif" }}
+        className="rich-content min-h-52 max-w-none px-5 py-4 outline-none"
       />
     </div>
   );
 }
 
-// ─── Outside-click hook ────────────────────────────────────────────────────────
-function useOutsideClick(
-  ref: React.RefObject<HTMLElement>,
-  handler: () => void,
-) {
-  useEffect(() => {
-    function listener(e: MouseEvent) {
-      if (!ref.current || ref.current.contains(e.target as Node)) return;
-      handler();
-    }
-    document.addEventListener("mousedown", listener);
-    return () => document.removeEventListener("mousedown", listener);
-  }, [ref, handler]);
+// ─── Field Error ───────────────────────────────────────────────────────────────
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p className="mt-1.5 text-[11px] text-rose-500 dark:text-rose-400">
+      {message}
+    </p>
+  );
 }
 
 // ─── Modal Backdrop ────────────────────────────────────────────────────────────
@@ -491,10 +496,10 @@ function ModalBackdrop({
   useOutsideClick(panelRef as React.RefObject<HTMLElement>, onClose);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/50 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-stone-900/50 p-4 backdrop-blur-sm dark:bg-slate-950/70">
       <div
         ref={panelRef}
-        className={`relative my-auto w-full rounded-2xl border border-stone-200 bg-white shadow-2xl ${
+        className={`relative my-auto w-full rounded-2xl border border-stone-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900 ${
           wide ? "max-w-2xl" : "max-w-sm"
         }`}
       >
@@ -504,18 +509,7 @@ function ModalBackdrop({
   );
 }
 
-// ─── Skeleton ──────────────────────────────────────────────────────────────────
-function SkeletonCard() {
-  return (
-    <div className="animate-pulse rounded-2xl border border-stone-100 bg-white p-5">
-      <div className="mb-3 h-4 w-2/3 rounded-lg bg-stone-100" />
-      <div className="mb-2 h-3 w-1/3 rounded bg-stone-100" />
-      <div className="h-3 w-full rounded bg-stone-100" />
-    </div>
-  );
-}
-
-// ─── Page Form Modal ───────────────────────────────────────────────────────────
+// ─── Page Form Modal (create / edit) ───────────────────────────────────────────
 function PageFormModal({
   initial,
   onSave,
@@ -528,8 +522,7 @@ function PageFormModal({
   isSaving: boolean;
 }) {
   const isEdit = !!initial;
-  // Track whether the user has manually edited the slug field so we don't
-  // overwrite their custom slug with an auto-generated one on title change.
+  // Stop auto-generating the slug once the user manually edits the slug field.
   const slugEdited = useRef(isEdit);
 
   const {
@@ -549,8 +542,6 @@ function PageFormModal({
     },
   });
 
-  // Auto-generate slug from title (create mode only, and only until the user
-  // manually touches the slug field)
   const titleValue = watch("title");
   useEffect(() => {
     if (!slugEdited.current) {
@@ -558,33 +549,41 @@ function PageFormModal({
         .toLowerCase()
         .replace(/\s+/g, "-")
         .replace(/[^a-z0-9-]/g, "")
-        // Collapse consecutive hyphens
         .replace(/-+/g, "-")
-        // Strip leading/trailing hyphens
         .replace(/^-+|-+$/g, "");
       setValue("slug", generated, { shouldValidate: true });
     }
   }, [titleValue, setValue]);
 
+  const isPublished = watch("isPublished");
+  const labelClass =
+    "mb-1.5 block text-[10px] font-medium uppercase tracking-widest text-stone-400 dark:text-slate-400";
+  const inputClass = (hasError: boolean) =>
+    `h-10 rounded-xl text-sm text-stone-700 shadow-none dark:bg-slate-800 dark:text-slate-200 ${
+      hasError
+        ? "border-rose-300 focus-visible:ring-rose-200 dark:border-rose-500/50"
+        : "border-stone-200 focus-visible:ring-amber-400 dark:border-slate-700 dark:focus-visible:ring-amber-500"
+    }`;
+
   return (
     <ModalBackdrop onClose={onClose} wide>
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
+      <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4 dark:border-slate-800">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50">
-            <FileText className="h-4 w-4 text-amber-600" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-500/10">
+            <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
           </div>
           <h2
-            className="text-lg font-normal text-stone-800"
+            className="text-lg font-normal text-stone-800 dark:text-slate-100"
             style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
           >
             {isEdit ? (
               <>
-                Edit <em className="italic text-amber-600">{initial?.title}</em>
+                Edit <em className="italic text-amber-600 dark:text-amber-400">{initial?.title}</em>
               </>
             ) : (
               <>
-                New <em className="italic text-amber-600">Dynamic Page</em>
+                New <em className="italic text-amber-600 dark:text-amber-400">Dynamic Page</em>
               </>
             )}
           </h2>
@@ -592,7 +591,7 @@ function PageFormModal({
         <button
           type="button"
           onClick={onClose}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
         >
           <X className="h-4 w-4" />
         </button>
@@ -603,55 +602,40 @@ function PageFormModal({
         <div className="space-y-5 px-6 py-5">
           {/* Title */}
           <div>
-            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-widest text-stone-400">
-              Page Title
-            </label>
+            <label className={labelClass}>Page Title</label>
             <Input
               {...register("title")}
               placeholder="e.g. Privacy Policy"
-              className={`h-10 rounded-xl text-sm text-stone-700 shadow-none ${
-                errors.title
-                  ? "border-rose-300 focus-visible:ring-rose-200"
-                  : "border-stone-200 focus-visible:ring-amber-400"
-              }`}
+              className={inputClass(!!errors.title)}
             />
             <FieldError message={errors.title?.message} />
           </div>
 
           {/* Slug */}
           <div>
-            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-widest text-stone-400">
-              URL Slug
-            </label>
+            <label className={labelClass}>URL Slug</label>
             <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-stone-400">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-stone-400 dark:text-slate-500">
                 /
               </span>
               <Input
                 {...register("slug", {
                   onChange: () => {
-                    // Once the user manually types in this field, stop
-                    // auto-generating from title
                     slugEdited.current = true;
                   },
                 })}
                 placeholder="privacy-policy"
-                className={`h-10 rounded-xl pl-6 font-mono text-sm text-stone-600 shadow-none ${
-                  errors.slug
-                    ? "border-rose-300 focus-visible:ring-rose-200"
-                    : "border-stone-200 focus-visible:ring-amber-400"
-                }`}
+                className={`${inputClass(!!errors.slug)} pl-6 font-mono text-stone-600 dark:text-slate-300`}
               />
             </div>
             <FieldError message={errors.slug?.message} />
           </div>
 
-          {/* Description (rich HTML) — must use Controller since contentEditable
-              is uncontrolled and can't be driven by register() */}
+          {/* Content (rich HTML) */}
           <div>
-            <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-widest text-stone-400">
+            <label className={labelClass}>
               Content{" "}
-              <span className="normal-case tracking-normal text-stone-300">
+              <span className="normal-case tracking-normal text-stone-300 dark:text-slate-500">
                 (rich HTML)
               </span>
             </label>
@@ -670,38 +654,48 @@ function PageFormModal({
           </div>
 
           {/* Publish toggle */}
-          <div className="flex items-center justify-between rounded-xl border border-stone-100 bg-stone-50/50 px-4 py-3">
+          <div className="flex items-center justify-between rounded-xl border border-stone-100 bg-stone-50/50 px-4 py-3 dark:border-slate-800 dark:bg-slate-800/40">
             <div className="flex items-center gap-2.5">
-              <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${
-                watch('isPublished') ? 'bg-teal-50' : 'bg-stone-100'
-              }`}>
-                <Globe className={`h-3.5 w-3.5 ${
-                  watch('isPublished') ? 'text-teal-500' : 'text-stone-400'
-                }`} />
+              <div
+                className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${
+                  isPublished
+                    ? "bg-teal-50 dark:bg-teal-500/10"
+                    : "bg-stone-100 dark:bg-slate-700"
+                }`}
+              >
+                <Globe
+                  className={`h-3.5 w-3.5 ${
+                    isPublished
+                      ? "text-teal-500 dark:text-teal-400"
+                      : "text-stone-400 dark:text-slate-400"
+                  }`}
+                />
               </div>
               <div>
-                <p className="text-xs font-medium text-stone-700">
-                  {watch('isPublished') ? 'Published' : 'Draft'}
+                <p className="text-xs font-medium text-stone-700 dark:text-slate-200">
+                  {isPublished ? "Published" : "Draft"}
                 </p>
-                <p className="text-[10px] text-stone-400">
-                  {watch('isPublished')
-                    ? 'This page is visible to everyone'
-                    : 'Only admins can see this page'}
+                <p className="text-[10px] text-stone-400 dark:text-slate-500">
+                  {isPublished
+                    ? "This page is visible to everyone"
+                    : "Only admins can see this page"}
                 </p>
               </div>
             </div>
             <button
               type="button"
               role="switch"
-              aria-checked={watch('isPublished')}
-              onClick={() => setValue('isPublished', !watch('isPublished'), { shouldDirty: true })}
+              aria-checked={isPublished}
+              onClick={() =>
+                setValue("isPublished", !isPublished, { shouldDirty: true })
+              }
               className={`relative inline-flex h-6 w-10 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ${
-                watch('isPublished') ? 'bg-teal-500' : 'bg-stone-200'
+                isPublished ? "bg-teal-500" : "bg-stone-200 dark:bg-slate-700"
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ${
-                  watch('isPublished') ? 'translate-x-4' : 'translate-x-0.5'
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                  isPublished ? "translate-x-4" : "translate-x-0.5"
                 }`}
               />
             </button>
@@ -709,14 +703,14 @@ function PageFormModal({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 border-t border-stone-100 px-6 py-4">
+        <div className="flex justify-end gap-2 border-t border-stone-100 px-6 py-4 dark:border-slate-800">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={onClose}
             disabled={isSaving}
-            className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50"
+            className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             Cancel
           </Button>
@@ -757,22 +751,24 @@ function DeleteModal({
         <button
           type="button"
           onClick={onCancel}
-          className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
+          className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
         >
           <X className="h-4 w-4" />
         </button>
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-50">
-          <Trash2 className="h-5 w-5 text-rose-500" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10">
+          <Trash2 className="h-5 w-5 text-rose-500 dark:text-rose-400" />
         </div>
         <h3
-          className="mt-4 text-lg font-normal text-stone-800"
+          className="mt-4 text-lg font-normal text-stone-800 dark:text-slate-100"
           style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
         >
           Delete <em className="italic text-rose-500">{page.title}</em>?
         </h3>
-        <p className="mt-1.5 text-sm text-stone-400">
+        <p className="mt-1.5 text-sm text-stone-400 dark:text-slate-400">
           The page at{" "}
-          <span className="font-mono text-xs text-stone-500">/{page.slug}</span>{" "}
+          <span className="font-mono text-xs text-stone-500 dark:text-slate-300">
+            /{page.slug}
+          </span>{" "}
           will be permanently removed. This action cannot be undone.
         </p>
         <div className="mt-6 flex justify-end gap-2">
@@ -781,7 +777,7 @@ function DeleteModal({
             variant="outline"
             size="sm"
             onClick={onCancel}
-            className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50"
+            className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             Cancel
           </Button>
@@ -813,214 +809,252 @@ function PreviewModal({
   page: DynamicPage;
   onClose: () => void;
 }) {
+  // The modal only renders after a client-side click, so `window` is safe here.
   const publicUrl = `${window.location.origin}/page/${page.slug}`;
 
   return (
     <ModalBackdrop onClose={onClose} wide>
-      <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
+      <div className="flex items-center justify-between border-b border-stone-100 px-6 py-4 dark:border-slate-800">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50">
-            <Eye className="h-4 w-4 text-sky-500" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50 dark:bg-sky-500/10">
+            <Eye className="h-4 w-4 text-sky-500 dark:text-sky-400" />
           </div>
           <div>
             <h2
-              className="text-lg font-normal text-stone-800"
+              className="text-lg font-normal text-stone-800 dark:text-slate-100"
               style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
             >
               {page.title}
             </h2>
-            <p className="font-mono text-[10px] text-stone-400">/{page.slug}</p>
+            <p className="font-mono text-[10px] text-stone-400 dark:text-slate-500">
+              /{page.slug}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <a
-            href={publicUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-[11px] text-sky-600 transition-colors hover:bg-sky-50"
-          >
-            <ExternalLink className="h-3 w-3" />
-            Open public
-          </a>
+          {page.isPublished && (
+            <a
+              href={publicUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-[11px] text-sky-600 transition-colors hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-500/10"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Open public
+            </a>
+          )}
           <button
             type="button"
             onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
       </div>
-      {/* Render the stored HTML safely — the content was authored by an
-          admin via the rich editor, not by end-users, so dangerouslySetInnerHTML
-          is acceptable here. Consider DOMPurify if untrusted input is a concern. */}
+      {/* Content authored by admins via the rich editor, not end-users.
+          dangerouslySetInnerHTML is acceptable here. */}
       <div
-        className="prose prose-sm max-h-[60vh] max-w-none overflow-y-auto px-6 py-5 text-stone-700"
-        style={{ fontFamily: "'DM Sans', sans-serif" }}
+        className="rich-content max-h-[60vh] overflow-y-auto px-6 py-5"
         dangerouslySetInnerHTML={{ __html: page.description }}
       />
     </ModalBackdrop>
   );
 }
 
-// ─── Page Card ─────────────────────────────────────────────────────────────────
-function PageCard({
-  page,
-  onEdit,
-  onDelete,
-  onPreview,
-  onCopyLink,
-  onTogglePublish,
+// ─── Stat Card ─────────────────────────────────────────────────────────────────
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  sub,
+  accent,
 }: {
-  page: DynamicPage;
-  onEdit: () => void;
-  onDelete: () => void;
-  onPreview: () => void;
-  onCopyLink: () => void;
-  onTogglePublish: () => void;
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  sub?: string;
+  accent: string;
 }) {
-  // Strip HTML tags for the preview snippet
-  const plainText = page.description.replace(/<[^>]+>/g, "").slice(0, 100);
-  const publicUrl = `${window.location.origin}/page/${page.slug}`;
-
   return (
-    <div className="group relative flex flex-col gap-3 rounded-2xl border border-stone-100 bg-white px-5 py-4 shadow-sm transition-all duration-200 hover:border-stone-200 hover:shadow-md">
-      {/* Published/Draft badge */}
-      <div className="absolute right-4 top-4 flex items-center gap-1.5">
-        <span
-          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
-            page.isPublished
-              ? "bg-teal-50 text-teal-600"
-              : "bg-stone-100 text-stone-500"
-          }`}
+    <div className="flex flex-col gap-3 rounded-xl border border-stone-100 bg-white px-5 py-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div
+        className={`flex h-8 w-8 items-center justify-center rounded-lg ${accent}`}
+      >
+        <Icon className="h-4 w-4" />
+      </div>
+      <div>
+        <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400 dark:text-slate-500">
+          {label}
+        </p>
+        <p
+          className="mt-0.5 text-2xl font-normal leading-none text-stone-800 dark:text-slate-100"
+          style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
         >
-          <span
-            className={`inline-block h-1.5 w-1.5 rounded-full ${
-              page.isPublished ? "bg-teal-500" : "bg-stone-400"
-            }`}
-          />
-          {page.isPublished ? "Published" : "Draft"}
-        </span>
-      </div>
-
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 transition-colors group-hover:bg-amber-100">
-            <FileText className="h-4 w-4 text-amber-500" />
-          </div>
-          <div className="min-w-0">
-            <p
-              className="truncate text-sm font-normal leading-snug text-stone-800"
-              style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+          {value}
+          {sub && (
+            <span
+              className="ml-1.5 text-xs font-normal text-amber-600 dark:text-amber-400"
+              style={{ fontFamily: "'DM Sans', sans-serif" }}
             >
-              {page.title}
-            </p>
-            <p className="flex items-center gap-1 font-mono text-[10px] text-stone-400">
-              <Globe className="h-2.5 w-2.5 shrink-0" />
-              <span className="truncate">/{page.slug}</span>
-            </p>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <button
-            type="button"
-            onClick={onPreview}
-            title="Preview"
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-300 transition-colors hover:bg-sky-50 hover:text-sky-500"
-          >
-            <Eye className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={onEdit}
-            title="Edit"
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-300 transition-colors hover:bg-amber-50 hover:text-amber-500"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            title="Delete"
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-stone-300 transition-colors hover:bg-rose-50 hover:text-rose-500"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </div>
-
-      <p className="line-clamp-2 text-xs leading-relaxed text-stone-400">
-        {plainText || <em className="italic">No content yet…</em>}
-      </p>
-
-      <div className="flex items-center justify-between border-t border-stone-50 pt-2">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onCopyLink}
-            title="Copy public link"
-            className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] text-stone-400 transition-colors hover:bg-teal-50 hover:text-teal-600"
-          >
-            <Copy className="h-3 w-3" />
-            Copy link
-          </button>
-          {page.isPublished && (
-            <a
-              href={publicUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Open public page"
-              className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] text-stone-400 transition-colors hover:bg-sky-50 hover:text-sky-600"
-            >
-              <ExternalLink className="h-3 w-3" />
-              View public
-            </a>
+              {sub}
+            </span>
           )}
-        </div>
-        <div className="flex items-center gap-2">
-          {!page.isPublished && (
-            <button
-              type="button"
-              onClick={onTogglePublish}
-              title="Publish"
-              className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] text-stone-400 transition-colors hover:bg-teal-50 hover:text-teal-600"
-            >
-              <Globe className="h-3 w-3" />
-              Publish
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onEdit}
-            className="flex items-center gap-1 text-[10px] text-stone-400 transition-colors hover:text-amber-500"
-          >
-            Edit <ExternalLink className="h-2.5 w-2.5" />
-          </button>
-        </div>
+        </p>
       </div>
     </div>
   );
 }
 
+// ─── Status Badge ──────────────────────────────────────────────────────────────
+function StatusBadge({ published }: { published: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider ${
+        published
+          ? "bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400"
+          : "bg-stone-100 text-stone-500 dark:bg-slate-800 dark:text-slate-400"
+      }`}
+    >
+      <span
+        className={`inline-block h-1.5 w-1.5 rounded-full ${
+          published ? "bg-teal-500" : "bg-stone-400 dark:bg-slate-500"
+        }`}
+      />
+      {published ? "Published" : "Draft"}
+    </span>
+  );
+}
+
+// ─── Sort Button ───────────────────────────────────────────────────────────────
+function SortButton({
+  label,
+  active,
+  dir,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  dir: SortDir;
+  onClick: () => void;
+}) {
+  const Icon =
+    !active || dir === null ? ArrowUpDown : dir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-center gap-1 text-[10px] font-medium uppercase tracking-[0.14em] transition-colors ${
+        active
+          ? "text-amber-600 dark:text-amber-400"
+          : "text-stone-400 hover:text-stone-600 dark:text-slate-500 dark:hover:text-slate-300"
+      }`}
+    >
+      {label}
+      <Icon
+        className={`h-3 w-3 ${
+          active ? "text-amber-500 dark:text-amber-400" : "text-stone-300 dark:text-slate-600"
+        }`}
+      />
+    </button>
+  );
+}
+
+// ─── Per-page select ───────────────────────────────────────────────────────────
+const PER_PAGE_OPTIONS = [5, 10, 15, 20];
+
+function PerPageSelect({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="relative flex items-center gap-2">
+      <span className="text-xs text-stone-400 dark:text-slate-500">Rows</span>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={e => onChange(Number(e.target.value))}
+          className="h-8 appearance-none rounded-lg border border-stone-200 bg-white pl-3 pr-7 text-xs text-stone-600 focus:outline-none focus:ring-1 focus:ring-amber-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+        >
+          {PER_PAGE_OPTIONS.map(n => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-stone-400 dark:text-slate-500" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Skeleton Row ──────────────────────────────────────────────────────────────
+function SkeletonRow() {
+  return (
+    <tr className="border-b border-stone-100 dark:border-slate-800">
+      <td colSpan={4} className="px-6 py-4">
+        <div className="h-9 w-full animate-pulse rounded-lg bg-stone-100 dark:bg-slate-800" />
+      </td>
+    </tr>
+  );
+}
+
+// ─── Filter Tabs ───────────────────────────────────────────────────────────────
+const FILTER_TABS: { key: PageFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "published", label: "Published" },
+  { key: "draft", label: "Drafts" },
+];
+
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function DynamicPagesPage() {
   const [pg, setPg] = useState(1);
-  const limit = 6;
+  const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
-
+  const [filter, setFilter] = useState<PageFilter>("all");
+  const [sortField, setSortField] = useState<SortField>("createdAt");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [formTarget, setFormTarget] = useState<DynamicPage | "new" | null>(
     null,
   );
   const [deleteTarget, setDeleteTarget] = useState<DynamicPage | null>(null);
   const [previewTarget, setPreviewTarget] = useState<DynamicPage | null>(null);
 
-  const { data, isLoading } = useGetAllPages({ page: pg, limit, search });
+  const { data, isLoading } = useGetAllPages({
+    page: pg,
+    limit,
+    search,
+    published: filter === "all" ? undefined : filter === "published",
+    sortBy: sortField,
+    sortOrder: sortDir ?? undefined,
+  });
+
   const pages: DynamicPage[] = data?.data?.pages ?? [];
   const meta = data?.data?.meta;
 
   const { mutate: createPage, isPending: isCreating } = useCreatePage();
   const { mutate: updatePage, isPending: isUpdating } = useUpdatePage();
   const { mutate: deletePage, isPending: isDeleting } = useDeletePage();
+
+  function handleSort(field: SortField) {
+    if (sortField !== field) {
+      setSortField(field);
+      setSortDir("asc");
+    } else if (sortDir === "asc") setSortDir("desc");
+    else {
+      // Cycle back to the default view
+      setSortField("createdAt");
+      setSortDir("desc");
+    }
+  }
+
+  function handleLimitChange(v: number) {
+    setLimit(v);
+    setPg(1);
+  }
 
   function handleSave(formData: PageFormValues) {
     if (formTarget === "new") {
@@ -1040,148 +1074,310 @@ export default function DynamicPagesPage() {
     });
   }
 
+  function handleCopyLink(slug: string) {
+    // Runs in a click handler, so `window` is always available.
+    navigator.clipboard
+      .writeText(`${window.location.origin}/page/${slug}`)
+      .then(() => toast.success("Public link copied!"))
+      .catch(() => toast.error("Failed to copy link"));
+  }
+
+  function handleTogglePublish(page: DynamicPage) {
+    updatePage({
+      slug: page.slug,
+      payload: { isPublished: !page.isPublished },
+    });
+  }
+
+  const publishedCount =
+    filter === "all" ? pages.filter(p => p.isPublished).length : null;
+  const draftCount =
+    filter === "all" ? pages.filter(p => !p.isPublished).length : null;
+
   return (
     <>
-      <div
-        className="flex h-auto flex-col"
-        style={{ fontFamily: "'DM Sans', sans-serif" }}
-      >
-        {/* ── Header ── */}
-        <div className="flex-none space-y-5 px-6 pb-4 pt-6">
-          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="mb-1.5 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.18em] text-amber-600">
-                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
-                Platform Console
-              </p>
-              <h1
-                className="text-3xl font-normal leading-tight text-stone-800 md:text-4xl"
-                style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
-              >
-                Dynamic <em className="italic text-amber-600">Pages</em>
-              </h1>
+      <div className="flex min-h-screen flex-col gap-6">
+        {/* ── Top Header Banner ── */}
+        <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-100 bg-white/60 p-6 shadow-sm backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/60 md:flex-row md:items-center">
+          <div>
+            <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-amber-600 dark:text-amber-400">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-amber-500" />
+              Dynamic Content & CMS Engine
             </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" />
-                <Input
-                  value={search}
-                  placeholder="Search pages…"
-                  className="h-10 rounded-xl border-stone-200 bg-white pl-9 text-sm text-stone-700 shadow-sm placeholder:text-stone-300 focus-visible:ring-amber-400"
-                  onChange={e => {
-                    setSearch(e.target.value);
-                    setPg(1); // Reset to first page on new search
-                  }}
-                />
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => setFormTarget("new")}
-                className="h-10 rounded-xl bg-amber-500 px-4 text-sm text-white shadow-none hover:bg-amber-600"
-              >
-                <Plus className="mr-1.5 h-4 w-4" /> New Page
-              </Button>
-            </div>
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              Dynamic Pages Manager
+            </h1>
           </div>
 
-          {/* Stats row */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 rounded-xl border border-stone-100 bg-white px-4 py-2.5 shadow-sm">
-              <FileText className="h-4 w-4 text-amber-500" />
-              <div>
-                <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
-                  Total Pages
-                </p>
-                <p
-                  className="text-xl font-normal leading-none text-stone-800"
-                  style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
-                >
-                  {meta?.total ?? "—"}
-                </p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                value={search}
+                placeholder="Search pages…"
+                className="h-10 rounded-xl border-slate-200 bg-white pl-10 text-xs focus-visible:ring-amber-500 dark:border-slate-700 dark:bg-slate-900"
+                onChange={e => {
+                  setSearch(e.target.value);
+                  setPg(1);
+                }}
+              />
             </div>
-            <div className="flex items-center gap-2 rounded-xl border border-stone-100 bg-white px-4 py-2.5 shadow-sm">
-              <Globe className="h-4 w-4 text-teal-500" />
-              <div>
-                <p className="text-[10px] font-medium uppercase tracking-widest text-stone-400">
-                  Published
-                </p>
-                <p
-                  className="text-xl font-normal leading-none text-stone-800"
-                  style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
-                >
-                  {pages.filter(p => p.isPublished).length}{" "}
-                  <span className="text-xs font-normal text-stone-400">
-                    / {meta?.total ?? "—"}
-                  </span>
-                </p>
-              </div>
-            </div>
+            <Button
+              type="button"
+              onClick={() => setFormTarget("new")}
+              className="shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2.5 text-xs font-semibold text-white shadow-md shadow-amber-500/20 hover:from-amber-600 hover:to-amber-700"
+            >
+              <Plus className="mr-2 h-4 w-4" /> Create Page
+            </Button>
           </div>
         </div>
 
-        {/* ── Grid ── */}
-        <div className="px-6 pb-4">
-          {isLoading ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: limit }).map((_, i) => (
-                <SkeletonCard key={i} />
-              ))}
+        {/* ── Stats ── */}
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <StatCard
+            icon={FileText}
+            label="Total Pages"
+            value={meta?.total?.toLocaleString() ?? "—"}
+            sub="pages"
+            accent="bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400"
+          />
+          <StatCard
+            icon={Globe}
+            label="Published"
+            value={publishedCount?.toLocaleString() ?? "—"}
+            sub={filter === "all" ? "this page" : undefined}
+            accent="bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400"
+          />
+          <StatCard
+            icon={FileText}
+            label="Drafts"
+            value={draftCount?.toLocaleString() ?? "—"}
+            sub={filter === "all" ? "this page" : undefined}
+            accent="bg-stone-100 text-stone-600 dark:bg-slate-800 dark:text-slate-300"
+          />
+          <StatCard
+            icon={Layers}
+            label="Current Page"
+            value={meta ? `${meta.page}` : "—"}
+            sub={meta ? `of ${meta.totalPages}` : undefined}
+            accent="bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400"
+          />
+        </div>
+
+        {/* ── Table ── */}
+        <div className="mx-6 mb-5 flex flex-1 flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex flex-none flex-wrap items-center justify-between gap-3 border-b border-stone-100 px-6 py-3 dark:border-slate-800">
+            <h2
+              className="text-base font-normal text-stone-700 dark:text-slate-200"
+              style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}
+            >
+              All Pages
+            </h2>
+            <div className="flex items-center gap-4">
+              {meta && (
+                <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs text-stone-500 dark:bg-slate-800 dark:text-slate-400">
+                  {meta.total?.toLocaleString()} total
+                </span>
+              )}
+              <PerPageSelect value={limit} onChange={handleLimitChange} />
             </div>
-          ) : pages.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {pages.map(p => (
-                <PageCard
-                  key={p.id}
-                  page={p}
-                  onEdit={() => setFormTarget(p)}
-                  onDelete={() => setDeleteTarget(p)}
-                  onPreview={() => setPreviewTarget(p)}
-                  onCopyLink={() => {
-                    const url = `${window.location.origin}/page/${p.slug}`;
-                    navigator.clipboard.writeText(url).catch(() => {
-                      toast.error("Failed to copy link");
-                    });
-                    toast.success("Public link copied!");
-                  }}
-                  onTogglePublish={() => {
-                    updatePage(
-                      { slug: p.slug, payload: { isPublished: !p.isPublished } },
-                      { onSuccess: () => toast.success(p.isPublished ? "Page unpublished" : "Page published") },
-                    );
-                  }}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-stone-200 bg-white py-20">
-              <FileText className="mb-3 h-8 w-8 text-stone-200" />
-              <p className="text-sm text-stone-400">No pages found</p>
+          </div>
+
+          {/* Filter tabs */}
+          <div className="flex flex-none items-center gap-1 border-b border-stone-100 px-6 py-2.5 dark:border-slate-800">
+            {FILTER_TABS.map(tab => (
               <button
+                key={tab.key}
                 type="button"
-                onClick={() => setFormTarget("new")}
-                className="mt-3 text-xs text-amber-500 hover:underline"
+                onClick={() => {
+                  setFilter(tab.key);
+                  setPg(1);
+                }}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  filter === tab.key
+                    ? "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400"
+                    : "text-stone-400 hover:bg-stone-100 hover:text-stone-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                }`}
               >
-                Create your first page →
+                {tab.label}
               </button>
-            </div>
-          )}
+            ))}
+          </div>
+
+          <div className="flex-1 overflow-auto">
+            <table className="w-full min-w-[720px]">
+              <thead className="sticky top-0 z-10">
+                <tr className="border-b border-stone-100 bg-stone-50/95 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-800/60">
+                  <th className="px-6 py-3 text-left">
+                    <SortButton
+                      label="Page"
+                      active={sortField === "title"}
+                      dir={sortField === "title" ? sortDir : null}
+                      onClick={() => handleSort("title")}
+                    />
+                  </th>
+                  <th className="px-6 py-3 text-left">
+                    <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-stone-400 dark:text-slate-500">
+                      Status
+                    </span>
+                  </th>
+                  <th className="px-6 py-3 text-left">
+                    <SortButton
+                      label="Created"
+                      active={sortField === "createdAt"}
+                      dir={sortField === "createdAt" ? sortDir : null}
+                      onClick={() => handleSort("createdAt")}
+                    />
+                  </th>
+                  <th className="px-6 py-3 text-right">
+                    <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-stone-400 dark:text-slate-500">
+                      Actions
+                    </span>
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {isLoading ? (
+                  Array.from({ length: limit }).map((_, i) => (
+                    <SkeletonRow key={i} />
+                  ))
+                ) : pages.length > 0 ? (
+                  pages.map(page => (
+                    <tr
+                      key={page.id}
+                      className="group border-b border-stone-100 transition-colors last:border-none hover:bg-stone-50/70 dark:border-slate-800 dark:hover:bg-slate-800/40"
+                    >
+                      {/* Page */}
+                      <td className="px-6 py-3.5">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 transition-colors group-hover:bg-amber-100 dark:bg-amber-500/10 dark:group-hover:bg-amber-500/20">
+                            <FileText className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                          </div>
+                          <div className="min-w-0">
+                            <p
+                              className="truncate text-sm font-normal leading-snug text-stone-800 dark:text-slate-100"
+                              style={{
+                                fontFamily: "'DM Serif Display', Georgia, serif",
+                              }}
+                            >
+                              {page.title}
+                            </p>
+                            <p className="flex items-center gap-1 font-mono text-[10px] text-stone-400 dark:text-slate-500">
+                              <Globe className="h-2.5 w-2.5 shrink-0" />
+                              <span className="truncate">/{page.slug}</span>
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-6 py-3.5">
+                        <StatusBadge published={page.isPublished} />
+                      </td>
+
+                      {/* Created */}
+                      <td className="px-6 py-3.5">
+                        <span className="text-xs tabular-nums text-stone-400 dark:text-slate-500">
+                          {formatDate(page.createdAt)}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-6 py-3.5">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewTarget(page)}
+                            title="Preview"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 text-stone-400 transition-colors hover:border-sky-200 hover:bg-sky-50 hover:text-sky-500 dark:border-slate-700 dark:text-slate-400 dark:hover:border-sky-500/30 dark:hover:bg-sky-500/10 dark:hover:text-sky-400"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyLink(page.slug)}
+                            title="Copy public link"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 text-stone-400 transition-colors hover:border-teal-200 hover:bg-teal-50 hover:text-teal-500 dark:border-slate-700 dark:text-slate-400 dark:hover:border-teal-500/30 dark:hover:bg-teal-500/10 dark:hover:text-teal-400"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormTarget(page)}
+                            title="Edit"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 text-stone-400 transition-colors hover:border-amber-200 hover:bg-amber-50 hover:text-amber-500 dark:border-slate-700 dark:text-slate-400 dark:hover:border-amber-500/30 dark:hover:bg-amber-500/10 dark:hover:text-amber-400"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePublish(page)}
+                            title={
+                              page.isPublished ? "Unpublish" : "Publish"
+                            }
+                            className={`flex h-7 w-7 items-center justify-center rounded-lg border transition-colors ${
+                              page.isPublished
+                                ? "border-stone-200 text-teal-500 hover:border-teal-200 hover:bg-teal-50 dark:border-slate-700 dark:text-teal-400 dark:hover:border-teal-500/30 dark:hover:bg-teal-500/10"
+                                : "border-stone-200 text-stone-400 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-500 dark:border-slate-700 dark:text-slate-400 dark:hover:border-teal-500/30 dark:hover:bg-teal-500/10 dark:hover:text-teal-400"
+                            }`}
+                          >
+                            <Globe className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(page)}
+                            title="Delete"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-stone-200 text-stone-400 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500 dark:border-slate-700 dark:text-slate-400 dark:hover:border-rose-500/30 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="py-16 text-center text-sm text-stone-400 dark:text-slate-500"
+                    >
+                      <div className="flex flex-col items-center">
+                        <FileText className="mb-2 h-6 w-6 text-stone-200 dark:text-slate-700" />
+                        {search || filter !== "all"
+                          ? "No pages match your filters"
+                          : "No pages yet"}
+                        <button
+                          type="button"
+                          onClick={() => setFormTarget("new")}
+                          className="mt-3 text-xs text-amber-500 hover:underline dark:text-amber-400"
+                        >
+                          Create your first page →
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* ── Pagination ── */}
         {meta && meta.totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4">
-            <p className="text-xs font-light text-stone-400">
+          <div className="flex flex-col items-start gap-4 px-6 py-4 md:flex-row md:items-center md:justify-between">
+            <p className="text-xs font-light text-stone-400 dark:text-slate-500">
               Page{" "}
-              <span className="font-medium text-stone-600">{meta.page}</span> of{" "}
-              <span className="font-medium text-stone-600">
+              <span className="font-medium text-stone-600 dark:text-slate-300">
+                {meta.page}
+              </span>{" "}
+              of{" "}
+              <span className="font-medium text-stone-600 dark:text-slate-300">
                 {meta.totalPages}
               </span>
               &nbsp;·&nbsp;
-              <span className="font-medium text-stone-600">
-                {meta.total}
+              <span className="font-medium text-stone-600 dark:text-slate-300">
+                {meta.total?.toLocaleString()}
               </span>{" "}
               total
             </p>
@@ -1192,7 +1388,7 @@ export default function DynamicPagesPage() {
                 size="sm"
                 disabled={!meta.hasPrevPage}
                 onClick={() => setPg(p => p - 1)}
-                className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50 disabled:opacity-30"
+                className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Prev
               </Button>
@@ -1202,7 +1398,7 @@ export default function DynamicPagesPage() {
                 size="sm"
                 disabled={!meta.hasNextPage}
                 onClick={() => setPg(p => p + 1)}
-                className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50 disabled:opacity-30"
+                className="h-8 rounded-lg border-stone-200 text-xs text-stone-600 shadow-none hover:bg-stone-50 disabled:opacity-30 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 Next <ChevronRight className="ml-1 h-3.5 w-3.5" />
               </Button>

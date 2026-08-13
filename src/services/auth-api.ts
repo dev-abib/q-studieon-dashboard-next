@@ -36,4 +36,38 @@ export const authApi = {
     const res = await api.put(`/auth/admin/change-password`, data);
     return res.data;
   },
+
+  inviteMember: async (payload: { email: string; role: string }) => {
+    const res = await api.post(`/admin/invite-member`, payload);
+    return res.data;
+  },
+
+  verifyInvite: async (token: string) => {
+    const res = await api.get(`/admin/verify-invite?token=${token}`);
+    return res.data;
+  },
+
+  acceptInvite: async (payload: {
+    token: string;
+    name: string;
+    password: string;
+    confirmPassword: string;
+  }) => {
+    const res = await api.post(`/admin/accept-invite`, payload);
+    return res.data;
+  },
+
+  forgotPassword: async (email: string) => {
+    const res = await api.post(`/admin/forgot-password`, { email });
+    return res.data;
+  },
+
+  resetPassword: async (payload: {
+    token: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) => {
+    const res = await api.post(`/admin/reset-password`, payload);
+    return res.data;
+  },
 };

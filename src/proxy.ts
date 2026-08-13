@@ -14,7 +14,9 @@ export async function proxy(req: NextRequest) {
   const refreshToken = req.cookies.get("refreshToken")?.value;
 
   if (isPublicRoute) {
-    if (accessToken) {
+    // Signed-in users are bounced away from the login form, but public content
+    // pages (e.g. /page/*) must stay viewable by everyone — including admins.
+    if (PUBLIC_ROUTES.includes(pathname) && accessToken) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
     return NextResponse.next();

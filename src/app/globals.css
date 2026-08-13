@@ -1,4 +1,5 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap");
+@import "../styles/designTokens.css";
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -6,11 +7,12 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-heading: "Plus Jakarta Sans", sans-serif;
+  --font-serif: "DM Serif Display", serif;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -41,9 +43,6 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
 
-  /* custom colors */
-  --color-off-gray: #354446;
-
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -54,72 +53,46 @@
 }
 
 :root {
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #f59e0b;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --destructive: #ef4444;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #f59e0b;
+  --radius: 0.75rem;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #0b0f17;
+  --foreground: #f8fafc;
+  --card: #111827;
+  --card-foreground: #f8fafc;
+  --popover: #111827;
+  --popover-foreground: #f8fafc;
+  --primary: #f59e0b;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #f8fafc;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #1e293b;
+  --accent-foreground: #f8fafc;
+  --destructive: #f87171;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #f59e0b;
 }
 
 @layer base {
@@ -127,9 +100,213 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased selection:bg-amber-500/20 selection:text-amber-500;
   }
   html {
     @apply font-sans;
   }
+}
+
+/* Glassmorphic Cards & Ambient Glow */
+.glass-card {
+  @apply bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm hover:shadow-md transition-all duration-300;
+}
+
+.glass-card-elevated {
+  @apply bg-white/95 dark:bg-slate-900/90 backdrop-blur-2xl border border-slate-200/90 dark:border-slate-800/90 shadow-lg hover:shadow-xl transition-all duration-300;
+}
+
+/* Rich text content — used by the dynamic pages editor & preview.
+   (The @tailwindcss/typography plugin is not installed, so `prose` utilities
+   don't generate any CSS; these styles cover that gap.) */
+.rich-content {
+  color: #57534e; /* stone-700 */
+  font-size: var(--rich-content-font-size, 0.875rem); /* text-sm default */
+  line-height: 1.7;
+  overflow-wrap: break-word;
+}
+
+/* Larger reading size for public-facing articles */
+.rich-content-lg {
+  --rich-content-font-size: 1.1875rem;
+  line-height: 1.8;
+  color: #44403c; /* stone-600 — stronger contrast for articles */
+}
+.rich-content-lg p {
+  margin: 1.25rem 0;
+}
+.rich-content-lg h1 {
+  font-size: 2.125rem;
+}
+.rich-content-lg h2 {
+  font-size: 1.75rem;
+}
+.rich-content-lg h3 {
+  font-size: 1.4375rem;
+}
+.rich-content-lg h4 {
+  font-size: 1.1875rem;
+}
+.rich-content-lg ul,
+.rich-content-lg ol {
+  margin: 1.25rem 0;
+  padding-left: 1.75rem;
+}
+.rich-content-lg li {
+  margin: 0.375rem 0;
+}
+.dark .rich-content {
+  color: #cbd5e1; /* slate-300 */
+}
+.rich-content h1,
+.rich-content h2,
+.rich-content h3,
+.rich-content h4,
+.rich-content h5,
+.rich-content h6 {
+  margin: 1.5rem 0 0.625rem;
+  font-family: "DM Serif Display", Georgia, serif;
+  font-weight: 400;
+  color: #292524; /* stone-800 */
+  line-height: 1.25;
+}
+.dark .rich-content h1,
+.dark .rich-content h2,
+.dark .rich-content h3,
+.dark .rich-content h4,
+.dark .rich-content h5,
+.dark .rich-content h6 {
+  color: #f1f5f9; /* slate-100 */
+}
+.rich-content h1 {
+  font-size: 1.875rem;
+}
+.rich-content h2 {
+  font-size: 1.5rem;
+}
+.rich-content h3 {
+  font-size: 1.25rem;
+}
+.rich-content h4 {
+  font-size: 1rem;
+}
+.rich-content h5,
+.rich-content h6 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: "Plus Jakarta Sans", sans-serif;
+}
+.rich-content p {
+  margin: 0.75rem 0;
+}
+.rich-content ul,
+.rich-content ol {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+.rich-content ul {
+  list-style: disc;
+}
+.rich-content ol {
+  list-style: decimal;
+}
+.rich-content li {
+  margin: 0.25rem 0;
+}
+.rich-content a {
+  color: #d97706; /* amber-600 */
+  text-decoration: none;
+}
+.rich-content a:hover {
+  text-decoration: underline;
+}
+.dark .rich-content a {
+  color: #fbbf24; /* amber-400 */
+}
+.rich-content blockquote {
+  margin: 0.75rem 0;
+  border-left: 2px solid #fcd34d; /* amber-300 */
+  padding-left: 1rem;
+  color: #78716c; /* stone-500 */
+  font-style: italic;
+}
+.dark .rich-content blockquote {
+  border-left-color: rgba(245, 158, 11, 0.5);
+  color: #94a3b8; /* slate-400 */
+}
+.rich-content pre {
+  margin: 0.75rem 0;
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  background: #f5f5f4; /* stone-100 */
+  padding: 0.75rem 1rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: #44403c; /* stone-600 */
+}
+.dark .rich-content pre {
+  background: #1e293b; /* slate-800 */
+  color: #e2e8f0; /* slate-200 */
+}
+.rich-content code {
+  border-radius: 0.25rem;
+  background: #f5f5f4; /* stone-100 */
+  padding: 0.125rem 0.375rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+  color: #e11d48; /* rose-500 */
+}
+.dark .rich-content code {
+  background: #1e293b; /* slate-800 */
+  color: #fb7185; /* rose-400 */
+}
+.rich-content pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+.rich-content img {
+  margin: 0.75rem 0;
+  max-width: 100%;
+  border-radius: 0.75rem;
+}
+.rich-content table {
+  margin: 0.75rem 0;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.rich-content th,
+.rich-content td {
+  border: 1px solid #e7e5e4; /* stone-200 */
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+.dark .rich-content th,
+.dark .rich-content td {
+  border-color: #334155; /* slate-700 */
+}
+.rich-content th {
+  background: #fafaf9; /* stone-50 */
+  font-weight: 600;
+  color: #44403c; /* stone-600 */
+}
+.dark .rich-content th {
+  background: #1e293b; /* slate-800 */
+  color: #e2e8f0; /* slate-200 */
+}
+.rich-content hr {
+  margin: 1.25rem 0;
+  border-color: #e7e5e4; /* stone-200 */
+}
+.dark .rich-content hr {
+  border-color: #334155; /* slate-700 */
+}
+.rich-content strong {
+  font-weight: 600;
+  color: #292524; /* stone-800 */
+}
+.dark .rich-content strong {
+  color: #f1f5f9; /* slate-100 */
 }

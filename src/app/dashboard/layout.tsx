@@ -12,16 +12,15 @@ export default function DashboardLayout({
 }) {
   const { data, isLoading } = useCurrentUser();
 
-  const admin: Admin | null = !isLoading && data?.data
-    ? adminSchema.parse(data.data)
-    : null;
+  const admin: Admin | null =
+    !isLoading && data?.data ? adminSchema.parse(data.data) : null;
 
   return (
-    <div className="flex p-10 h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-slate-50/70 dark:bg-slate-950 p-4 lg:p-6 gap-6">
       <Sidebar role={admin?.role ?? null} />
-      <div className="flex pl-5 flex-col flex-1 overflow-hidden">
+      <div className="flex flex-col flex-1 overflow-hidden min-w-0">
         {admin && <Header admin={admin} />}
-        <main className="flex-1 overflow-y-auto p-6 bg-[#f7f6f3]">
+        <main className="flex-1 overflow-y-auto rounded-2xl bg-white/40 dark:bg-slate-900/40 border border-slate-100/80 dark:border-slate-800/80 p-6 backdrop-blur-sm shadow-sm">
           {children}
         </main>
       </div>

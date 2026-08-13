@@ -4,6 +4,9 @@ export const createAdminSchema = z
   .object({
     name: z.string(),
     email: z.string().email(),
+    role: z
+      .enum(["admin", "customer_support", "content_manager", "finance"])
+      .optional(),
     password: z
       .string()
       .regex(

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -75,6 +76,14 @@ export default function LoginPage() {
                       {errors.password.message}
                     </p>
                   )}
+                  <div className="flex justify-end pt-1">
+                    <Link
+                      href="/auth/forgot-password"
+                      className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-semibold"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
                 </div>
 
                 <Button
