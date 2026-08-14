@@ -559,7 +559,7 @@ export default function QuestionsPage() {
     allCategories.find(c => c.id === id)?.name ?? "Uncategorized";
 
   return (
-    <div className="flex flex-col gap-6">
+    <section className="w-full flex flex-col gap-6 min-h-screen pb-20">
       {/* ── Page Header ── */}
       <PageHeader
         kicker="Survey & Assessment Builder"
@@ -756,7 +756,7 @@ export default function QuestionsPage() {
                             size="icon"
                             onClick={() => setFormTarget(q)}
                             title="Edit Question"
-                            className="h-8 w-8 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+                            className="h-8 w-8 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 dark:hover:bg-primary/10"
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -832,6 +832,6 @@ export default function QuestionsPage() {
           isLoading={isDeleting}
         />
       )}
-    </div>
+    </section>
   );
 }

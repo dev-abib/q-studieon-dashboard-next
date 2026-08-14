@@ -722,7 +722,7 @@ export default function QueriesPage() {
   const activeIndex = queries.findIndex(q => q.id === activeQuery?.id);
 
   return (
-    <div className="space-y-4">
+    <section className="w-full flex flex-col gap-6 min-h-screen pb-20">
       {/* ─── Header ───────────────────────────────────────────────────────── */}
       <PageHeader
         kicker="Support & Communications"
@@ -767,7 +767,7 @@ export default function QueriesPage() {
               variant="outline"
               size="sm"
               onClick={() => setPermissionsModalOpen(true)}
-              className="gap-1.5 rounded-xl text-xs h-8 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/30 hover:bg-indigo-100 font-semibold"
+              className="gap-1.5 rounded-xl text-xs h-8 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium"
               title="Manage Staff Deletion Privileges"
             >
               <Key className="h-3.5 w-3.5" />
@@ -2009,7 +2009,7 @@ export default function QueriesPage() {
         <DialogContent className="sm:max-w-2xl w-[95vw] rounded-2xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
           <DialogHeader className="pb-2">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/20">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
                 <Key className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
@@ -2059,7 +2059,7 @@ export default function QueriesPage() {
 
                     <div className="shrink-0 flex items-center gap-2">
                       {isMemberSuperAdmin ? (
-                        <Badge className="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20 text-[10.5px] gap-1 py-1 px-2.5 font-semibold">
+                        <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 text-[10.5px] gap-1 py-1 px-2.5 font-medium">
                           <ShieldCheck className="h-3.5 w-3.5" />
                           Super Admin (Full Access)
                         </Badge>
@@ -2103,9 +2103,9 @@ export default function QueriesPage() {
                             onClick={() =>
                               handleToggleStaffUserDetailsPermission(staff.id, Boolean(staff.canViewUserDetails))
                             }
-                            className={`h-7 px-2.5 rounded-lg text-[11px] gap-1 font-semibold transition-all ${
+                            className={`h-7 px-2.5 rounded-lg text-[11px] gap-1 font-medium transition-all ${
                               staff.canViewUserDetails
-                                ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
+                                ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
                                 : "text-slate-600 dark:text-slate-300 hover:text-slate-900 bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700"
                             }`}
                             title="Toggle user details viewing privilege"
@@ -2815,6 +2815,6 @@ export default function QueriesPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </section>
   );
 }

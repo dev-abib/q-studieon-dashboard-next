@@ -11,6 +11,11 @@ import { useChangePassword } from "@/features/auth/hooks/use-change-password";
 import { ChangePasswordInput } from "@/features/auth/types/change-pass.types";
 import { ChangePasswordSchema } from "@/features/auth/schema/change-password.schema";
 
+import { useCurrentUser } from "../hooks/use-get-met";
+import { authApi } from "@/services/auth-api";
+import { toast } from "sonner";
+import { ShieldAlert, Mail } from "lucide-react";
+
 function getPasswordStrength(password: string) {
   if (!password) return { score: 0, label: "", color: "" };
   let score = 0;
@@ -28,6 +33,14 @@ function getPasswordStrength(password: string) {
 }
 
 export function PasswordForm() {
+  const { data: userData } = useCurrentUser();
+  const currentUser = userData?.data || userData;
+  const canChangePassword =
+    currentUser?.role === "super_admin" ||
+    currentUser?.isOwner ||
+    Boolean(currentUser?.canChangePassword);
+
+  const [isSendingReset, setIsSendingReset] = React.useState(false);
   const [newPassword, setNewPassword] = React.useState("");
   const strength = getPasswordStrength(newPassword);
 
@@ -46,6 +59,89 @@ export function PasswordForm() {
   const { mutate: updatePassword, isPending: isUpdating } = useChangePassword();
   const onSubmit = (values: ChangePasswordInput) => updatePassword(values);
   const isDirty = form.formState.isDirty;
+
+  const handleSendResetEmail = async () => {
+    if (!currentUser?.email) return;
+    setIsSendingReset(true);
+    try {
+      const res = await authApi.forgotPassword(currentUser.email);
+      toast.success(res.message || "Password reset link sent to your email!");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to send reset link");
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
+
+  if (!canChangePassword) {
+    return (
+      <div className="flex flex-col rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+        {/* ── Card Header ── */}
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4 bg-slate-50/50 dark:bg-slate-800/20">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <Lock className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-base font-semibold text-slate-900 dark:text-white">
+                Password & Security
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Staff credential modification policy
+              </p>
+            </div>
+          </div>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+            <Lock className="h-3 w-3" />
+            Restricted by Super Admin
+          </span>
+        </div>
+
+        <div className="p-6 flex flex-col gap-4">
+          <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
+            <ShieldAlert className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-sm mb-1 text-amber-950 dark:text-amber-100">
+                Direct Password Modification Locked
+              </p>
+              <p className="text-xs text-amber-800 dark:text-amber-300/90">
+                Staff members are not permitted to change their account password manually unless granted permission by a <strong>Super Admin</strong>.
+              </p>
+              <p className="text-xs text-amber-800 dark:text-amber-300/90 mt-1">
+                If you have forgotten your password or require a credential update, you can trigger a secure recovery link to your verified email (<strong>{currentUser?.email}</strong>).
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Need assistance? Contact your organization administrator.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isSendingReset}
+              onClick={handleSendResetEmail}
+              className="rounded-xl h-9 px-4 text-xs font-bold gap-2 text-primary border-primary/30 hover:bg-primary/10"
+            >
+              {isSendingReset ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Sending Reset Link...</span>
+                </>
+              ) : (
+                <>
+                  <Mail className="h-3.5 w-3.5" />
+                  <span>Email Me Password Reset Link</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">

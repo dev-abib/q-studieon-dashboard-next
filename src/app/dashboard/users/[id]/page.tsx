@@ -70,8 +70,16 @@ import {
   History,
   Zap,
   MapPin,
+  MoreHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const formatDuration = (seconds?: number | null): string => {
   if (!seconds || seconds <= 0) return "< 1m";
@@ -96,7 +104,12 @@ import {
   useRestoreUser,
   useFlagUser,
   useResolveFlag,
+  useGrantUserAccess,
+  useRevokeUserAccess,
 } from "@/features/admin/hooks/use-user-moderation";
+import { useTeamPresence } from "@/features/admin/hooks/use-team-presence";
+import { InternalNotesSection } from "@/features/admin/components/InternalNotesSection";
+import { adminApi } from "@/services/admin-api";
 import {
   ContactQuery,
   ContactQueryPriority,
@@ -284,25 +297,25 @@ const getReportStatusBadge = (status?: string) => {
   switch (status) {
     case "completed":
       return (
-        <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-[10.5px] font-semibold">
+        <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[11px] font-medium py-0.5 px-2">
           Completed
         </Badge>
       );
     case "pending":
       return (
-        <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 text-[10.5px] font-semibold">
+        <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[11px] font-medium py-0.5 px-2">
           Processing
         </Badge>
       );
     case "failed":
       return (
-        <Badge variant="destructive" className="text-[10.5px]">
+        <Badge variant="destructive" className="text-[11px] font-medium py-0.5 px-2">
           Failed
         </Badge>
       );
     default:
       return (
-        <Badge variant="outline" className="text-[10.5px]">
+        <Badge variant="outline" className="text-[11px] font-medium text-slate-500 py-0.5 px-2">
           {cap(status)}
         </Badge>
       );
@@ -358,21 +371,21 @@ function SectionCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border border-slate-200/90 dark:border-slate-800/90 bg-white dark:bg-slate-900 shadow-xs overflow-hidden ${className}`}
+      className={`rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden ${className}`}
     >
-      <div className="px-6 py-4.5 border-b border-slate-100 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-850/40">
+      <div className="px-6 py-4.5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-850/50">
         <div className="flex items-center gap-3 min-w-0">
           {Icon && (
-            <div className="h-8.5 w-8.5 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0">
-              <Icon className="h-4.5 w-4.5" />
+            <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0">
+              <Icon className="h-4 w-4" />
             </div>
           )}
           <div>
-            <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white truncate">
+            <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-100 truncate">
               {title}
             </h3>
             {subtitle && (
-              <p className="text-[11.5px] text-slate-500 dark:text-slate-400 mt-0.5 font-normal">
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 font-normal">
                 {subtitle}
               </p>
             )}
@@ -383,7 +396,7 @@ function SectionCard({
           {action}
         </div>
       </div>
-      <div className="p-6">{children}</div>
+      <div className="p-5">{children}</div>
     </div>
   );
 }
@@ -547,7 +560,7 @@ function PaginationBar({
 // Page Main Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-type DetailTab = "reports" | "collections" | "inquiries" | "sessions" | "overview" | "payments";
+type DetailTab = "reports" | "collections" | "inquiries" | "sessions" | "overview" | "payments" | "notes";
 
 export default function UserDetailsPage() {
   const { id } = useParams();
@@ -562,8 +575,24 @@ export default function UserDetailsPage() {
   const canViewUsers = isSuperAdmin || Boolean(currentUser?.canViewUserDetails);
   const isCustomerSupport = currentUser?.role === "customer_support";
 
+  // Active Team Presence & Collision Detection
+  const { collisions } = useTeamPresence(id as string, "User");
+
   // Active navigation tab
   const [activeTab, setActiveTab] = useState<DetailTab>("reports");
+
+  const handleImpersonate = async () => {
+    if (!user) return;
+    try {
+      const res = await adminApi.impersonateUser(user.id);
+      localStorage.setItem("impersonated_user", user.name || user.email);
+      localStorage.setItem("impersonated_token", res.data?.token);
+      toast.success(`Safe Impersonation Mode active for ${user.name || user.email}`);
+      window.location.href = "/dashboard";
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to start impersonation");
+    }
+  };
 
   // Query live contact messages from this user
   const userQueryParams = useMemo(() => {
@@ -608,6 +637,15 @@ export default function UserDetailsPage() {
   const [flagAction, setFlagAction] = useState<"BLOCK" | "DELETE">("BLOCK");
   const [flagReason, setFlagReason] = useState<string>("");
   const [flagNote, setFlagNote] = useState<string>("");
+
+  // Subscription Grant & Revoke state
+  const [grantModalOpen, setGrantModalOpen] = useState(false);
+  const [grantPlan, setGrantPlan] = useState<"1_month" | "3_months" | "6_months" | "1_year" | "custom" | "lifetime">("1_month");
+  const [grantCustomEndDate, setGrantCustomEndDate] = useState<string>("");
+  const [grantReason, setGrantReason] = useState<string>("");
+  const [grantBillingCycle, setGrantBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [revokeModalOpen, setRevokeModalOpen] = useState(false);
+  const [revokeReason, setRevokeReason] = useState<string>("");
 
   // Report inspection modal state
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
@@ -665,6 +703,8 @@ export default function UserDetailsPage() {
   const restoreMutation = useRestoreUser();
   const flagMutation = useFlagUser();
   const resolveFlagMutation = useResolveFlag();
+  const grantAccessMutation = useGrantUserAccess();
+  const revokeAccessMutation = useRevokeUserAccess();
 
   const handleCopyText = (text: string, type: "id" | "email") => {
     navigator.clipboard.writeText(text);
@@ -819,6 +859,44 @@ export default function UserDetailsPage() {
   const handleResolveFlag = async (flagId: string, status: "APPROVED" | "REJECTED") => {
     try {
       await resolveFlagMutation.mutateAsync({ flagId, status });
+      refetch();
+    } catch {
+      // Handled by hook
+    }
+  };
+
+  const handleGrantAccessConfirm = async () => {
+    if (!user) return;
+    if (grantPlan === "custom" && !grantCustomEndDate) {
+      toast.error("Please pick a custom end date");
+      return;
+    }
+    try {
+      await grantAccessMutation.mutateAsync({
+        userId: user.id,
+        plan: grantPlan,
+        customEndDate: grantPlan === "custom" ? new Date(grantCustomEndDate).toISOString() : undefined,
+        reason: grantReason.trim() || undefined,
+        billingCycle: grantBillingCycle,
+      });
+      setGrantModalOpen(false);
+      setGrantReason("");
+      setGrantCustomEndDate("");
+      refetch();
+    } catch {
+      // Handled by hook
+    }
+  };
+
+  const handleRevokeAccessConfirm = async () => {
+    if (!user) return;
+    try {
+      await revokeAccessMutation.mutateAsync({
+        userId: user.id,
+        reason: revokeReason.trim() || undefined,
+      });
+      setRevokeModalOpen(false);
+      setRevokeReason("");
       refetch();
     } catch {
       // Handled by hook
@@ -1056,7 +1134,25 @@ export default function UserDetailsPage() {
   const daysUntilPurge = getDaysRemaining(user.purgeAt);
 
   return (
-    <div className="space-y-6 pb-20">
+    <section className="w-full flex flex-col gap-6 min-h-screen pb-20">
+      {/* ─── REAL-TIME TEAM COLLISION WARNING ─────────────────────────────── */}
+      {collisions.length > 0 && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 flex items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
+            </span>
+            <p className="text-xs font-semibold">
+              <strong>Active Team Presence:</strong> {collisions.map(c => c.name || c.email).join(', ')} is also viewing this profile.
+            </p>
+          </div>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-300">
+            Live Collision Guard
+          </span>
+        </div>
+      )}
+
       {/* ─── MODERATION STATUS BANNERS ─────────────────────────────────────── */}
 
       {/* 1. Soft-Deleted Account Banner */}
@@ -1144,46 +1240,75 @@ export default function UserDetailsPage() {
         </div>
       )}
 
-      {/* 3. Flagged User Banner (If flagged by an admin) */}
-      {user.flags && user.flags.length > 0 && (
-        <div className="p-4 rounded-2xl border border-purple-500/30 bg-purple-500/10 text-purple-950 dark:text-purple-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
-          <div className="flex items-start gap-3 min-w-0">
-            <div className="h-8 w-8 rounded-xl bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 mt-0.5">
-              <Flag className="h-4 w-4" />
-            </div>
-            <div className="space-y-0.5 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-xs text-purple-900 dark:text-purple-100">
-                  Account Flagged for Moderation Review ({user.flags[0].actionRequested})
-                </span>
-                <Badge className="bg-purple-600 text-white text-[9.5px]">
-                  Flagged by {user.flags[0].flaggedBy?.name || "Admin"}
-                </Badge>
+      {/* 3. Pending Moderation Flags Banner */}
+      {pendingFlags.length > 0 && (
+        <div className="p-4 sm:p-5 rounded-2xl border border-amber-500/30 bg-amber-500/5 text-amber-950 dark:text-amber-100 space-y-3 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <Flag className="h-4 w-4" />
               </div>
-              <p className="text-[11.5px] text-purple-800 dark:text-purple-300">
-                Reason: {user.flags[0].reason} {user.flags[0].note && `• Note: ${user.flags[0].note}`}
-              </p>
+              <span className="font-bold text-sm text-amber-900 dark:text-amber-100">
+                Moderation Flag Submitted by Staff ({pendingFlags.length} Pending Review)
+              </span>
             </div>
           </div>
 
-          {isSuperAdmin && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={async () => {
-                try {
-                  await resolveFlagMutation.mutateAsync(user.flags[0].id);
-                  toast.success("Flag dismissed");
-                  refetch();
-                } catch {
-                  toast.error("Failed to dismiss flag");
-                }
-              }}
-              className="rounded-xl h-8 px-3 border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-xs font-semibold shrink-0"
-            >
-              <span>Dismiss Flag</span>
-            </Button>
-          )}
+          <div className="space-y-2.5">
+            {pendingFlags.map((flag: any) => (
+              <div
+                key={flag.id}
+                className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-200/60 dark:border-amber-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs"
+              >
+                <div className="space-y-1 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className="bg-slate-800 dark:bg-slate-700 text-white font-medium text-[10px]">
+                      Action: {flag.action || "BLOCK"}
+                    </Badge>
+                    <span className="text-slate-600 dark:text-slate-300">
+                      Flagged by <strong>{flag.flaggedBy?.name || flag.flaggedBy?.email || "Staff Admin"}</strong> ({cap(flag.flaggedBy?.role || "admin")})
+                    </span>
+                    <span className="text-slate-400">• {formatTimeAgo(flag.createdAt)}</span>
+                  </div>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">
+                    Reason: {flag.reason}
+                  </p>
+                  {flag.note && (
+                    <p className="text-slate-500 dark:text-slate-400 italic">
+                      Staff Note: "{flag.note}"
+                    </p>
+                  )}
+                </div>
+
+                {isSuperAdmin ? (
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                    <Button
+                      size="sm"
+                      onClick={() => handleResolveFlag(flag.id, "APPROVED")}
+                      disabled={resolveFlagMutation.isPending}
+                      className="rounded-lg h-7.5 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-[11px] gap-1"
+                    >
+                      <Check className="h-3 w-3" />
+                      <span>Approve & Execute</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleResolveFlag(flag.id, "REJECTED")}
+                      disabled={resolveFlagMutation.isPending}
+                      className="rounded-lg h-7.5 px-2.5 text-slate-600 dark:text-slate-300 hover:text-rose-600 text-[11px]"
+                    >
+                      <span>Dismiss Flag</span>
+                    </Button>
+                  </div>
+                ) : (
+                  <span className="text-[11px] text-purple-600 dark:text-purple-400 font-semibold italic">
+                    Under Super Admin Review
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -1206,100 +1331,144 @@ export default function UserDetailsPage() {
 
         {/* Global Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Impersonate User (Super Admin Only) */}
+          {isSuperAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleImpersonate}
+              className="h-8.5 px-3 rounded-xl text-xs gap-1.5 font-medium text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-2xs"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              <span>Impersonate</span>
+            </Button>
+          )}
+
           <Button
             variant="outline"
             size="sm"
             onClick={handleOpenDirectMessage}
-            className="h-8.5 px-3 rounded-xl text-xs gap-1.5 font-semibold text-slate-700 dark:text-slate-300 hover:text-primary hover:border-primary/40 transition-all"
+            className="h-8.5 px-3 rounded-xl text-xs gap-1.5 font-medium text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-2xs"
           >
-            <Send className="h-3.5 w-3.5 text-primary" />
+            <Send className="h-3.5 w-3.5" />
             <span>Send Email</span>
           </Button>
 
-          {isSoftBlocked ? (
+          {/* Grant / Manage Subscription Access Button */}
+          {user.isPaid ? (
             <Button
               variant="outline"
               size="sm"
-              onClick={handleUnblock}
-              disabled={unblockMutation.isPending}
-              className="h-8.5 px-3 rounded-xl text-xs gap-1.5 font-bold text-emerald-600 border-emerald-200 dark:border-emerald-900/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+              onClick={() => setRevokeModalOpen(true)}
+              className="h-8.5 px-3 rounded-xl text-xs gap-1.5 font-medium text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-2xs"
             >
-              <Unlock className="h-3.5 w-3.5" />
-              <span>Unblock</span>
+              <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+              <span>Manage Subscription</span>
             </Button>
           ) : (
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setBlockModalOpen(true)}
-              className="h-8.5 px-3 rounded-xl text-xs gap-1.5 font-bold text-amber-600 border-amber-200 dark:border-amber-900/60 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+              onClick={() => setGrantModalOpen(true)}
+              className="h-8.5 px-3 rounded-xl text-xs gap-1.5 font-medium text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-2xs"
             >
-              <Ban className="h-3.5 w-3.5" />
-              <span>Soft Block</span>
+              <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+              <span>Grant Subscription</span>
             </Button>
           )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setFlagModalOpen(true)}
-            className="h-8.5 px-3 rounded-xl text-xs gap-1.5 font-semibold text-purple-600 border-purple-200 dark:border-purple-900/60 hover:bg-purple-50 dark:hover:bg-purple-950/40"
-          >
-            <Flag className="h-3.5 w-3.5" />
-            <span>Flag User</span>
-          </Button>
-
-          {isSoftDeleted ? (
-            <Button
-              size="sm"
-              onClick={handleRestoreAccount}
-              disabled={restoreMutation.isPending}
-              className="h-8.5 px-3.5 rounded-xl text-xs gap-1.5 font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>Restore User</span>
-            </Button>
-          ) : (
-            !isCustomerSupport && (
+          {/* More Actions Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setImmediateHardDelete(false);
-                  setDeleteModalOpen(true);
-                }}
-                className="h-8.5 px-3 rounded-xl text-xs gap-1.5 font-bold text-rose-600 border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                className="h-8.5 px-3 rounded-xl text-xs gap-1.5 font-medium text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-2xs"
               >
-                <Trash2 className="h-3.5 w-3.5" />
-                <span>Delete</span>
+                <MoreHorizontal className="h-3.5 w-3.5" />
+                <span>Actions</span>
               </Button>
-            )
-          )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52 rounded-xl p-1 shadow-lg text-xs">
+              <DropdownMenuItem
+                onClick={() => setFlagModalOpen(true)}
+                className="gap-2 cursor-pointer font-medium text-amber-600 dark:text-amber-400"
+              >
+                <Flag className="h-3.5 w-3.5" />
+                <span>Flag User for Review</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              {isSoftBlocked ? (
+                <DropdownMenuItem
+                  onClick={handleUnblock}
+                  disabled={unblockMutation.isPending}
+                  className="gap-2 cursor-pointer font-medium text-emerald-600"
+                >
+                  <Unlock className="h-3.5 w-3.5" />
+                  <span>Unblock Account</span>
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  onClick={() => setBlockModalOpen(true)}
+                  className="gap-2 cursor-pointer font-medium text-amber-600"
+                >
+                  <Ban className="h-3.5 w-3.5" />
+                  <span>Suspend Account</span>
+                </DropdownMenuItem>
+              )}
+
+              {isSoftDeleted ? (
+                <DropdownMenuItem
+                  onClick={handleRestoreAccount}
+                  disabled={restoreMutation.isPending}
+                  className="gap-2 cursor-pointer font-medium text-emerald-600"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span>Restore Account</span>
+                </DropdownMenuItem>
+              ) : (
+                !isCustomerSupport && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setImmediateHardDelete(false);
+                      setDeleteModalOpen(true);
+                    }}
+                    className="gap-2 cursor-pointer font-medium text-rose-600"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Soft-Delete Account</span>
+                  </DropdownMenuItem>
+                )
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
       {/* ─── Hero Profile Header Card ──────────────────────────────────────── */}
-      <div className="p-6 sm:p-7 rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white dark:bg-slate-900 shadow-xs relative overflow-hidden">
+      <div className="p-6 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
 
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative">
           <div className="flex items-start sm:items-center gap-5 min-w-0">
             <div className="relative shrink-0">
-              <div className="h-18 w-18 sm:h-22 sm:w-22 rounded-3xl bg-primary/10 text-primary border-2 border-primary/20 flex items-center justify-center font-bold text-2xl sm:text-3xl shadow-sm overflow-hidden">
+              <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-bold text-xl sm:text-2xl shadow-sm overflow-hidden">
                 {user.profilePictureURL ? (
                   <Image
                     src={user.profilePictureURL}
                     alt={user.name || "User Avatar"}
                     className="h-full w-full object-cover"
-                    width={90}
-                    height={90}
+                    width={80}
+                    height={80}
                   />
                 ) : (
                   getInitials(user.name || user.email || "??")
                 )}
               </div>
               <span
-                className={`absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-3 border-white dark:border-slate-900 ${
+                className={`absolute -bottom-1 -right-1 h-4.5 w-4.5 rounded-full border-2 border-white dark:border-slate-900 ${
                   isSoftDeleted
                     ? "bg-rose-600"
                     : isSoftBlocked
@@ -1314,71 +1483,55 @@ export default function UserDetailsPage() {
             </div>
 
             {/* Profile Identity Details */}
-            <div className="space-y-2 min-w-0">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+            <div className="space-y-1.5 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
                   {user.name || "Anonymous Platform User"}
                 </h1>
 
-                <Badge
-                  variant="outline"
-                  className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[10.5px] py-0.5 px-2"
-                >
-                  {cap(user.role)}
-                </Badge>
+                {isOtpVerified && (
+                  <span title="OTP Verified" className="inline-flex items-center text-sky-500">
+                    <ShieldCheck className="h-4 w-4" />
+                  </span>
+                )}
+
+                {user.role && user.role !== "user" && (
+                  <Badge
+                    variant="outline"
+                    className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs py-0.5 px-2"
+                  >
+                    {cap(user.role)}
+                  </Badge>
+                )}
 
                 {user.userRole && (
                   <Badge
                     variant="outline"
-                    className="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/25 text-[10.5px] font-bold py-0.5 px-2"
+                    className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 text-xs font-medium py-0.5 px-2"
                   >
                     {userPersona}
                   </Badge>
                 )}
 
-                {engagement?.tierLabel && (
-                  <Badge
-                    variant="outline"
-                    className={`${
-                      engagement.tier === "power_user"
-                        ? "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30"
-                        : engagement.tier === "active_regular"
-                        ? "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30"
-                        : engagement.tier === "occasional"
-                        ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
-                        : engagement.tier === "dormant"
-                        ? "bg-slate-500/15 text-slate-700 dark:text-slate-400 border-slate-500/30"
-                        : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
-                    } text-[10.5px] font-bold py-0.5 px-2 gap-1`}
-                  >
-                    <Sparkles className="h-3 w-3" />
-                    {engagement.tierLabel}
-                  </Badge>
-                )}
-
                 {isSoftDeleted ? (
-                  <Badge variant="destructive" className="text-[10.5px] font-bold py-0.5 px-2">
+                  <Badge variant="destructive" className="text-xs font-medium py-0.5 px-2">
                     Soft-Deleted ({daysUntilPurge}d left)
                   </Badge>
                 ) : isSoftBlocked ? (
-                  <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30 text-[10.5px] font-bold py-0.5 px-2">
+                  <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-xs font-medium py-0.5 px-2">
                     Suspended
                   </Badge>
+                ) : user.adminGrantedAccess ? (
+                  <Badge className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20 text-xs font-medium py-0.5 px-2">
+                    Admin Grant
+                  </Badge>
                 ) : isPaid ? (
-                  <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-[10.5px] font-bold gap-1 py-0.5 px-2">
-                    <CheckCircle2 className="h-3 w-3" />
+                  <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs font-medium py-0.5 px-2">
                     Paid {cap(user.billingCycle)}
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="text-slate-500 text-[10.5px] py-0.5 px-2">
+                  <Badge variant="outline" className="text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 text-xs font-medium py-0.5 px-2">
                     Free Tier
-                  </Badge>
-                )}
-
-                {isOtpVerified && (
-                  <Badge className="bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/25 text-[10.5px] font-semibold gap-1 py-0.5 px-2">
-                    <ShieldCheck className="h-3 w-3" />
-                    OTP Verified
                   </Badge>
                 )}
               </div>
@@ -1451,22 +1604,22 @@ export default function UserDetailsPage() {
           </div>
 
           {/* Quick Metrics Badge Ribbon inside Hero */}
-          <div className="flex items-center gap-3 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-slate-800/80 flex-wrap">
-            <div className="px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-850/70 border border-slate-200/70 dark:border-slate-800 text-center min-w-[90px]">
-              <p className="text-[10px] uppercase font-bold text-slate-400">Avg Score</p>
-              <p className="text-base font-black text-slate-900 dark:text-white mt-0.5">
+          <div className="flex items-center gap-3 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-slate-800 flex-wrap">
+            <div className="px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-center min-w-[90px]">
+              <p className="text-[10px] uppercase font-semibold text-slate-400">Avg Score</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
                 {avgReportScore !== null ? `${avgReportScore}/100` : "—"}
               </p>
             </div>
-            <div className="px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-850/70 border border-slate-200/70 dark:border-slate-800 text-center min-w-[90px]">
-              <p className="text-[10px] uppercase font-bold text-slate-400">Total Spent</p>
-              <p className="text-base font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+            <div className="px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-center min-w-[90px]">
+              <p className="text-[10px] uppercase font-semibold text-slate-400">Total Spent</p>
+              <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
                 {totalSpentFormatted}
               </p>
             </div>
-            <div className="px-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-850/70 border border-slate-200/70 dark:border-slate-800 text-center min-w-[90px]">
-              <p className="text-[10px] uppercase font-bold text-slate-400">Total Logins</p>
-              <p className="text-base font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
+            <div className="px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-center min-w-[90px]">
+              <p className="text-[10px] uppercase font-semibold text-slate-400">Total Logins</p>
+              <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">
                 {engagement?.totalLogins ?? user.loginCount ?? rawSessions.length ?? 1}
               </p>
             </div>
@@ -1474,117 +1627,133 @@ export default function UserDetailsPage() {
         </div>
       </div>
 
-      {/* ─── Metric Ribbon ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
+      {/* ─── Metric Ribbon (5-column matching dashboard) ─────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <button
           type="button"
           onClick={() => setActiveTab("reports")}
-          className={`p-4 sm:p-5 rounded-2xl border text-left transition-all shadow-2xs flex items-center justify-between group ${
+          className={`rounded-2xl border p-5 shadow-sm hover:shadow-md flex flex-col justify-between gap-3 text-left transition-all group cursor-pointer ${
             activeTab === "reports"
               ? "bg-primary/5 border-primary/40 ring-2 ring-primary/20"
-              : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+              : "border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700"
           }`}
         >
+          <div className="flex items-center justify-between w-full">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Inspection Reports</p>
+            <div className="h-8 w-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center font-bold shrink-0">
+              <FileBarChart2 className="h-4 w-4" />
+            </div>
+          </div>
           <div>
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Inspection Reports</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white mt-1.5">
+            <p className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
               {user._count?.reports ?? rawReports.length}
             </p>
-          </div>
-          <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold group-hover:scale-105 transition-transform shrink-0">
-            <FileBarChart2 className="h-5 w-5 sm:h-5.5 sm:w-5.5" />
+            <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-1">property audits</p>
           </div>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab("collections")}
-          className={`p-4 sm:p-5 rounded-2xl border text-left transition-all shadow-2xs flex items-center justify-between group ${
+          className={`rounded-2xl border p-5 shadow-sm hover:shadow-md flex flex-col justify-between gap-3 text-left transition-all group cursor-pointer ${
             activeTab === "collections"
               ? "bg-primary/5 border-primary/40 ring-2 ring-primary/20"
-              : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+              : "border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700"
           }`}
         >
+          <div className="flex items-center justify-between w-full">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Saved Collections</p>
+            <div className="h-8 w-8 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 flex items-center justify-center font-bold shrink-0">
+              <FolderKanban className="h-4 w-4" />
+            </div>
+          </div>
           <div>
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Saved Collections</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white mt-1.5">
+            <p className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
               {user._count?.collections ?? rawCollections.length}
             </p>
-          </div>
-          <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold group-hover:scale-105 transition-transform shrink-0">
-            <FolderKanban className="h-5 w-5 sm:h-5.5 sm:w-5.5" />
+            <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-1">bookmarks & folders</p>
           </div>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab("payments")}
-          className={`p-4 sm:p-5 rounded-2xl border text-left transition-all shadow-2xs flex items-center justify-between group ${
+          className={`rounded-2xl border p-5 shadow-sm hover:shadow-md flex flex-col justify-between gap-3 text-left transition-all group cursor-pointer ${
             activeTab === "payments"
               ? "bg-primary/5 border-primary/40 ring-2 ring-primary/20"
-              : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+              : "border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700"
           }`}
         >
+          <div className="flex items-center justify-between w-full">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Transactions</p>
+            <div className="h-8 w-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center font-bold shrink-0">
+              <Receipt className="h-4 w-4" />
+            </div>
+          </div>
           <div>
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Transactions</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white mt-1.5">
+            <p className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
               {user._count?.payments ?? rawPayments.length}
             </p>
-          </div>
-          <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold group-hover:scale-105 transition-transform shrink-0">
-            <Receipt className="h-5 w-5 sm:h-5.5 sm:w-5.5" />
+            <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-1">invoices & plans</p>
           </div>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab("inquiries")}
-          className={`p-4 sm:p-5 rounded-2xl border text-left transition-all shadow-2xs flex items-center justify-between group ${
+          className={`rounded-2xl border p-5 shadow-sm hover:shadow-md flex flex-col justify-between gap-3 text-left transition-all group cursor-pointer ${
             activeTab === "inquiries"
               ? "bg-primary/5 border-primary/40 ring-2 ring-primary/20"
-              : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+              : "border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700"
           }`}
         >
+          <div className="flex items-center justify-between w-full">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Support Inquiries</p>
+            <div className="h-8 w-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center justify-center font-bold shrink-0">
+              <MailQuestion className="h-4 w-4" />
+            </div>
+          </div>
           <div>
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Support Inquiries</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white mt-1.5">
+            <p className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
               {userInquiries.length || user._count?.contactQueries || 0}
             </p>
-          </div>
-          <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold group-hover:scale-105 transition-transform shrink-0">
-            <MailQuestion className="h-5 w-5 sm:h-5.5 sm:w-5.5" />
+            <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-1">messages & tickets</p>
           </div>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab("sessions")}
-          className={`p-4 sm:p-5 rounded-2xl border text-left transition-all shadow-2xs flex items-center justify-between group ${
+          className={`rounded-2xl border p-5 shadow-sm hover:shadow-md flex flex-col justify-between gap-3 text-left transition-all group cursor-pointer ${
             activeTab === "sessions"
               ? "bg-primary/5 border-primary/40 ring-2 ring-primary/20"
-              : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+              : "border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700"
           }`}
         >
+          <div className="flex items-center justify-between w-full">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Sessions & IPs</p>
+            <div className="h-8 w-8 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-bold shrink-0">
+              <Globe className="h-4 w-4" />
+            </div>
+          </div>
           <div>
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Sessions & IPs</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white mt-1.5">
+            <p className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
               {rawSessions.length || user.loginCount || 1}
             </p>
-          </div>
-          <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold group-hover:scale-105 transition-transform shrink-0">
-            <Globe className="h-5 w-5 sm:h-5.5 sm:w-5.5" />
+            <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-1">active devices</p>
           </div>
         </button>
       </div>
 
       {/* ─── Navigation Sub-Tabs ────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 border-b border-slate-200/80 dark:border-slate-800 overflow-x-auto [scrollbar-width:none] pb-1 text-xs">
+      <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl overflow-x-auto [scrollbar-width:none] text-xs">
         {[
           { id: "reports", label: `Generated Reports (${rawReports.length})`, icon: FileBarChart2 },
           { id: "collections", label: `Saved Collections (${rawCollections.length})`, icon: FolderKanban },
           { id: "inquiries", label: `Support Inquiries (${userInquiries.length})`, icon: MessageSquare },
           { id: "overview", label: "Account Identity & Security", icon: User },
           { id: "payments", label: `Transactions & Invoices (${rawPayments.length})`, icon: CreditCard },
+          { id: "notes", label: "Private Staff Notes", icon: Lock },
         ].map(t => {
           const Icon = t.icon;
           const isActive = activeTab === t.id;
@@ -1593,13 +1762,13 @@ export default function UserDetailsPage() {
               key={t.id}
               type="button"
               onClick={() => setActiveTab(t.id as DetailTab)}
-              className={`px-4 py-2.5 rounded-xl font-bold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 ${
+              className={`px-3.5 py-2 rounded-xl font-semibold transition-all flex items-center gap-2 whitespace-nowrap shrink-0 ${
                 isActive
-                  ? "bg-primary text-white shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+                  ? "bg-white dark:bg-slate-900 text-primary shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-3.5 w-3.5" />
               <span>{t.label}</span>
             </button>
           );
@@ -1699,66 +1868,75 @@ export default function UserDetailsPage() {
           {/* Reports Grid */}
           {paginatedReports.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {paginatedReports.map((r: any) => (
-                <div
-                  key={r.id}
-                  className="p-4.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-primary/40 hover:shadow-md transition-all flex flex-col justify-between gap-3 group relative"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <h4 className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-primary transition-colors truncate">
-                          {r.address || `Inspection #${r.id.slice(0, 8)}`}
-                        </h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          {getReportStatusBadge(r.status)}
-                          <Badge variant="outline" className="text-[10px] uppercase font-semibold">
-                            {r.type || "Remote"}
-                          </Badge>
+              {paginatedReports.map((r: any) => {
+                const typeLabel = r.type === "PROPERTY_REPORT"
+                  ? "Property Report"
+                  : r.type
+                  ? cap(String(r.type).replace(/_/g, " "))
+                  : "Inspection";
+
+                return (
+                  <div
+                    key={r.id}
+                    className="p-5 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md transition-all flex flex-col justify-between gap-4 group"
+                  >
+                    <div className="space-y-2.5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-semibold text-sm text-slate-900 dark:text-white group-hover:text-primary transition-colors truncate">
+                            {r.address || `Inspection #${r.id.slice(0, 8)}`}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            {getReportStatusBadge(r.status)}
+                            <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
+                              {typeLabel}
+                            </span>
+                          </div>
                         </div>
+
+                        {r.overallScore !== null && r.overallScore !== undefined && (
+                          <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 text-xs font-medium text-slate-600 dark:text-slate-300 shrink-0">
+                            <span className="text-[11px] text-slate-400">Score</span>
+                            <span className="font-bold text-sm text-slate-900 dark:text-white">{r.overallScore}</span>
+                            <span className="text-[10px] text-slate-400">/100</span>
+                          </div>
+                        )}
                       </div>
 
-                      {r.overallScore !== null && r.overallScore !== undefined && (
-                        <div className="flex flex-col items-center justify-center h-12 w-12 rounded-xl bg-amber-500/10 border border-amber-500/25 shrink-0 text-center">
-                          <span className="text-[9px] font-bold uppercase text-amber-700 dark:text-amber-400">Score</span>
-                          <span className="text-sm font-black text-amber-600 dark:text-amber-300">{r.overallScore}</span>
+                      {r.overview ? (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                          {r.overview}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-slate-400 italic">No overview provided.</p>
+                      )}
+
+                      {r.auspiciousnessLevel && (
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                          <Compass className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <span>Feng Shui: {r.auspiciousnessLevel}</span>
                         </div>
                       )}
                     </div>
 
-                    {r.overview ? (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                        {r.overview}
-                      </p>
-                    ) : (
-                      <p className="text-xs text-slate-400 italic">No executive overview provided.</p>
-                    )}
-
-                    {r.auspiciousnessLevel && (
-                      <div className="flex items-center gap-1.5 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
-                        <Compass className="h-3.5 w-3.5" />
-                        <span>Alignment: {r.auspiciousnessLevel}</span>
-                      </div>
-                    )}
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                      <span>{formatDate(r.createdAt)}</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedReport(r);
+                          setReportModalOpen(true);
+                        }}
+                        className="h-8 px-3 rounded-xl text-xs font-medium gap-1 text-slate-700 dark:text-slate-200 hover:text-primary hover:bg-primary/5 hover:border-primary/30 transition-all"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        <span>Inspect Details</span>
+                      </Button>
+                    </div>
                   </div>
-
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-                    <span>{formatDate(r.createdAt)}</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedReport(r);
-                        setReportModalOpen(true);
-                      }}
-                      className="h-7 px-2.5 rounded-lg text-xs font-semibold gap-1 text-slate-700 dark:text-slate-200 group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all"
-                    >
-                      <Eye className="h-3 w-3" />
-                      <span>Inspect Details</span>
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="py-14 text-center text-slate-400 flex flex-col items-center justify-center gap-2.5">
@@ -2221,50 +2399,130 @@ export default function UserDetailsPage() {
           {/* CARD 2: Subscription & Billing */}
           <SectionCard
             title="Subscription & Billing"
-            subtitle="Stripe plan & invoicing configuration"
+            subtitle="Platform subscription, tier & administrative access grants"
             icon={CreditCard}
             badge={
-              <Badge
-                className={
-                  isPaid
-                    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-[10px]"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px]"
-                }
-              >
-                {isPaid ? "Active Subscription" : "Free Tier"}
-              </Badge>
+              user.adminGrantedAccess ? (
+                <Badge className="bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30 text-[10px] font-bold gap-1">
+                  <Sparkles className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                  Admin-Granted
+                </Badge>
+              ) : (
+                <Badge
+                  className={
+                    isPaid
+                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-[10px]"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px]"
+                  }
+                >
+                  {isPaid ? "Active Stripe Subscription" : "Free Tier"}
+                </Badge>
+              )
             }
           >
             <div className="space-y-0.5">
               <DetailRow
                 label="Subscription Status"
-                value={cap(status)}
+                value={user.adminGrantedAccess ? "Active (Admin Granted)" : cap(status)}
                 icon={CheckCircle2}
               />
               <DetailRow
-                label="Billing Interval"
-                value={cap(user.billingCycle)}
+                label="Plan / Billing Cycle"
+                value={user.currentPeriodEnd && user.currentPeriodEnd > 4000000000 ? "Lifetime Access" : cap(user.billingCycle)}
                 icon={RefreshCw}
               />
               <DetailRow
-                label="Current Period End"
-                value={user.currentPeriodEnd ? formatDate(user.currentPeriodEnd) : "—"}
+                label="Access Expiration"
+                value={
+                  user.currentPeriodEnd
+                    ? user.currentPeriodEnd > 4000000000
+                      ? "Never Expires (Lifetime Access)"
+                      : formatDate(user.currentPeriodEnd)
+                    : isPaid
+                    ? "Active"
+                    : "No active access"
+                }
                 icon={Calendar}
               />
-              <DetailRow
-                label="Stripe Customer ID"
-                value={user.stripeCustomerId || "—"}
-                icon={CreditCard}
-                mono
-                copyable
-              />
-              <DetailRow
-                label="Subscription ID"
-                value={user.stripeSubscriptionId || "—"}
-                icon={RefreshCw}
-                mono
-                copyable
-              />
+
+              {user.adminGrantedAccess && (
+                <>
+                  <DetailRow
+                    label="Granted By"
+                    value={user.adminGrantedBy || "Administrator"}
+                    icon={ShieldCheck}
+                  />
+                  {user.adminGrantedReason && (
+                    <DetailRow
+                      label="Grant Reason / Note"
+                      value={user.adminGrantedReason}
+                      icon={FileText}
+                    />
+                  )}
+                  {user.adminGrantedAt && (
+                    <DetailRow
+                      label="Granted On"
+                      value={formatDate(user.adminGrantedAt)}
+                      icon={Clock}
+                    />
+                  )}
+                </>
+              )}
+
+              {user.stripeCustomerId && (
+                <DetailRow
+                  label="Stripe Customer ID"
+                  value={user.stripeCustomerId}
+                  icon={CreditCard}
+                  mono
+                  copyable
+                />
+              )}
+              {user.stripeSubscriptionId && (
+                <DetailRow
+                  label="Subscription ID"
+                  value={user.stripeSubscriptionId}
+                  icon={RefreshCw}
+                  mono
+                  copyable
+                />
+              )}
+
+              {/* Action Buttons inside Card */}
+              <div className="pt-3 flex items-center gap-2 flex-wrap border-t border-slate-100 dark:border-slate-800 mt-2">
+                {isPaid ? (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setGrantModalOpen(true)}
+                      className="rounded-xl h-8 px-3 text-xs font-medium text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 gap-1.5 shadow-2xs"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                      <span>{user.adminGrantedAccess ? "Modify Access Duration" : "Grant Admin Access"}</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setRevokeModalOpen(true)}
+                      className="rounded-xl h-8 px-3 text-xs font-medium text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 gap-1.5 shadow-2xs"
+                    >
+                      <Ban className="h-3.5 w-3.5" />
+                      <span>Revoke Access</span>
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setGrantModalOpen(true)}
+                    className="rounded-xl h-8 px-3.5 text-xs font-medium text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 gap-1.5 shadow-2xs"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                    <span>Grant Subscription Access</span>
+                  </Button>
+                )}
+              </div>
             </div>
           </SectionCard>
 
@@ -2845,6 +3103,15 @@ export default function UserDetailsPage() {
         </div>
       )}
 
+      {/* ─── TAB 7: PRIVATE INTERNAL STAFF NOTES ─────────────────────────────── */}
+      {activeTab === "notes" && (
+        <InternalNotesSection
+          targetType="User"
+          targetId={user.id}
+          title={`Internal Collaboration Notes on ${user.name || user.email}`}
+        />
+      )}
+
       {/* ─── MODAL 1: SOFT BLOCK USER MODAL ─────────────────────────────────── */}
       <Dialog open={blockModalOpen} onOpenChange={setBlockModalOpen}>
         <DialogContent className="sm:max-w-lg w-[95vw] rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-200 dark:border-slate-800">
@@ -3055,7 +3322,7 @@ export default function UserDetailsPage() {
               size="sm"
               disabled={!flagReason.trim() || flagMutation.isPending}
               onClick={handleFlagConfirm}
-              className="rounded-xl h-9 px-5 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white gap-1.5 shadow-xs"
+              className="rounded-xl h-9 px-5 text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 shadow-xs"
             >
               {flagMutation.isPending ? (
                 <>
@@ -3437,7 +3704,241 @@ export default function UserDetailsPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+
+      {/* ─── MODAL 7: GRANT SUBSCRIPTION ACCESS MODAL ──────────────────────── */}
+      <Dialog open={grantModalOpen} onOpenChange={setGrantModalOpen}>
+        <DialogContent className="sm:max-w-xl w-[95vw] rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/20 shadow-xs">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                  Grant Subscription Access
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                  Grant complimentary active platform access to <strong>{user.name || user.email}</strong> without requiring Stripe checkout.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-4 my-2 text-xs">
+            {/* Duration Plan Picker */}
+            <div className="space-y-2">
+              <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                <span>Select Access Duration:</span>
+                <span className="text-[10.5px] font-normal text-purple-600 dark:text-purple-400">
+                  {grantPlan === "lifetime" ? "👑 Unlimited" : grantPlan === "custom" ? "📅 Custom Date" : "⚡ Preset Duration"}
+                </span>
+              </label>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {[
+                  { id: "1_month", label: "1 Month", sub: "30 Days Access", icon: "⚡" },
+                  { id: "3_months", label: "3 Months", sub: "90 Days Access", icon: "🌟" },
+                  { id: "6_months", label: "6 Months", sub: "180 Days Access", icon: "🚀" },
+                  { id: "1_year", label: "1 Year", sub: "365 Days Access", icon: "💎" },
+                  { id: "lifetime", label: "Lifetime", sub: "Unlimited Access", icon: "👑" },
+                  { id: "custom", label: "Custom Range", sub: "Pick Specific End Date", icon: "📅" },
+                ].map(item => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setGrantPlan(item.id as any)}
+                    className={`p-3 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${
+                      grantPlan === item.id
+                        ? "border-purple-600 bg-purple-500/10 text-purple-950 dark:text-purple-200 ring-2 ring-purple-500/20 font-bold shadow-xs"
+                        : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span className="text-base">{item.icon}</span>
+                      {grantPlan === item.id && (
+                        <div className="h-4 w-4 rounded-full bg-purple-600 text-white flex items-center justify-center">
+                          <Check className="h-2.5 w-2.5" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-bold text-xs">{item.label}</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{item.sub}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Date Input (If Custom selected) */}
+            {grantPlan === "custom" && (
+              <div className="p-3.5 rounded-2xl bg-purple-500/5 border border-purple-500/20 space-y-2">
+                <label className="font-bold text-purple-900 dark:text-purple-200 block">
+                  Select Custom End Date:
+                </label>
+                <input
+                  type="date"
+                  value={grantCustomEndDate}
+                  min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
+                  onChange={e => setGrantCustomEndDate(e.target.value)}
+                  className="h-9 w-full rounded-xl border border-purple-300 dark:border-purple-800 bg-white dark:bg-slate-900 px-3 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-purple-500/30"
+                />
+                <p className="text-[10.5px] text-purple-700 dark:text-purple-300">
+                  Access will remain active until 23:59:59 on the selected date.
+                </p>
+              </div>
+            )}
+
+            {/* Billing Cycle Label Selection */}
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-700 dark:text-slate-300">
+                Display Billing Cycle:
+              </label>
+              <div className="flex items-center gap-2">
+                {(["monthly", "yearly"] as const).map(cycle => (
+                  <button
+                    key={cycle}
+                    type="button"
+                    onClick={() => setGrantBillingCycle(cycle)}
+                    className={`flex-1 py-2 rounded-xl border text-xs font-bold capitalize transition-all ${
+                      grantBillingCycle === cycle
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400"
+                    }`}
+                  >
+                    {cycle}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Internal Admin Reason / Note */}
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-700 dark:text-slate-300">
+                Administrative Grant Reason / Note (Optional):
+              </label>
+              <textarea
+                rows={3}
+                value={grantReason}
+                onChange={e => setGrantReason(e.target.value)}
+                placeholder="E.g. VIP partner complimentary pass, influencer promo, beta testing account..."
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 resize-y min-h-[70px] leading-relaxed"
+              />
+            </div>
+
+            {/* Notice Callout */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-[11px] text-slate-600 dark:text-slate-400 flex items-start gap-2.5 leading-relaxed">
+              <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
+              <span>
+                <strong>Instant Elevation:</strong> The user's account will immediately have <code>isPaid = true</code>, unlocking full report generation, unlimited inquiries, and full pro features across web and mobile.
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setGrantModalOpen(false)}
+              className="rounded-xl h-9 text-xs font-semibold px-4"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={grantAccessMutation.isPending}
+              onClick={handleGrantAccessConfirm}
+              className="rounded-xl h-9 px-5 text-xs font-medium gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
+            >
+              {grantAccessMutation.isPending ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Granting Access...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>Confirm & Grant Access</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── MODAL 8: REVOKE SUBSCRIPTION ACCESS MODAL ──────────────────────── */}
+      <Dialog open={revokeModalOpen} onOpenChange={setRevokeModalOpen}>
+        <DialogContent className="sm:max-w-md w-[95vw] rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+          <DialogHeader className="pb-2">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-500/20">
+                <Ban className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                  Revoke Subscription Access
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                  Reset <strong>{user.name || user.email}</strong> back to the Free Tier.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-3 my-2 text-xs">
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-900 dark:text-rose-200 text-xs leading-relaxed">
+              This will immediately cancel active premium privileges. The user will be reverted to the Free tier and cannot generate paid reports until access is re-granted or purchased.
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-700 dark:text-slate-300">
+                Reason for Revocation (Optional):
+              </label>
+              <textarea
+                rows={3}
+                value={revokeReason}
+                onChange={e => setRevokeReason(e.target.value)}
+                placeholder="Reason for ending access..."
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 resize-y min-h-[70px]"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setRevokeModalOpen(false)}
+              className="rounded-xl h-9 text-xs font-semibold px-4"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={revokeAccessMutation.isPending}
+              onClick={handleRevokeAccessConfirm}
+              className="rounded-xl h-9 px-5 text-xs font-bold gap-1.5 bg-rose-600 hover:bg-rose-700 text-white shadow-xs"
+            >
+              {revokeAccessMutation.isPending ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Revoking...</span>
+                </>
+              ) : (
+                <>
+                  <Ban className="h-3.5 w-3.5" />
+                  <span>Revoke Access</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </section>
   );
 }
 

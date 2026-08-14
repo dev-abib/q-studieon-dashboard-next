@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Camera, Loader2, User, Mail, Upload, X, ShieldCheck } from "lucide-react";
+import { Camera, Loader2, User, Mail, Upload, X, ShieldCheck, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrentUser } from "../hooks/use-get-met";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -15,7 +15,6 @@ import { adminApi } from "@/services/admin-api";
 
 const profileSchema = z.object({
   name: z.string().min(4, "Name must be at least 4 characters"),
-  email: z.string().email("Invalid email address"),
 });
 
 export function ProfileForm() {
@@ -28,14 +27,13 @@ export function ProfileForm() {
 
   const form = useForm({
     resolver: zodResolver(profileSchema),
-    defaultValues: { name: "", email: "" },
+    defaultValues: { name: "" },
   });
 
   React.useEffect(() => {
     if (admin?.data) {
       form.reset({
         name: admin.data.name || "",
-        email: admin.data.email || "",
       });
       setImgError(false);
     }
@@ -75,10 +73,9 @@ export function ProfileForm() {
     },
   });
 
-  const onSubmit = (values: { name: string; email: string }) => {
+  const onSubmit = (values: { name: string }) => {
     const formData = new FormData();
     formData.append("name", values.name);
-    formData.append("email", values.email);
     if (selectedFile) formData.append("profilePicture", selectedFile);
     updateProfile(formData);
   };
@@ -241,23 +238,28 @@ export function ProfileForm() {
             )}
           </div>
 
-          {/* Email Address */}
+          {/* Email Address (Read-Only / Immutable) */}
           <div className="flex flex-col gap-1.5">
-            <label className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
-              <Mail className="h-3.5 w-3.5 text-slate-400" />
-              Email Address
-            </label>
-            <Input
-              {...form.register("email")}
-              type="email"
-              placeholder="admin@dwellr.tech"
-              className="h-10.5 rounded-xl border-slate-200 dark:border-slate-700 text-sm dark:bg-slate-800/40"
-            />
-            {form.formState.errors.email && (
-              <p className="text-xs font-medium text-rose-500">
-                {form.formState.errors.email.message}
-              </p>
-            )}
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+                <Mail className="h-3.5 w-3.5 text-slate-400" />
+                Email Address
+              </label>
+              <span className="flex items-center gap-1 text-[10.5px] font-semibold text-slate-500 dark:text-slate-400">
+                <Lock className="h-3 w-3 text-slate-400" />
+                Managed by Organization • Locked
+              </span>
+            </div>
+            <div className="flex items-center justify-between h-10.5 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 text-sm text-slate-700 dark:text-slate-300">
+              <span className="font-medium">{admin?.data?.email || "admin@dwellr.tech"}</span>
+              <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                <ShieldCheck className="h-3 w-3" />
+                Verified
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+              Administrative email addresses are tied to your team seat and cannot be modified.
+            </p>
           </div>
 
           {/* Submit Button */}

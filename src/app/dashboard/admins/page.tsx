@@ -36,6 +36,7 @@ import {
   KeyRound,
   FileBarChart2,
   MessageSquare,
+  Activity,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -51,10 +52,12 @@ import { useCreateAdmin } from "@/features/auth/hooks/use-create-admin";
 import { useDeleteAdmin } from "@/features/auth/hooks/use-delete-admin";
 import { useToggleUserDetailsPermission } from "@/features/contact-queries/hooks/use-toggle-user-details-permission";
 import { useToggleDeletePermission } from "@/features/contact-queries/hooks/use-toggle-delete-permission";
+import { useTogglePasswordPermission } from "@/features/admin/hooks/use-toggle-password-permission";
 import { authApi } from "@/services/auth-api";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Image from "next/image";
+import Link from "next/link";
 import {
   Dialog,
   DialogContent,
@@ -72,6 +75,7 @@ interface Admin {
   isOwner?: boolean;
   canDeleteQueries?: boolean | null;
   canViewUserDetails?: boolean | null;
+  canChangePassword?: boolean | null;
   profilePictureURL: string | null;
   createdAt: string;
 }
@@ -214,43 +218,38 @@ function DeleteModal({
   isLoading: boolean;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-md rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl animate-in fade-in-0 zoom-in-95">
-        <button
-          onClick={onCancel}
-          className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-        >
-          <X className="h-5 w-5" />
-        </button>
-
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 mb-4">
+    <Dialog open={true} onOpenChange={open => !open && onCancel()}>
+      <DialogContent className="max-w-md p-6 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 mb-2">
           <Trash2 className="h-6 w-6" />
         </div>
 
-        <h3 className="text-xl font-semibold text-slate-900 dark:text-white">
-          Revoke Access for <span className="text-rose-500">{admin.name}</span>?
-        </h3>
+        <DialogHeader className="text-left space-y-1.5">
+          <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
+            Revoke Access for <span className="text-rose-500">{admin.name}</span>?
+          </DialogTitle>
+          <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            Are you sure you want to remove{" "}
+            <span className="font-semibold text-slate-800 dark:text-slate-200">
+              {admin.email}
+            </span>
+            ? They will immediately lose all administrative privileges.
+          </DialogDescription>
+        </DialogHeader>
 
-        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-          Are you sure you want to remove{" "}
-          <span className="font-semibold text-slate-800 dark:text-slate-200">
-            {admin.email}
-          </span>
-          ? They will immediately lose all administrative privileges.
-        </p>
-
-        <div className="mt-6 flex items-center justify-end gap-3">
+        <div className="mt-4 flex items-center justify-end gap-2.5">
           <Button
             variant="outline"
+            type="button"
             onClick={onCancel}
-            className="rounded-xl border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="rounded-xl border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 h-9 px-4"
           >
             Cancel
           </Button>
           <Button
             disabled={isLoading}
             onClick={onConfirm}
-            className="rounded-xl bg-rose-600 text-xs font-semibold text-white shadow-md shadow-rose-600/20 hover:bg-rose-700 disabled:opacity-60"
+            className="rounded-xl bg-rose-600 text-xs font-semibold text-white shadow-md shadow-rose-600/20 hover:bg-rose-700 disabled:opacity-60 h-9 px-4"
           >
             {isLoading ? (
               <>
@@ -265,8 +264,8 @@ function DeleteModal({
             )}
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -297,16 +296,16 @@ export default function Page() {
   const [inviteRole, setInviteRole] = useState("admin");
 
   const [deleteTarget, setDeleteTarget] = useState<Admin | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { data: currentUserRes } = useCurrentUser();
   const currentUser = currentUserRes?.data || currentUserRes;
   const isSuperAdmin = currentUser?.role === "super_admin" || currentUser?.isOwner;
 
   const { mutate: createAdmin } = useCreateAdmin();
-  const { mutate: deleteAdmin } = useDeleteAdmin();
+  const { mutate: deleteAdmin, isPending: isDeleting } = useDeleteAdmin();
   const toggleUserDetailsMutation = useToggleUserDetailsPermission();
   const toggleDeleteMutation = useToggleDeletePermission();
+  const togglePasswordMutation = useTogglePasswordPermission();
 
   const { mutate: sendInvite, isPending: isInviting } = useMutation({
     mutationFn: authApi.inviteMember,
@@ -376,6 +375,18 @@ export default function Page() {
     });
   }
 
+  function handleTogglePassword(admin: Admin) {
+    if (!isSuperAdmin) {
+      toast.error("Only Super Admins can configure staff permissions.");
+      return;
+    }
+    const nextState = !Boolean(admin.canChangePassword);
+    togglePasswordMutation.mutate({
+      staffId: admin.id,
+      canChangePassword: nextState,
+    });
+  }
+
   function onCreateSubmit(values: CreateAdminInput) {
     createAdmin(values, {
       onSuccess: () => {
@@ -396,16 +407,12 @@ export default function Page() {
     deleteAdmin(deleteTarget.id, {
       onSuccess: () => {
         setDeleteTarget(null);
-        setDeletingId(null);
-      },
-      onError: () => {
-        setDeletingId(null);
       },
     });
   }
 
   return (
-    <div className="space-y-6 pb-20">
+    <section className="w-full flex flex-col gap-6 min-h-screen pb-20">
       {/* ── Page Header ── */}
       <PageHeader
         kicker="TEAM & ACCESS CONTROL"
@@ -414,6 +421,17 @@ export default function Page() {
         description="Manage internal team members, assign operational roles, and centrally grant or revoke granular permissions across the platform."
       >
         <div className="flex items-center gap-2.5">
+          {/* Work Tracking & Activity Feed */}
+          <Link href="/dashboard/admins/activity">
+            <Button
+              variant="outline"
+              className="rounded-xl border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold h-10 px-4 gap-2 shadow-2xs"
+            >
+              <Activity className="h-4 w-4 text-emerald-500" />
+              <span>Work Tracking & Activity</span>
+            </Button>
+          </Link>
+
           {/* Centralized Permissions Button */}
           {isSuperAdmin && (
             <Button
@@ -610,7 +628,10 @@ export default function Page() {
                     >
                       {/* Name */}
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
+                        <Link
+                          href={`/dashboard/admins/${admin.id}`}
+                          className="flex items-center gap-3 group/link hover:opacity-80 transition-opacity"
+                        >
                           <div
                             className={`h-9 w-9 rounded-xl flex items-center justify-center font-semibold text-xs border ${pal.bg}`}
                           >
@@ -626,10 +647,15 @@ export default function Page() {
                               initials
                             )}
                           </div>
-                          <span className="font-semibold text-sm text-slate-900 dark:text-white">
-                            {admin.name}
-                          </span>
-                        </div>
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-sm text-slate-900 dark:text-white group-hover/link:text-primary transition-colors flex items-center gap-1.5">
+                              {admin.name}
+                            </span>
+                            <span className="text-[11px] text-slate-400 group-hover/link:underline">
+                              View duties & profile →
+                            </span>
+                          </div>
+                        </Link>
                       </td>
 
                       {/* Email */}
@@ -671,7 +697,7 @@ export default function Page() {
                               }`}
                             >
                               <Eye className="h-3 w-3" />
-                              <span>View Users: {canViewUsers ? "Granted" : "Restricted"}</span>
+                              <span>User Profiles: {canViewUsers ? "Granted" : "Restricted"}</span>
                             </button>
 
                             {/* Toggle 2: Delete Contact Queries */}
@@ -691,7 +717,7 @@ export default function Page() {
                               }`}
                             >
                               <Trash2 className="h-3 w-3" />
-                              <span>Delete Queries: {canDeleteQ ? "Granted" : "Restricted"}</span>
+                              <span>Delete Inquiries: {canDeleteQ ? "Granted" : "Restricted"}</span>
                             </button>
                           </div>
                         )}
@@ -711,6 +737,15 @@ export default function Page() {
                       {/* Actions */}
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* View Profile & Duties */}
+                          <Link
+                            href={`/dashboard/admins/${admin.id}`}
+                            title="View Full Profile & Assigned Duties"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
+                          >
+                            <UserCheck className="h-4 w-4" />
+                          </Link>
+
                           {/* Configure permissions modal trigger */}
                           {!isAdminSuper && isSuperAdmin && (
                             <button
@@ -731,11 +766,8 @@ export default function Page() {
                             </span>
                           ) : (
                             <button
-                              disabled={deletingId === admin.id}
-                              onClick={() => {
-                                setDeleteTarget(admin);
-                                setDeletingId(admin.id);
-                              }}
+                              disabled={isDeleting}
+                              onClick={() => setDeleteTarget(admin)}
                               title="Revoke Admin Access"
                               className="h-8 w-8 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:border-rose-200 transition-colors disabled:opacity-40"
                             >
@@ -822,10 +854,10 @@ export default function Page() {
               </div>
               <ul className="space-y-1 text-slate-600 dark:text-slate-400 pl-6 list-disc leading-relaxed">
                 <li>
-                  <strong>View User Details (`canViewUserDetails`)</strong>: Grants ability to open user profile pages, view inspection reports, browse user collections, review payment history, and send direct emails.
+                  <strong>View User Profiles</strong>: Grants ability to open user profile pages, view inspection reports, browse user collections, review payment history, and send direct emails.
                 </li>
                 <li>
-                  <strong>Delete Contact Queries (`canDeleteQueries`)</strong>: Grants permission to permanently delete customer support inquiries and spam messages.
+                  <strong>Delete Inquiries</strong>: Grants permission to permanently delete customer support inquiries and spam messages.
                 </li>
               </ul>
             </div>
@@ -1013,6 +1045,47 @@ export default function Page() {
                     <span
                       className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                         selectedStaffForPermissions.canDeleteQueries
+                          ? "translate-x-5"
+                          : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* 3. Manual Password Change Switch */}
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 flex items-center justify-between gap-3">
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <KeyRound className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                      Manual Password Change Permission
+                    </p>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      Allow this staff member to manually change their password in settings without requiring Super Admin intervention.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleTogglePassword(selectedStaffForPermissions);
+                      setSelectedStaffForPermissions(prev =>
+                        prev
+                          ? {
+                              ...prev,
+                              canChangePassword: !prev.canChangePassword,
+                            }
+                          : null,
+                      );
+                    }}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                      selectedStaffForPermissions.canChangePassword
+                        ? "bg-primary"
+                        : "bg-slate-200 dark:bg-slate-700"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        selectedStaffForPermissions.canChangePassword
                           ? "translate-x-5"
                           : "translate-x-0"
                       }`}
@@ -1280,14 +1353,15 @@ export default function Page() {
       {deleteTarget && (
         <DeleteModal
           admin={deleteTarget}
-          isLoading={deletingId === deleteTarget.id}
+          isLoading={isDeleting}
           onConfirm={handleDeleteConfirm}
           onCancel={() => {
-            setDeleteTarget(null);
-            setDeletingId(null);
+            if (!isDeleting) {
+              setDeleteTarget(null);
+            }
           }}
         />
       )}
-    </div>
+    </section>
   );
 }

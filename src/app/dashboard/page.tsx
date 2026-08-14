@@ -22,7 +22,7 @@ import {
 import { useDashboardAnalytics } from "@/features/admin/hooks/user-dashboard-analytics";
 import { useCurrentUser } from "@/features/admin/hooks/use-get-met";
 import { PageHeader } from "@/components/layout/dashboard/PageHeader";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Users, CheckCircle, UserCircle, FileText, BarChart2 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Skeleton helpers
@@ -388,7 +388,7 @@ const Page = () => {
       ...getGrowthData(stats_data?.totalUsers?.growth, "this month"),
       accent: "#6C63FF",
       lightBg: "#F0EFFE",
-      icon: "👥",
+      Icon: Users,
     },
     {
       label: "Active subscriptions",
@@ -396,7 +396,7 @@ const Page = () => {
       ...getGrowthData(stats_data?.activeSubscriptions?.growth, "this month"),
       accent: "#10B981",
       lightBg: "#ECFDF5",
-      icon: "⭐",
+      Icon: CheckCircle,
     },
     {
       label: "Guest users",
@@ -405,7 +405,7 @@ const Page = () => {
       positive: null,
       accent: "#F59E0B",
       lightBg: "#FFFBEB",
-      icon: "👤",
+      Icon: UserCircle,
     },
     {
       label: "Reports today",
@@ -413,7 +413,7 @@ const Page = () => {
       ...getGrowthData(stats_data?.reportsToday?.growth, "vs yesterday"),
       accent: "#3B82F6",
       lightBg: "#EFF6FF",
-      icon: "📄",
+      Icon: FileText,
     },
     {
       label: "Reports (14 days)",
@@ -422,7 +422,7 @@ const Page = () => {
       positive: null,
       accent: "#8B5CF6",
       lightBg: "#F5F3FF",
-      icon: "📊",
+      Icon: BarChart2,
     },
   ];
 
@@ -526,8 +526,8 @@ const Page = () => {
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
                 {stat.label}
               </p>
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 text-sm">
-                {stat.icon}
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+                <stat.Icon className="h-4 w-4" />
               </span>
             </div>
             <div>

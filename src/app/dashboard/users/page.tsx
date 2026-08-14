@@ -16,6 +16,7 @@ import {
   Trash2,
   Loader2,
   X,
+  User,
   UserCheck,
   UserX,
   Eye,
@@ -56,6 +57,8 @@ import {
   useSoftDeleteUser,
   useRestoreUser,
   useFlagUser,
+  useGrantUserAccess,
+  useRevokeUserAccess,
 } from "@/features/admin/hooks/use-user-moderation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -68,6 +71,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Types
 export interface UserDirectoryItem {
@@ -81,6 +91,11 @@ export interface UserDirectoryItem {
   isOtpVerified?: boolean;
   status?: string;
   billingCycle?: string;
+  currentPeriodEnd?: number | null;
+  adminGrantedAccess?: boolean | null;
+  adminGrantedReason?: string | null;
+  adminGrantedBy?: string | null;
+  adminGrantedAt?: string | null;
   blockedUntil?: string | null;
   blockReason?: string | null;
   isDeleted?: boolean;
@@ -247,28 +262,28 @@ function StatCard({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-2xl border p-4.5 shadow-2xs flex flex-col justify-between gap-3 text-left transition-all group cursor-pointer ${
+      className={`rounded-2xl border p-5 shadow-sm hover:shadow-md flex flex-col justify-between gap-3 text-left transition-all group cursor-pointer ${
         active
           ? "bg-primary/5 border-primary/40 ring-2 ring-primary/20"
-          : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700"
+          : "border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700"
       }`}
     >
       <div className="flex items-center justify-between w-full">
-        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+        <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
           {label}
         </p>
         <span
-          className={`flex h-8.5 w-8.5 items-center justify-center rounded-xl border border-slate-200/60 dark:border-slate-800 shrink-0 group-hover:scale-105 transition-transform ${accentColor}`}
+          className={`flex h-8 w-8 items-center justify-center rounded-xl border border-slate-100 dark:border-slate-800 shrink-0 group-hover:scale-105 transition-transform ${accentColor}`}
         >
           <Icon className="h-4 w-4" />
         </span>
       </div>
       <div>
-        <p className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+        <p className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
           {value}
         </p>
         {sub && (
-          <p className="text-[11.5px] font-medium text-slate-400 dark:text-slate-500 mt-0.5">
+          <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-1">
             {sub}
           </p>
         )}
@@ -339,6 +354,15 @@ export default function UsersPage() {
   const [deleteReason, setDeleteReason] = useState<string>("");
   const [immediateHardDelete, setImmediateHardDelete] = useState<boolean>(false);
 
+  // Subscription Grant & Revoke state
+  const [grantTarget, setGrantTarget] = useState<UserDirectoryItem | null>(null);
+  const [grantPlan, setGrantPlan] = useState<"1_month" | "3_months" | "6_months" | "1_year" | "custom" | "lifetime">("1_month");
+  const [grantCustomEndDate, setGrantCustomEndDate] = useState<string>("");
+  const [grantReason, setGrantReason] = useState<string>("");
+  const [grantBillingCycle, setGrantBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [revokeTarget, setRevokeTarget] = useState<UserDirectoryItem | null>(null);
+  const [revokeReason, setRevokeReason] = useState<string>("");
+
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Current User Session
@@ -366,6 +390,8 @@ export default function UsersPage() {
   const softDeleteMutation = useSoftDeleteUser();
   const restoreMutation = useRestoreUser();
   const flagMutation = useFlagUser();
+  const grantAccessMutation = useGrantUserAccess();
+  const revokeAccessMutation = useRevokeUserAccess();
 
   // Client-side Filter for quick status, persona, and engagement tabs
   const filteredUsers = useMemo(() => {
@@ -515,8 +541,46 @@ export default function UsersPage() {
     }
   };
 
+  const handleGrantAccessConfirm = async () => {
+    if (!grantTarget) return;
+    if (grantPlan === "custom" && !grantCustomEndDate) {
+      toast.error("Please pick a custom end date");
+      return;
+    }
+    try {
+      await grantAccessMutation.mutateAsync({
+        userId: grantTarget.id,
+        plan: grantPlan,
+        customEndDate: grantPlan === "custom" ? new Date(grantCustomEndDate).toISOString() : undefined,
+        reason: grantReason.trim() || undefined,
+        billingCycle: grantBillingCycle,
+      });
+      setGrantTarget(null);
+      setGrantReason("");
+      setGrantCustomEndDate("");
+      refetch();
+    } catch {
+      // Handled by hook
+    }
+  };
+
+  const handleRevokeAccessConfirm = async () => {
+    if (!revokeTarget) return;
+    try {
+      await revokeAccessMutation.mutateAsync({
+        userId: revokeTarget.id,
+        reason: revokeReason.trim() || undefined,
+      });
+      setRevokeTarget(null);
+      setRevokeReason("");
+      refetch();
+    } catch {
+      // Handled by hook
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-6 min-h-screen pb-20">
+    <section className="w-full flex flex-col gap-6 min-h-screen pb-20">
       {/* ── Page Header ── */}
       <PageHeader
         kicker="Platform Directory"
@@ -552,8 +616,8 @@ export default function UsersPage() {
         </div>
       </PageHeader>
 
-      {/* ── Stat Cards Grid (Interactive Filter Triggers) ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      {/* ── Stat Cards Grid (5-column layout matching dashboard) ── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard
           icon={Users}
           label="Total Users"
@@ -564,28 +628,37 @@ export default function UsersPage() {
           onClick={() => setStatusFilter("all")}
         />
         <StatCard
-          icon={UserCheck}
-          label="OTP Verified"
-          value={meta?.otpVerifiedCount?.toLocaleString() ?? "—"}
-          sub="authenticated identity"
-          accentColor="bg-emerald-500/10 text-emerald-600"
-          active={statusFilter === "verified"}
-          onClick={() => setStatusFilter(statusFilter === "verified" ? "all" : "verified")}
-        />
-        <StatCard
           icon={Crown}
           label="Paid Subscribers"
           value={meta?.paidCount?.toLocaleString() ?? "—"}
-          sub="active subscription"
+          sub="active subscriptions"
           accentColor="bg-amber-500/10 text-amber-600"
           active={statusFilter === "paid"}
           onClick={() => setStatusFilter(statusFilter === "paid" ? "all" : "paid")}
         />
         <StatCard
+          icon={UserCheck}
+          label="OTP Verified"
+          value={meta?.otpVerifiedCount?.toLocaleString() ?? "—"}
+          sub="verified identities"
+          accentColor="bg-emerald-500/10 text-emerald-600"
+          active={statusFilter === "verified"}
+          onClick={() => setStatusFilter(statusFilter === "verified" ? "all" : "verified")}
+        />
+        <StatCard
+          icon={User}
+          label="Guest Accounts"
+          value={`${rawUsers.filter(u => u.isGuest).length || (meta?.total ? Math.max(0, meta.total - (meta.otpVerifiedCount || 0)) : 0)}`}
+          sub="temporary sessions"
+          accentColor="bg-blue-500/10 text-blue-600"
+          active={statusFilter === "guest"}
+          onClick={() => setStatusFilter(statusFilter === "guest" ? "all" : "guest")}
+        />
+        <StatCard
           icon={Ban}
-          label="Suspended / Deleted"
+          label="Moderated Accounts"
           value={`${(meta?.blockedCount || 0) + (meta?.deletedCount || 0)}`}
-          sub="moderated accounts"
+          sub="suspended & deleted"
           accentColor="bg-rose-500/10 text-rose-600"
           active={statusFilter === "blocked" || statusFilter === "deleted"}
           onClick={() => setStatusFilter(statusFilter === "blocked" ? "deleted" : "blocked")}
@@ -593,11 +666,11 @@ export default function UsersPage() {
       </div>
 
       {/* ── Data Table Card ── */}
-      <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 shadow-sm overflow-hidden backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
         {/* Filter Toolbar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 border-b border-slate-100 dark:border-slate-800">
           {/* Quick Status Filter Tabs */}
-          <div className="flex items-center gap-1.5 bg-slate-100/80 dark:bg-slate-800/60 p-1 rounded-xl w-max overflow-x-auto [scrollbar-width:none]">
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-max overflow-x-auto [scrollbar-width:none]">
             {[
               { id: "all", label: "All Users" },
               { id: "paid", label: "Paid" },
@@ -623,17 +696,17 @@ export default function UsersPage() {
 
           <div className="flex items-center gap-2.5 text-xs flex-wrap self-end md:self-auto">
             {/* Persona / User Role Filter Dropdown */}
-            <div className="flex items-center gap-1.5 bg-slate-100/80 dark:bg-slate-800/60 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
-              <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400 ml-1.5 shrink-0" />
+            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+              <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400 ml-1 shrink-0" />
               <select
                 value={personaFilter}
                 onChange={e => {
                   setPersonaFilter(e.target.value);
                   setPage(1);
                 }}
-                className="bg-transparent text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-hidden pr-2 cursor-pointer"
+                className="bg-transparent text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-hidden pr-2 cursor-pointer"
               >
-                <option value="all">All Personas / User Roles</option>
+                <option value="all">All Roles</option>
                 <option value="home_owner">Homeowners</option>
                 <option value="renter">Renters</option>
                 <option value="real_estate_agent">Real Estate Agents</option>
@@ -644,35 +717,15 @@ export default function UsersPage() {
               </select>
             </div>
 
-            {/* Engagement Level Filter Dropdown */}
-            <div className="flex items-center gap-1.5 bg-slate-100/80 dark:bg-slate-800/60 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
-              <Sparkles className="h-3.5 w-3.5 text-slate-400 ml-1.5 shrink-0" />
-              <select
-                value={engagementFilter}
-                onChange={e => {
-                  setEngagementFilter(e.target.value);
-                  setPage(1);
-                }}
-                className="bg-transparent text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-hidden pr-2 cursor-pointer"
-              >
-                <option value="all">All Engagement Levels</option>
-                <option value="power">🚀 Power Users (10+ Reports)</option>
-                <option value="active">⚡ Active Regulars (3+ Reports)</option>
-                <option value="occasional">🌱 Occasional (1-2 Reports)</option>
-                <option value="explorer">🔍 Explorers (0 Reports)</option>
-                <option value="dormant">💤 Dormant Accounts</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-1.5 bg-slate-100/80 dark:bg-slate-800/60 p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
-              <span className="text-slate-400 pl-1.5">Show:</span>
+            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+              <span className="text-slate-400 pl-1">Show:</span>
               <select
                 value={limit}
                 onChange={e => {
                   setLimit(Number(e.target.value));
                   setPage(1);
                 }}
-                className="bg-transparent text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-hidden pr-2 cursor-pointer"
+                className="bg-transparent text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-hidden pr-2 cursor-pointer"
               >
                 <option value={10}>10 / page</option>
                 <option value={20}>20 / page</option>
@@ -687,7 +740,7 @@ export default function UsersPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 whitespace-nowrap">
+              <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">
                 <th className="px-6 py-3.5">
                   <SortButton
                     label="User Name & Identity"
@@ -704,6 +757,9 @@ export default function UsersPage() {
                     onClick={() => handleSort("email")}
                   />
                 </th>
+                <th className="px-6 py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Role
+                </th>
                 <th className="px-6 py-3.5">
                   <SortButton
                     label="Account Status"
@@ -712,7 +768,7 @@ export default function UsersPage() {
                     onClick={() => handleSort("status")}
                   />
                 </th>
-                <th className="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <th className="px-6 py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
                   Activity
                 </th>
                 <th className="px-6 py-3.5">
@@ -723,17 +779,17 @@ export default function UsersPage() {
                     onClick={() => handleSort("createdAt")}
                   />
                 </th>
-                <th className="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Quick Actions
+                <th className="px-6 py-3.5 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Actions
                 </th>
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
               {isLoading ? (
                 Array.from({ length: limit }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td colSpan={6} className="px-6 py-4">
+                    <td colSpan={7} className="px-6 py-4">
                       <div className="h-9 bg-slate-100 dark:bg-slate-800 rounded-xl w-full" />
                     </td>
                   </tr>
@@ -749,95 +805,78 @@ export default function UsersPage() {
                   );
                   const isDeleted = Boolean(u.isDeleted);
                   const daysToPurge = getDaysRemaining(u.purgeAt);
-                  const eng = getUserEngagementTier(u);
+
+                  const reportsCount = u._count?.reports || 0;
+                  const queriesCount = u._count?.contactQueries || 0;
 
                   return (
                     <tr
                       key={u.id}
-                      className="group hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors text-xs"
+                      className="hover:bg-slate-50/50 dark:hover:bg-slate-850/50 transition-colors"
                     >
                       {/* Name & Identity */}
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-3 min-w-[220px]">
+                        <div className="flex items-center gap-3 min-w-[200px]">
                           <Link
                             href={`/dashboard/users/${u.id}`}
-                            className="relative shrink-0 group/link"
+                            className="relative shrink-0"
                           >
                             <div
-                              className={`h-9.5 w-9.5 rounded-xl flex items-center justify-center font-bold text-xs border transition-transform group-hover/link:scale-105 overflow-hidden ${pal.bg}`}
+                              className={`h-9 w-9 rounded-xl flex items-center justify-center font-bold text-xs border overflow-hidden ${pal.bg}`}
                             >
                               {u.profilePictureURL ? (
                                 <Image
                                   src={u.profilePictureURL}
                                   alt=""
                                   className="h-full w-full object-cover"
-                                  width={38}
-                                  height={38}
+                                  width={36}
+                                  height={36}
                                 />
                               ) : (
                                 initials
                               )}
                             </div>
                             <span
-                              className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-slate-900 ${
+                              className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-slate-900 ${
                                 isDeleted
-                                  ? "bg-rose-600"
+                                  ? "bg-rose-500"
                                   : isBlocked
-                                  ? "bg-amber-600"
+                                  ? "bg-amber-500"
                                   : u.isPaid
                                   ? "bg-emerald-500"
-                                  : "bg-primary"
+                                  : "bg-slate-400"
                               }`}
                             />
                           </Link>
 
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
+                          <div className="min-w-0 flex flex-col">
+                            <div className="flex items-center gap-1.5">
                               <Link
                                 href={`/dashboard/users/${u.id}`}
-                                className="font-bold text-sm text-slate-900 dark:text-white hover:text-primary transition-colors truncate max-w-[150px]"
+                                className="font-semibold text-sm text-slate-900 dark:text-white hover:text-primary transition-colors truncate max-w-[170px]"
                               >
                                 {u.name || "Anonymous User"}
                               </Link>
-                              {u.userRole && (
-                                <Badge
-                                  variant="outline"
-                                  className="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/25 font-bold text-[10px] py-0 px-1.5"
-                                >
-                                  {formatPersonaRole(u.userRole)}
-                                </Badge>
+                              {u.isOtpVerified && (
+                                <span title="OTP Verified">
+                                  <ShieldCheck className="h-3.5 w-3.5 text-sky-500 shrink-0" />
+                                </span>
                               )}
-                              <Badge
-                                variant="outline"
-                                className={`${eng.color} font-bold text-[10px] py-0 px-1.5`}
-                                title={eng.desc}
-                              >
-                                <span className="mr-1">{eng.icon}</span>
-                                {eng.label}
-                              </Badge>
                             </div>
-                            <div className="flex items-center gap-2 text-[10.5px] text-slate-400 mt-0.5 whitespace-nowrap">
+                            <div className="flex items-center gap-1 text-[11px] text-slate-400 font-mono">
+                              <span>ID: {u.id.slice(0, 8)}…</span>
                               <button
                                 type="button"
                                 onClick={() => handleCopy(u.id, u.id)}
-                                className="font-mono hover:text-primary transition-colors flex items-center gap-1"
-                                title="Click to copy ID"
+                                className="hover:text-primary p-0.5 transition-colors"
+                                title="Copy ID"
                               >
-                                <span>ID: {u.id.slice(0, 8)}…</span>
                                 {copiedId === u.id ? (
                                   <CheckCheck className="h-3 w-3 text-emerald-500" />
                                 ) : (
                                   <Copy className="h-2.5 w-2.5 opacity-60" />
                                 )}
                               </button>
-                              {u.lastActiveIp && (
-                                <>
-                                  <span>•</span>
-                                  <span className="font-mono text-[10px] text-slate-400" title="Last Active IP">
-                                    IP: {u.lastActiveIp}
-                                  </span>
-                                </>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -845,214 +884,177 @@ export default function UsersPage() {
 
                       {/* Email */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                          <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
                           {u.email}
                         </span>
                       </td>
 
-                      {/* Status Badges */}
+                      {/* Role / Persona */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          {isDeleted ? (
-                            <Badge variant="destructive" className="text-[10px] font-bold">
-                              Soft-Deleted ({daysToPurge}d left)
-                            </Badge>
-                          ) : isBlocked ? (
-                            <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 text-[10px] font-bold gap-1">
-                              <Ban className="h-3 w-3" />
-                              Suspended
-                            </Badge>
-                          ) : u.isPaid ? (
-                            <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-bold gap-1">
-                              <CheckCircle2 className="h-3 w-3" />
-                              Paid ({u.billingCycle || "Active"})
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 text-[10px] font-semibold">
-                              Free Member
-                            </Badge>
-                          )}
-
-                          {u.isOtpVerified ? (
-                            <Badge className="bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20 text-[10px] font-semibold">
-                              OTP Verified
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-slate-400 border-slate-200 dark:border-slate-800 text-[10px]">
-                              Unverified
-                            </Badge>
-                          )}
-                        </div>
+                        {u.userRole ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[11px] border border-slate-200/60 dark:border-slate-700/60">
+                            {formatPersonaRole(u.userRole)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">—</span>
+                        )}
                       </td>
 
-                      {/* Activity Metrics */}
+                      {/* Account Status Badge */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {(() => {
-                          const reportsCount = u._count?.reports || 0;
-                          const collectionsCount = u._count?.collections || 0;
-                          const queriesCount = u._count?.contactQueries || 0;
-                          const paymentsCount = u._count?.payments || 0;
-                          const total = reportsCount + collectionsCount + queriesCount + paymentsCount;
-
-                          if (total === 0) {
-                            return (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-slate-100/80 dark:bg-slate-800/80 text-slate-400 dark:text-slate-500 text-[11px] font-medium border border-slate-200/50 dark:border-slate-700/50">
-                                <Clock className="h-3 w-3" />
-                                No activity yet
-                              </span>
-                            );
-                          }
-
-                          return (
-                            <div className="flex items-center gap-1.5">
-                              {reportsCount > 0 && (
-                                <Link
-                                  href={`/dashboard/users/${u.id}`}
-                                  title="View User Generated Reports"
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-[10.5px] border border-blue-500/20 transition-colors"
-                                >
-                                  <FileBarChart2 className="h-3 w-3" />
-                                  <span>{reportsCount} {reportsCount === 1 ? 'Report' : 'Reports'}</span>
-                                </Link>
-                              )}
-
-                              {collectionsCount > 0 && (
-                                <Link
-                                  href={`/dashboard/users/${u.id}`}
-                                  title="View User Collections"
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 font-bold text-[10.5px] border border-purple-500/20 transition-colors"
-                                >
-                                  <FolderKanban className="h-3 w-3" />
-                                  <span>{collectionsCount} {collectionsCount === 1 ? 'Collection' : 'Collections'}</span>
-                                </Link>
-                              )}
-
-                              {queriesCount > 0 && (
-                                <Link
-                                  href={`/dashboard/users/${u.id}`}
-                                  title="View Support Queries"
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-[10.5px] border border-amber-500/20 transition-colors"
-                                >
-                                  <MessageSquare className="h-3 w-3" />
-                                  <span>{queriesCount} {queriesCount === 1 ? 'Inquiry' : 'Inquiries'}</span>
-                                </Link>
-                              )}
-
-                              {paymentsCount > 0 && (
-                                <Link
-                                  href={`/dashboard/users/${u.id}`}
-                                  title="View Payment Invoices"
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-[10.5px] border border-emerald-500/20 transition-colors"
-                                >
-                                  <CreditCard className="h-3 w-3" />
-                                  <span>{paymentsCount} {paymentsCount === 1 ? 'Invoice' : 'Invoices'}</span>
-                                </Link>
-                              )}
-                            </div>
-                          );
-                        })()}
+                        {isDeleted ? (
+                          <Badge variant="destructive" className="text-[11px] font-medium py-0.5 px-2">
+                            Deleted ({daysToPurge}d left)
+                          </Badge>
+                        ) : isBlocked ? (
+                          <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[11px] font-medium py-0.5 px-2">
+                            Suspended
+                          </Badge>
+                        ) : u.adminGrantedAccess ? (
+                          <Badge className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20 text-[11px] font-medium py-0.5 px-2">
+                            Admin Grant
+                          </Badge>
+                        ) : u.isPaid ? (
+                          <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[11px] font-medium py-0.5 px-2">
+                            Paid ({u.billingCycle || "Monthly"})
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 text-[11px] font-medium py-0.5 px-2">
+                            Free Tier
+                          </Badge>
+                        )}
                       </td>
 
-                      {/* Joined Date */}
+                      {/* Usage & Activity */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                          <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                          {formatDate(u.createdAt)}
+                        <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                          {reportsCount > 0 && queriesCount > 0
+                            ? `${reportsCount} reports • ${queriesCount} inquiries`
+                            : reportsCount > 0
+                            ? `${reportsCount} ${reportsCount === 1 ? 'report' : 'reports'}`
+                            : queriesCount > 0
+                            ? `${queriesCount} ${queriesCount === 1 ? 'inquiry' : 'inquiries'}`
+                            : "—"}
                         </span>
                       </td>
 
-                      {/* Quick Actions Group */}
+                      {/* Joined Date */}
+                      <td className="px-6 py-4 whitespace-nowrap text-slate-500 dark:text-slate-400">
+                        {formatDate(u.createdAt)}
+                      </td>
+
+                      {/* Quick Actions */}
                       <td className="px-6 py-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* 1. View User Details Button */}
                           <Link
                             href={`/dashboard/users/${u.id}`}
-                            title="Inspect User Details & Reports"
-                            className="h-8 px-2.5 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors shadow-2xs"
+                            className="h-8 px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-primary hover:bg-primary/5 hover:border-primary/30 transition-all shadow-2xs"
                           >
                             <Eye className="h-3.5 w-3.5" />
                             <span>View</span>
                           </Link>
 
-                          {/* 2. Direct Email Quick Action */}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEmailModal(u)}
-                            disabled={Boolean(u.isGuest)}
-                            title="Send Direct Email to User"
-                            className="h-8 w-8 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors disabled:opacity-40"
-                          >
-                            <Mail className="h-3.5 w-3.5" />
-                          </button>
-
-                          {/* 3. Soft Block / Unblock Quick Toggle */}
-                          {isBlocked ? (
-                            <button
-                              type="button"
-                              onClick={() => handleUnblock(u)}
-                              disabled={unblockMutation.isPending}
-                              title="Unblock this user immediately"
-                              className="h-8 w-8 inline-flex items-center justify-center rounded-xl border border-amber-300 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors"
-                            >
-                              <Unlock className="h-3.5 w-3.5" />
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setBlockTarget(u);
-                                setBlockReason("");
-                                setBlockCustomDate("");
-                              }}
-                              title="Soft-block user for custom duration"
-                              className="h-8 w-8 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 hover:border-amber-300 transition-colors"
-                            >
-                              <Ban className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-
-                          {/* 4. Flag User to Super Admin */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setFlagTarget(u);
-                              setFlagReason("");
-                              setFlagNote("");
-                            }}
-                            title="Flag User to Super Admin"
-                            className="h-8 w-8 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40 hover:border-purple-300 transition-colors"
-                          >
-                            <Flag className="h-3.5 w-3.5" />
-                          </button>
-
-                          {/* 5. Delete or Restore Account */}
-                          {isDeleted ? (
-                            <button
-                              type="button"
-                              onClick={() => handleRestore(u)}
-                              disabled={restoreMutation.isPending}
-                              title="Restore and retain this soft-deleted user account"
-                              className="h-8 w-8 inline-flex items-center justify-center rounded-xl border border-emerald-300 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors"
-                            >
-                              <RotateCcw className="h-3.5 w-3.5" />
-                            </button>
-                          ) : (
-                            !isCustomerSupport && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setDeleteTarget(u);
-                                  setDeleteReason("");
-                                  setImmediateHardDelete(false);
-                                }}
-                                title="Delete user (60-day soft retention)"
-                                className="h-8 w-8 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:border-rose-300 transition-colors"
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
                               >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            )
-                          )}
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48 rounded-xl p-1 shadow-lg text-xs">
+                              <DropdownMenuItem
+                                onClick={() => handleOpenEmailModal(u)}
+                                disabled={Boolean(u.isGuest)}
+                                className="gap-2 cursor-pointer font-medium"
+                              >
+                                <Mail className="h-3.5 w-3.5 text-slate-400" />
+                                <span>Send Direct Email</span>
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  if (u.isPaid) {
+                                    setRevokeTarget(u);
+                                    setRevokeReason("");
+                                  } else {
+                                    setGrantTarget(u);
+                                    setGrantPlan("1_month");
+                                    setGrantReason("");
+                                    setGrantCustomEndDate("");
+                                  }
+                                }}
+                                className="gap-2 cursor-pointer font-medium text-purple-600 dark:text-purple-400"
+                              >
+                                <Sparkles className="h-3.5 w-3.5" />
+                                <span>{u.isPaid ? "Manage / Revoke Access" : "Grant Subscription"}</span>
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setFlagTarget(u);
+                                  setFlagReason("");
+                                  setFlagNote("");
+                                }}
+                                className="gap-2 cursor-pointer font-medium text-amber-600 dark:text-amber-400"
+                              >
+                                <Flag className="h-3.5 w-3.5" />
+                                <span>Flag for Moderation</span>
+                              </DropdownMenuItem>
+
+                              <DropdownMenuSeparator />
+
+                              {isBlocked ? (
+                                <DropdownMenuItem
+                                  onClick={() => handleUnblock(u)}
+                                  disabled={unblockMutation.isPending}
+                                  className="gap-2 cursor-pointer font-medium text-emerald-600"
+                                >
+                                  <Unlock className="h-3.5 w-3.5" />
+                                  <span>Unblock Account</span>
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setBlockTarget(u);
+                                    setBlockReason("");
+                                    setBlockCustomDate("");
+                                  }}
+                                  className="gap-2 cursor-pointer font-medium text-amber-600"
+                                >
+                                  <Ban className="h-3.5 w-3.5" />
+                                  <span>Suspend Account</span>
+                                </DropdownMenuItem>
+                              )}
+
+                              {isDeleted ? (
+                                <DropdownMenuItem
+                                  onClick={() => handleRestore(u)}
+                                  disabled={restoreMutation.isPending}
+                                  className="gap-2 cursor-pointer font-medium text-emerald-600"
+                                >
+                                  <RotateCcw className="h-3.5 w-3.5" />
+                                  <span>Restore Account</span>
+                                </DropdownMenuItem>
+                              ) : (
+                                !isCustomerSupport && (
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setDeleteTarget(u);
+                                      setDeleteReason("");
+                                      setImmediateHardDelete(false);
+                                    }}
+                                    className="gap-2 cursor-pointer font-medium text-rose-600"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <span>Soft-Delete Account</span>
+                                  </DropdownMenuItem>
+                                )
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>
@@ -1485,7 +1487,7 @@ export default function UsersPage() {
                   size="sm"
                   disabled={!flagReason.trim() || flagMutation.isPending}
                   onClick={handleFlagConfirm}
-                  className="rounded-xl h-9 px-5 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white gap-1.5 shadow-xs"
+                  className="rounded-xl h-9 px-5 text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 shadow-xs"
                 >
                   {flagMutation.isPending ? (
                     <>
@@ -1613,6 +1615,248 @@ export default function UsersPage() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+
+      {/* ─── MODAL: GRANT SUBSCRIPTION ACCESS MODAL ──────────────────────── */}
+      <Dialog open={Boolean(grantTarget)} onOpenChange={open => !open && setGrantTarget(null)}>
+        <DialogContent className="sm:max-w-xl w-[95vw] rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+          {grantTarget && (
+            <div>
+              <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/20 shadow-xs">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <DialogTitle className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                      Grant Subscription Access
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                      Grant complimentary active platform access to <strong>{grantTarget.name || grantTarget.email}</strong> without requiring Stripe checkout.
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-4 my-3 text-xs">
+                {/* Duration Plan Picker */}
+                <div className="space-y-2">
+                  <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                    <span>Select Access Duration:</span>
+                    <span className="text-[10.5px] font-normal text-purple-600 dark:text-purple-400">
+                      {grantPlan === "lifetime" ? "👑 Unlimited" : grantPlan === "custom" ? "📅 Custom Date" : "⚡ Preset Duration"}
+                    </span>
+                  </label>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {[
+                      { id: "1_month", label: "1 Month", sub: "30 Days Access", icon: "⚡" },
+                      { id: "3_months", label: "3 Months", sub: "90 Days Access", icon: "🌟" },
+                      { id: "6_months", label: "6 Months", sub: "180 Days Access", icon: "🚀" },
+                      { id: "1_year", label: "1 Year", sub: "365 Days Access", icon: "💎" },
+                      { id: "lifetime", label: "Lifetime", sub: "Unlimited Access", icon: "👑" },
+                      { id: "custom", label: "Custom Range", sub: "Pick Specific End Date", icon: "📅" },
+                    ].map(item => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setGrantPlan(item.id as any)}
+                        className={`p-3 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${
+                          grantPlan === item.id
+                            ? "border-purple-600 bg-purple-500/10 text-purple-950 dark:text-purple-200 ring-2 ring-purple-500/20 font-bold shadow-xs"
+                            : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full mb-1">
+                          <span className="text-base">{item.icon}</span>
+                          {grantPlan === item.id && (
+                            <div className="h-4 w-4 rounded-full bg-purple-600 text-white flex items-center justify-center">
+                              <Check className="h-2.5 w-2.5" />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-bold text-xs">{item.label}</p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{item.sub}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Date Input (If Custom selected) */}
+                {grantPlan === "custom" && (
+                  <div className="p-3.5 rounded-2xl bg-purple-500/5 border border-purple-500/20 space-y-2">
+                    <label className="font-bold text-purple-900 dark:text-purple-200 block">
+                      Select Custom End Date:
+                    </label>
+                    <input
+                      type="date"
+                      value={grantCustomEndDate}
+                      min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
+                      onChange={e => setGrantCustomEndDate(e.target.value)}
+                      className="h-9 w-full rounded-xl border border-purple-300 dark:border-purple-800 bg-white dark:bg-slate-900 px-3 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-purple-500/30"
+                    />
+                    <p className="text-[10.5px] text-purple-700 dark:text-purple-300">
+                      Access will remain active until 23:59:59 on the selected date.
+                    </p>
+                  </div>
+                )}
+
+                {/* Billing Cycle Label Selection */}
+                <div className="space-y-1.5">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">
+                    Display Billing Cycle:
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {(["monthly", "yearly"] as const).map(cycle => (
+                      <button
+                        key={cycle}
+                        type="button"
+                        onClick={() => setGrantBillingCycle(cycle)}
+                        className={`flex-1 py-2 rounded-xl border text-xs font-bold capitalize transition-all ${
+                          grantBillingCycle === cycle
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400"
+                        }`}
+                      >
+                        {cycle}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Internal Admin Reason / Note */}
+                <div className="space-y-1.5">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">
+                    Administrative Grant Reason / Note (Optional):
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={grantReason}
+                    onChange={e => setGrantReason(e.target.value)}
+                    placeholder="E.g. VIP partner complimentary pass, influencer promo, beta testing account..."
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 resize-y min-h-[70px] leading-relaxed"
+                  />
+                </div>
+
+                {/* Notice Callout */}
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-[11px] text-slate-600 dark:text-slate-400 flex items-start gap-2.5 leading-relaxed">
+                  <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Instant Elevation:</strong> The user's account will immediately have <code>isPaid = true</code>, unlocking full report generation, unlimited inquiries, and full pro features across web and mobile.
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setGrantTarget(null)}
+                  className="rounded-xl h-9 text-xs font-semibold px-4"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={grantAccessMutation.isPending}
+                  onClick={handleGrantAccessConfirm}
+                  className="rounded-xl h-9 px-5 text-xs font-medium gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
+                >
+                  {grantAccessMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Granting Access...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>Confirm & Grant Access</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── MODAL: REVOKE SUBSCRIPTION ACCESS MODAL ──────────────────────── */}
+      <Dialog open={Boolean(revokeTarget)} onOpenChange={open => !open && setRevokeTarget(null)}>
+        <DialogContent className="sm:max-w-md w-[95vw] rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+          {revokeTarget && (
+            <div>
+              <DialogHeader className="pb-2">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-500/20">
+                    <Ban className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <DialogTitle className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                      Revoke Subscription Access
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                      Reset <strong>{revokeTarget.name || revokeTarget.email}</strong> back to the Free Tier.
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-3 my-2 text-xs">
+                <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-900 dark:text-rose-200 text-xs leading-relaxed">
+                  This will immediately cancel active premium privileges. The user will be reverted to the Free tier and cannot generate paid reports until access is re-granted or purchased.
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-slate-700 dark:text-slate-300">
+                    Reason for Revocation (Optional):
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={revokeReason}
+                    onChange={e => setRevokeReason(e.target.value)}
+                    placeholder="Reason for ending access..."
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 resize-y min-h-[70px]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRevokeTarget(null)}
+                  className="rounded-xl h-9 text-xs font-semibold px-4"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={revokeAccessMutation.isPending}
+                  onClick={handleRevokeAccessConfirm}
+                  className="rounded-xl h-9 px-5 text-xs font-bold gap-1.5 bg-rose-600 hover:bg-rose-700 text-white shadow-xs"
+                >
+                  {revokeAccessMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Revoking...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Ban className="h-3.5 w-3.5" />
+                      <span>Revoke Access</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </section>
   );
 }

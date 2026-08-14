@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_ROUTES = ["/login"];
+const PUBLIC_ROUTES = [
+  "/login",
+  "/accept-invite",
+  "/forgot-password",
+  "/reset-password",
+];
 const PUBLIC_PREFIXES = ["/page/"];
 
 export async function proxy(req: NextRequest) {
@@ -14,9 +19,9 @@ export async function proxy(req: NextRequest) {
   const refreshToken = req.cookies.get("refreshToken")?.value;
 
   if (isPublicRoute) {
-    // Signed-in users are bounced away from the login form, but public content
-    // pages (e.g. /page/*) must stay viewable by everyone — including admins.
-    if (PUBLIC_ROUTES.includes(pathname) && accessToken) {
+    // Only bounce signed-in users away from the login page, but allow them to
+    // access public content, accept-invite, reset-password, and forgot-password.
+    if (pathname === "/login" && accessToken) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
     return NextResponse.next();

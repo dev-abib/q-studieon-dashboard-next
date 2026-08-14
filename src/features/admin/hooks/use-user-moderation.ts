@@ -163,3 +163,64 @@ export const useResolveFlag = () => {
     },
   });
 };
+
+export const useGrantUserAccess = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      userId,
+      plan,
+      customEndDate,
+      reason,
+      billingCycle,
+    }: {
+      userId: string;
+      plan: "1_month" | "3_months" | "6_months" | "1_year" | "custom" | "lifetime";
+      customEndDate?: string;
+      reason?: string;
+      billingCycle?: "monthly" | "yearly";
+    }) =>
+      adminApi.grantUserAccess(userId, {
+        plan,
+        customEndDate,
+        reason,
+        billingCycle,
+      }),
+
+    onSuccess: data => {
+      toast.success(data.message || "Subscription access granted successfully");
+      queryClient.invalidateQueries({ queryKey: ["user-details"] });
+      queryClient.invalidateQueries({ queryKey: ["userDetails"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["allUsers"] });
+    },
+
+    onError: (error: any) => {
+      const msg = error.response?.data?.message || "Failed to grant subscription access";
+      toast.error(msg);
+    },
+  });
+};
+
+export const useRevokeUserAccess = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ userId, reason }: { userId: string; reason?: string }) =>
+      adminApi.revokeUserAccess(userId, { reason }),
+
+    onSuccess: data => {
+      toast.success(data.message || "User subscription access revoked");
+      queryClient.invalidateQueries({ queryKey: ["user-details"] });
+      queryClient.invalidateQueries({ queryKey: ["userDetails"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["allUsers"] });
+    },
+
+    onError: (error: any) => {
+      const msg = error.response?.data?.message || "Failed to revoke access";
+      toast.error(msg);
+    },
+  });
+};

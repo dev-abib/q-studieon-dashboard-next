@@ -5,7 +5,6 @@ import {
   Settings,
   Shield,
   UserCheck,
-  KeyRound,
   CheckCircle2,
   Palette,
   Check,
@@ -28,7 +27,7 @@ export default function SettingsLayout() {
   const colorInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="flex flex-col gap-6">
+    <section className="w-full flex flex-col gap-6 min-h-screen pb-20">
       {/* ── Page Header ── */}
       <PageHeader
         kicker="Account & Security"
@@ -62,16 +61,14 @@ export default function SettingsLayout() {
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-xs font-medium text-slate-600 dark:text-slate-400">
             <UserCheck className="h-3.5 w-3.5 text-slate-500" />
-            <span>{admin?.role?.replace("_", " ") || "Admin"}</span>
+            <span className="capitalize">{admin?.role?.replace(/_/g, " ") || "Admin"}</span>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-xs font-medium text-slate-600 dark:text-slate-400">
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-            Verified
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-xs font-medium text-slate-600 dark:text-slate-400">
-            <KeyRound className="h-3.5 w-3.5 text-slate-500" />
-            2FA Active
-          </div>
+          {admin?.email && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-xs font-medium text-slate-600 dark:text-slate-400">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+              Account Active
+            </div>
+          )}
         </div>
       </div>
 
@@ -256,6 +253,6 @@ export default function SettingsLayout() {
           <PasswordForm />
         </div>
       </div>
-    </div>
+    </section>
   );
 }

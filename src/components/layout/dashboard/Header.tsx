@@ -28,6 +28,9 @@ import {
   Image as ImageIcon,
   MessageSquareQuote,
   MailQuestion,
+  UserCheck,
+  Briefcase,
+  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -54,6 +57,8 @@ const BREADCRUMB_MAP: Record<string, string> = {
   admins: "Admins Center",
   queries: "User Inquiries",
   settings: "Settings",
+  status: "System Status",
+  activity: "Team Activity Feed",
   categories: "Onsite Categories",
   questions: "Onsite Questions",
   insights: "Helpful Insights",
@@ -72,6 +77,8 @@ const PAGE_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   admins: ShieldCheck,
   queries: MailQuestion,
   settings: Settings,
+  status: Activity,
+  activity: Activity,
   categories: BookMarked,
   questions: MessageCircleQuestion,
   insights: Lightbulb,
@@ -311,10 +318,18 @@ export function Header({ admin }: HeaderProps) {
 
             {/* Menu Items */}
             <DropdownMenuItem
+              onClick={() => router.push("/dashboard/admins/me")}
+              className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold rounded-xl cursor-pointer text-slate-700 dark:text-slate-200 hover:bg-primary/10 hover:text-primary transition-colors"
+            >
+              <Briefcase className="h-4 w-4 text-primary" />
+              My Duties & Profile
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
               onClick={() => router.push("/dashboard/settings")}
               className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-medium rounded-xl cursor-pointer text-slate-700 dark:text-slate-200 hover:bg-primary/10 hover:text-primary transition-colors"
             >
-              <Settings className="h-4 w-4 text-primary" />
+              <Settings className="h-4 w-4 text-slate-400" />
               Settings & Profile
             </DropdownMenuItem>
 

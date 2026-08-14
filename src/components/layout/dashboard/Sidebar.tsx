@@ -26,6 +26,7 @@ import {
   Image as ImageIcon,
   MessageSquareQuote,
   MailQuestion,
+  Activity,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -225,6 +226,12 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: "System",
     items: [
+      {
+        label: "System Status",
+        href: "/dashboard/status",
+        icon: Activity,
+        requiredRoles: ["super_admin", "admin"],
+      },
       { label: "Settings", href: "/dashboard/settings", icon: Settings },
     ],
   },
@@ -302,9 +309,9 @@ export function Sidebar({ role }: SidebarProps) {
   const RoleIcon = roleInfo.icon;
 
   return (
-    <aside className="w-64 rounded-2xl h-full bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 shadow-xs flex flex-col justify-between transition-colors">
+    <aside className="w-64 shrink-0 rounded-2xl h-full bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 shadow-xs flex flex-col overflow-hidden transition-colors">
       {/* ── Brand Logo ── */}
-      <div className="h-18 flex items-center px-6 border-b border-slate-100 dark:border-slate-800">
+      <div className="h-16 shrink-0 flex items-center px-5 border-b border-slate-100 dark:border-slate-800">
         <Link href="/dashboard" className="flex items-center gap-3 group">
           <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shadow-xs group-hover:scale-105 transition-transform">
             <Building2 className="h-5 w-5" />
@@ -321,7 +328,7 @@ export function Sidebar({ role }: SidebarProps) {
       </div>
 
       {/* ── Navigation Items ── */}
-      <ScrollArea className="flex-1 px-3.5 py-5">
+      <ScrollArea className="flex-1 min-h-0 px-3.5 py-4">
         <div className="flex flex-col gap-5">
           {NAV_SECTIONS.map(section => {
             const filteredItems = section.items
@@ -505,7 +512,7 @@ export function Sidebar({ role }: SidebarProps) {
       </ScrollArea>
 
       {/* ── Role Badge Footer ── */}
-      <div className="p-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+      <div className="shrink-0 p-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
         <div
           className={`flex items-center gap-3 p-2.5 rounded-xl border ${roleInfo.bg}`}
         >

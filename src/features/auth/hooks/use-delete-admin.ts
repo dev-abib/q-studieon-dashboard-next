@@ -1,18 +1,26 @@
 "use client";
-import { queryClient } from "@/providers/query-provider";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/services/auth-api";
-import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export function useDeleteAdmin() {
+  const queryClient = useQueryClient();
+
   return useMutation({
-    mutationFn: authApi.deleteAdmin,
+    mutationFn: (id: string) => authApi.deleteAdmin(id),
     onSuccess: async data => {
-      toast.success(data.message);
+      toast.success(data.message || "Admin access revoked successfully");
       queryClient.invalidateQueries({ queryKey: ["allAdmins"] });
+      queryClient.invalidateQueries({ queryKey: ["admins"] });
+      queryClient.invalidateQueries({ queryKey: ["contact-queries", "staff-members"] });
     },
-    onError: (error: unknown) => {
-      toast.error((error as any)?.response?.data?.message ?? "Login failed");
+    onError: (error: any) => {
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Failed to revoke admin access",
+      );
     },
   });
 }
+

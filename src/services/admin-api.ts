@@ -76,4 +76,131 @@ export const adminApi = {
     const res = await api.patch(`/admin/resolve-flag/${flagId}`, payload);
     return res.data;
   },
+
+  grantUserAccess: async (
+    userId: string,
+    payload: {
+      plan: '1_month' | '3_months' | '6_months' | '1_year' | 'custom' | 'lifetime';
+      customEndDate?: string;
+      reason?: string;
+      billingCycle?: 'monthly' | 'yearly';
+    }
+  ) => {
+    const res = await api.patch(`/admin/grant-access/${userId}`, payload);
+    return res.data;
+  },
+
+  revokeUserAccess: async (userId: string, payload?: { reason?: string }) => {
+    const res = await api.patch(`/admin/revoke-access/${userId}`, payload || {});
+    return res.data;
+  },
+
+  togglePasswordPermission: async (
+    staffId: string,
+    canChangePassword: boolean,
+  ) => {
+    const res = await api.patch(`/admin/toggle-password-permission/${staffId}`, {
+      canChangePassword,
+    });
+    return res.data;
+  },
+
+  getStaffProfile: async (staffId: string) => {
+    const res = await api.get(`/admin/staff-profile/${staffId || "me"}`);
+    return res.data;
+  },
+
+  getAuditLogs: async (params?: any) => {
+    const res = await api.get(`/admin/audit-logs`, { params });
+    return res.data;
+  },
+
+  getTeamWorkTimeSummary: async () => {
+    const res = await api.get(`/admin/work-time-summary`);
+    return res.data;
+  },
+
+  getStaffWorkTime: async (staffId: string) => {
+    const res = await api.get(`/admin/staff-work-time/${staffId || "me"}`);
+    return res.data;
+  },
+
+  // Real-Time Team Presence & Heartbeat
+  sendPresenceHeartbeat: async (dto: {
+    currentPath?: string;
+    targetId?: string;
+    targetType?: string;
+    isTyping?: boolean;
+  }) => {
+    const res = await api.post(`/admin/presence/heartbeat`, dto);
+    return res.data;
+  },
+
+  getActivePresence: async (targetId?: string) => {
+    const res = await api.get(`/admin/presence/active`, {
+      params: targetId ? { targetId } : undefined,
+    });
+    return res.data;
+  },
+
+  // Internal Staff Notes
+  getInternalNotes: async (targetType: string, targetId: string) => {
+    const res = await api.get(`/admin/internal-notes/${targetType}/${targetId}`);
+    return res.data;
+  },
+
+  createInternalNote: async (dto: {
+    targetType: string;
+    targetId: string;
+    content: string;
+    isPinned?: boolean;
+  }) => {
+    const res = await api.post(`/admin/internal-notes`, dto);
+    return res.data;
+  },
+
+  togglePinInternalNote: async (noteId: string) => {
+    const res = await api.patch(`/admin/internal-notes/${noteId}/pin`);
+    return res.data;
+  },
+
+  deleteInternalNote: async (noteId: string) => {
+    const res = await api.delete(`/admin/internal-notes/${noteId}`);
+    return res.data;
+  },
+
+  // Security & Anomaly Alerts
+  getSecurityAlerts: async (isResolved?: boolean) => {
+    const res = await api.get(`/admin/security-alerts`, {
+      params: { isResolved: isResolved ? "true" : "false" },
+    });
+    return res.data;
+  },
+
+  resolveSecurityAlert: async (alertId: string) => {
+    const res = await api.patch(`/admin/security-alerts/${alertId}/resolve`);
+    return res.data;
+  },
+
+  // Super Admin: Impersonate User
+  impersonateUser: async (userId: string) => {
+    const res = await api.post(`/admin/impersonate-user/${userId}`);
+    return res.data;
+  },
+
+  // VIP Grant Expiry Check Trigger
+  triggerGrantExpiryCheck: async () => {
+    const res = await api.post(`/admin/trigger-grant-expiry-check`);
+    return res.data;
+  },
+
+  // System Status & Health Metrics
+  getSystemStatus: async () => {
+    const res = await api.get(`/admin/system/status`);
+    return res.data;
+  },
+
+  // CSV Exports
+  exportWorkTimeCsvUrl: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1"}/admin/export/work-time-csv`,
+  exportAuditLogsCsvUrl: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1"}/admin/export/audit-logs-csv`,
 };
