@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   Search,
   MailQuestion,
@@ -94,6 +96,7 @@ import { useUpdatePriority } from "@/features/contact-queries/hooks/use-update-p
 import { useAddInternalNote } from "@/features/contact-queries/hooks/use-add-internal-note";
 import { useBulkAction } from "@/features/contact-queries/hooks/use-bulk-action";
 import { useToggleDeletePermission } from "@/features/contact-queries/hooks/use-toggle-delete-permission";
+import { useToggleUserDetailsPermission } from "@/features/contact-queries/hooks/use-toggle-user-details-permission";
 import { useCurrentUser } from "@/features/admin/hooks/use-get-met";
 import {
   useUpdateQueryStatus,
@@ -160,20 +163,34 @@ function formatTimeAgo(dateStr: string) {
 }
 
 export default function QueriesPage() {
+  const searchParams = useSearchParams();
+  const urlSearch = searchParams.get("search") || "";
+  const urlStatus = (searchParams.get("status") as ContactQueryStatus) || "ALL";
+  const urlPriority = (searchParams.get("priority") as ContactQueryPriority) || "ALL";
+
   // View mode (split inbox vs table)
   const [viewMode, setViewMode] = useState<ViewMode>("split");
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
   // Filters & State
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ContactQueryStatus | "ALL">("ALL");
-  const [priorityFilter, setPriorityFilter] = useState<ContactQueryPriority | "ALL">("ALL");
+  const [search, setSearch] = useState(urlSearch);
+  const [statusFilter, setStatusFilter] = useState<ContactQueryStatus | "ALL">(urlStatus);
+  const [priorityFilter, setPriorityFilter] = useState<ContactQueryPriority | "ALL">(urlPriority);
   const [registeredFilter, setRegisteredFilter] = useState<"ALL" | "REGISTERED" | "GUEST">("ALL");
   const [assignedFilter, setAssignedFilter] = useState<string>("ALL");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [sortBy, setSortBy] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortDir>("desc");
+
+  // Keep search in sync if search param in URL changes
+  useEffect(() => {
+    const q = searchParams.get("search");
+    if (q !== null && q !== search) {
+      setSearch(q);
+      setPage(1);
+    }
+  }, [searchParams]);
 
   // Multi-Selection State for Bulk Actions
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -248,6 +265,7 @@ export default function QueriesPage() {
   const deleteMutation = useDeleteQuery();
   const assignMutation = useAssignQuery();
   const togglePermissionMutation = useToggleDeletePermission();
+  const toggleUserDetailsMutation = useToggleUserDetailsPermission();
 
   const queries = queriesRes?.data || [];
   const meta = queriesRes?.meta;
@@ -402,13 +420,6 @@ export default function QueriesPage() {
     updatePriorityMutation.mutate({ id, priority: newPriority });
   };
 
-  const handleToggleStaffDeletePermission = async (staffId: string, currentVal: boolean) => {
-    await togglePermissionMutation.mutateAsync({
-      staffId,
-      canDelete: !currentVal,
-    });
-  };
-
   // Keyboard shortcut support (Ctrl+Enter to send reply)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
@@ -479,6 +490,28 @@ export default function QueriesPage() {
       setDeleteTarget(null);
     } catch {
       // Handled by hook
+    }
+  };
+
+  const handleToggleStaffDeletePermission = async (staffId: string, currentStatus: boolean) => {
+    try {
+      await togglePermissionMutation.mutateAsync({
+        staffId,
+        canDelete: !currentStatus,
+      });
+    } catch {
+      // Handled by hook toast
+    }
+  };
+
+  const handleToggleStaffUserDetailsPermission = async (staffId: string, currentStatus: boolean) => {
+    try {
+      await toggleUserDetailsMutation.mutateAsync({
+        staffId,
+        canViewUserDetails: !currentStatus,
+      });
+    } catch {
+      // Handled by hook toast
     }
   };
 
@@ -563,9 +596,9 @@ export default function QueriesPage() {
         return (
           <Badge
             variant="outline"
-            className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 font-semibold text-[10.5px] gap-1"
+            className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 font-semibold text-[10.5px] gap-1.5"
           >
-            <Loader2 className="h-2.5 w-2.5 animate-spin" />
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
             In Progress
           </Badge>
         );
@@ -1335,12 +1368,40 @@ export default function QueriesPage() {
                             <Copy className="h-3 w-3" />
                           )}
                         </button>
+                        {activeQuery.isRegisteredUser && (
+                          activeQuery.userId || activeQuery.user?.id ? (
+                            <Link
+                              href={`/dashboard/users/${activeQuery.userId || activeQuery.user?.id}`}
+                              className="inline-flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 border border-emerald-200 dark:border-emerald-800 text-[10px] px-1.5 py-0.2 rounded-md font-semibold transition-colors shrink-0"
+                              title="View registered user account profile"
+                            >
+                              <span>Registered User</span>
+                              <ExternalLink className="h-2.5 w-2.5 opacity-70" />
+                            </Link>
+                          ) : (
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-600 text-[9.5px] py-0">
+                              Registered User
+                            </Badge>
+                          )
+                        )}
                       </div>
                     </div>
                   </div>
 
                   {/* Fast Navigation & Quick Actions */}
                   <div className="flex items-center gap-1.5 shrink-0">
+                    {activeQuery.isRegisteredUser && (activeQuery.userId || activeQuery.user?.id) && (
+                      <Link
+                        href={`/dashboard/users/${activeQuery.userId || activeQuery.user?.id}`}
+                        className="h-8 px-2.5 inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/80 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-semibold transition-colors"
+                        title="View registered user account details"
+                      >
+                        <User className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">View Profile</span>
+                        <ExternalLink className="h-3 w-3 opacity-60" />
+                      </Link>
+                    )}
+
                     <Button
                       variant="outline"
                       size="icon"
@@ -1386,6 +1447,20 @@ export default function QueriesPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48 rounded-xl text-xs">
+                        {activeQuery.isRegisteredUser && (activeQuery.userId || activeQuery.user?.id) && (
+                          <>
+                            <DropdownMenuItem asChild>
+                              <Link
+                                href={`/dashboard/users/${activeQuery.userId || activeQuery.user?.id}`}
+                                className="flex items-center gap-2 cursor-pointer font-semibold text-emerald-600 dark:text-emerald-400"
+                              >
+                                <User className="h-3.5 w-3.5" />
+                                <span>View User Profile</span>
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </>
+                        )}
                         <DropdownMenuLabel className="text-[11px]">Quick Status</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => handleQuickStatusChange(activeQuery.id, "RESOLVED")}>
                           Mark Resolved
@@ -1819,9 +1894,21 @@ export default function QueriesPage() {
                               {q.name.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
-                              <span className="font-semibold text-slate-900 dark:text-white truncate block">
-                                {q.name}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-slate-900 dark:text-white truncate block">
+                                  {q.name}
+                                </span>
+                                {q.isRegisteredUser && (q.userId || q.user?.id) && (
+                                  <Link
+                                    href={`/dashboard/users/${q.userId || q.user?.id}`}
+                                    className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 text-[10px] font-bold transition-colors"
+                                    title="View Registered User Details Page"
+                                  >
+                                    <span>Profile</span>
+                                    <ExternalLink className="h-2.5 w-2.5 opacity-60" />
+                                  </Link>
+                                )}
+                              </div>
                               <span className="text-[10.5px] text-slate-400 truncate block">
                                 {q.email}
                               </span>
@@ -1919,7 +2006,7 @@ export default function QueriesPage() {
 
       {/* ─── Super Admin Staff Permissions Modal ────────────────────────────── */}
       <Dialog open={permissionsModalOpen} onOpenChange={setPermissionsModalOpen}>
-        <DialogContent className="sm:max-w-xl w-[95vw] rounded-2xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+        <DialogContent className="sm:max-w-2xl w-[95vw] rounded-2xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
           <DialogHeader className="pb-2">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/20">
@@ -1927,24 +2014,23 @@ export default function QueriesPage() {
               </div>
               <div className="min-w-0 flex-1">
                 <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                  Staff Deletion Privileges
+                  Staff Admin Privileges
                 </DialogTitle>
                 <DialogDescription className="text-xs text-slate-500 mt-0.5">
-                  As Super Admin, grant or restrict staff from permanently deleting customer inquiries.
+                  As Super Admin, grant or restrict staff privileges for inquiry deletion and user profile inspection.
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
 
           <div className="space-y-3 my-2 text-xs">
-            <div className="space-y-2 max-h-80 overflow-y-auto pr-1 [scrollbar-width:thin] overscroll-contain">
+            <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1 [scrollbar-width:thin] overscroll-contain">
               {staffMembers.map(staff => {
                 const isMemberSuperAdmin = staff.role === "super_admin" || staff.isOwner;
-                const isPermitted = isMemberSuperAdmin || staff.canDeleteQueries;
                 return (
                   <div
                     key={staff.id}
-                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 bg-white dark:bg-slate-900 shadow-2xs hover:border-slate-300 transition-colors"
+                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 shadow-2xs hover:border-slate-300 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       {staff.profilePictureURL ? (
@@ -1971,39 +2057,72 @@ export default function QueriesPage() {
                       </div>
                     </div>
 
-                    <div className="shrink-0">
+                    <div className="shrink-0 flex items-center gap-2">
                       {isMemberSuperAdmin ? (
                         <Badge className="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20 text-[10.5px] gap-1 py-1 px-2.5 font-semibold">
                           <ShieldCheck className="h-3.5 w-3.5" />
-                          Super Admin
+                          Super Admin (Full Access)
                         </Badge>
                       ) : (
-                        <Button
-                          type="button"
-                          variant={isPermitted ? "default" : "outline"}
-                          size="sm"
-                          disabled={togglePermissionMutation.isPending}
-                          onClick={() =>
-                            handleToggleStaffDeletePermission(staff.id, Boolean(staff.canDeleteQueries))
-                          }
-                          className={`h-7.5 px-3 rounded-lg text-xs gap-1.5 font-semibold transition-all ${
-                            isPermitted
-                              ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
-                              : "text-slate-600 dark:text-slate-300 hover:text-slate-900 bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700"
-                          }`}
-                        >
-                          {isPermitted ? (
-                            <>
-                              <Unlock className="h-3.5 w-3.5" />
-                              <span>Can Delete</span>
-                            </>
-                          ) : (
-                            <>
-                              <Lock className="h-3.5 w-3.5 text-slate-400" />
-                              <span>Restricted</span>
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                          {/* Delete Permission */}
+                          <Button
+                            type="button"
+                            variant={staff.canDeleteQueries ? "default" : "outline"}
+                            size="sm"
+                            disabled={togglePermissionMutation.isPending}
+                            onClick={() =>
+                              handleToggleStaffDeletePermission(staff.id, Boolean(staff.canDeleteQueries))
+                            }
+                            className={`h-7 px-2.5 rounded-lg text-[11px] gap-1 font-semibold transition-all ${
+                              staff.canDeleteQueries
+                                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                                : "text-slate-600 dark:text-slate-300 hover:text-slate-900 bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700"
+                            }`}
+                            title="Toggle inquiry deletion privilege"
+                          >
+                            {staff.canDeleteQueries ? (
+                              <>
+                                <Unlock className="h-3 w-3" />
+                                <span>Delete: Allowed</span>
+                              </>
+                            ) : (
+                              <>
+                                <Lock className="h-3 w-3 text-slate-400" />
+                                <span>Delete: Blocked</span>
+                              </>
+                            )}
+                          </Button>
+
+                          {/* View User Details Permission */}
+                          <Button
+                            type="button"
+                            variant={staff.canViewUserDetails ? "default" : "outline"}
+                            size="sm"
+                            disabled={toggleUserDetailsMutation.isPending}
+                            onClick={() =>
+                              handleToggleStaffUserDetailsPermission(staff.id, Boolean(staff.canViewUserDetails))
+                            }
+                            className={`h-7 px-2.5 rounded-lg text-[11px] gap-1 font-semibold transition-all ${
+                              staff.canViewUserDetails
+                                ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
+                                : "text-slate-600 dark:text-slate-300 hover:text-slate-900 bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700"
+                            }`}
+                            title="Toggle user details viewing privilege"
+                          >
+                            {staff.canViewUserDetails ? (
+                              <>
+                                <UserCheck className="h-3 w-3" />
+                                <span>Users: Allowed</span>
+                              </>
+                            ) : (
+                              <>
+                                <UserX className="h-3 w-3 text-slate-400" />
+                                <span>Users: Blocked</span>
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -2052,14 +2171,39 @@ export default function QueriesPage() {
                         <Copy className="h-3 w-3" />
                       </button>
                       {activeQuery.isRegisteredUser && (
-                        <Badge variant="outline" className="bg-emerald-50 text-emerald-600 text-[9.5px] py-0">
-                          Registered User
-                        </Badge>
+                        activeQuery.userId || activeQuery.user?.id ? (
+                          <Link
+                            href={`/dashboard/users/${activeQuery.userId || activeQuery.user?.id}`}
+                            target="_blank"
+                            className="inline-flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 border border-emerald-200 dark:border-emerald-800 text-[10px] px-1.5 py-0.2 rounded-md font-semibold transition-colors shrink-0"
+                            title="View registered user account profile"
+                          >
+                            <span>Registered User</span>
+                            <ExternalLink className="h-2.5 w-2.5 opacity-70" />
+                          </Link>
+                        ) : (
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-600 text-[9.5px] py-0">
+                            Registered User
+                          </Badge>
+                        )
                       )}
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {activeQuery.isRegisteredUser && (activeQuery.userId || activeQuery.user?.id) && (
+                      <Link
+                        href={`/dashboard/users/${activeQuery.userId || activeQuery.user?.id}`}
+                        target="_blank"
+                        className="h-8 px-2.5 inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/80 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-semibold transition-colors"
+                        title="View user details in new tab"
+                      >
+                        <User className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">View Profile</span>
+                        <ExternalLink className="h-3 w-3 opacity-60" />
+                      </Link>
+                    )}
+
                     <Button
                       variant="outline"
                       size="sm"

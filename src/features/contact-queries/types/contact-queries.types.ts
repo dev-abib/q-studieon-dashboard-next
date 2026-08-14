@@ -69,6 +69,7 @@ export interface StaffMember {
   role: string;
   profilePictureURL?: string | null;
   canDeleteQueries?: boolean | null;
+  canViewUserDetails?: boolean | null;
   isOwner?: boolean | null;
 }
 

@@ -146,4 +146,15 @@ export const contactQueriesApi = {
     });
     return res.data;
   },
+
+  // Toggle user details view permission for staff member (Super Admin only)
+  toggleUserDetailsPermission: async (
+    staffId: string,
+    canViewUserDetails: boolean,
+  ): Promise<{ success: boolean; message: string; data: StaffMember }> => {
+    const res = await api.patch(`/contact-query/staff/${staffId}/user-details-permission`, {
+      canViewUserDetails,
+    });
+    return res.data;
+  },
 };

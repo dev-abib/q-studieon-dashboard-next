@@ -24,4 +24,26 @@ export const adminSchema = z.object({
   guestIp: z.string().nullable().optional(),
   guestDeviceId: z.string().nullable().optional(),
   isResetRequest: z.boolean().optional(),
+  isOwner: z.boolean().optional(),
+  canDeleteQueries: z.boolean().nullable().optional(),
+  canViewUserDetails: z.boolean().nullable().optional(),
+  blockReason: z.string().nullable().optional(),
+  isDeleted: z.boolean().optional(),
+  deletedAt: z.string().nullable().optional(),
+  purgeAt: z.string().nullable().optional(),
+  deleteReason: z.string().nullable().optional(),
+  deletedBy: z.string().nullable().optional(),
+  flags: z.array(z.any()).optional(),
+  _count: z
+    .object({
+      collections: z.number().optional(),
+      reports: z.number().optional(),
+      payments: z.number().optional(),
+      contactQueries: z.number().optional(),
+    })
+    .optional(),
+  reports: z.array(z.any()).optional(),
+  collections: z.array(z.any()).optional(),
+  payments: z.array(z.any()).optional(),
+  contactQueries: z.array(z.any()).optional(),
 });

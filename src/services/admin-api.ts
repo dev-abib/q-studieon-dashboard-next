@@ -46,4 +46,34 @@ export const adminApi = {
 
     return res.data;
   },
+
+  softDeleteUser: async (id: string, payload?: { reason?: string; immediateHardDelete?: boolean }) => {
+    const res = await api.post(`/admin/soft-delete-user/${id}`, payload || {});
+    return res.data;
+  },
+
+  restoreUser: async (id: string) => {
+    const res = await api.patch(`/admin/restore-user/${id}`);
+    return res.data;
+  },
+
+  blockUser: async (id: string, payload: { blockedUntil: string; reason?: string }) => {
+    const res = await api.patch(`/admin/block-user/${id}`, payload);
+    return res.data;
+  },
+
+  unblockUser: async (id: string) => {
+    const res = await api.patch(`/admin/unblock-user/${id}`);
+    return res.data;
+  },
+
+  flagUser: async (id: string, payload: { action: 'BLOCK' | 'DELETE'; reason: string; note?: string }) => {
+    const res = await api.post(`/admin/flag-user/${id}`, payload);
+    return res.data;
+  },
+
+  resolveFlag: async (flagId: string, payload: { status: 'APPROVED' | 'REJECTED' }) => {
+    const res = await api.patch(`/admin/resolve-flag/${flagId}`, payload);
+    return res.data;
+  },
 };
