@@ -19,7 +19,9 @@ import {
   X,
   UserCheck,
   UserX,
+  Eye,
 } from "lucide-react";
+import Link from "next/link";
 
 import { useGetAllUsers } from "@/features/users/hooks/use.users";
 import { Admin } from "@/features/admin/types/admin.types";
@@ -309,11 +311,9 @@ export default function UsersPage() {
                     onClick={() => handleSort("createdAt")}
                   />
                 </th>
-                {!isCustomerSupport && (
-                  <th className="px-6 py-3.5 text-right text-xs font-medium uppercase tracking-wider text-slate-400">
-                    Actions
-                  </th>
-                )}
+                <th className="px-6 py-3.5 text-right text-xs font-medium uppercase tracking-wider text-slate-400">
+                  Actions
+                </th>
               </tr>
             </thead>
 
@@ -339,9 +339,12 @@ export default function UsersPage() {
                       className="group hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
                     >
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
+                        <Link
+                          href={`/dashboard/users/${u.id}`}
+                          className="flex items-center gap-3 group/link"
+                        >
                           <div
-                            className={`h-9 w-9 rounded-xl flex items-center justify-center font-semibold text-xs border ${pal.bg}`}
+                            className={`h-9 w-9 rounded-xl flex items-center justify-center font-semibold text-xs border transition-transform group-hover/link:scale-105 ${pal.bg}`}
                           >
                             {u.profilePictureURL ? (
                               <Image
@@ -355,10 +358,10 @@ export default function UsersPage() {
                               initials
                             )}
                           </div>
-                          <span className="font-semibold text-sm text-slate-900 dark:text-white">
+                          <span className="font-semibold text-sm text-slate-900 dark:text-white group-hover/link:text-primary transition-colors">
                             {u.name || "Anonymous User"}
                           </span>
-                        </div>
+                        </Link>
                       </td>
 
                       <td className="px-6 py-4">
@@ -379,21 +382,32 @@ export default function UsersPage() {
                         </span>
                       </td>
 
-                      {!isCustomerSupport && (
-                        <td className="px-6 py-4 text-right">
-                          <button
-                            disabled={deletingId === u.id}
-                            onClick={() => {
-                              setDeleteTarget(u);
-                              setDeletingId(u.id);
-                            }}
-                            title="Delete User"
-                            className="h-8 w-8 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:border-rose-200 transition-colors disabled:opacity-40"
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Link
+                            href={`/dashboard/users/${u.id}`}
+                            title="View User Details"
+                            className="h-8 px-2.5 inline-flex items-center justify-center gap-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </td>
-                      )}
+                            <Eye className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">View</span>
+                          </Link>
+
+                          {!isCustomerSupport && (
+                            <button
+                              disabled={deletingId === u.id}
+                              onClick={() => {
+                                setDeleteTarget(u);
+                                setDeletingId(u.id);
+                              }}
+                              title="Delete User"
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:border-rose-200 transition-colors disabled:opacity-40"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   );
                 })

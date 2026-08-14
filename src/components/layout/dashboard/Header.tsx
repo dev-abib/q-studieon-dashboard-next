@@ -22,6 +22,12 @@ import {
   Lightbulb,
   BookDashed,
   Sparkles,
+  Globe,
+  LayoutTemplate,
+  Newspaper,
+  Image as ImageIcon,
+  MessageSquareQuote,
+  MailQuestion,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,24 +52,36 @@ const BREADCRUMB_MAP: Record<string, string> = {
   dashboard: "Overview",
   users: "Users Management",
   admins: "Admins Center",
+  queries: "User Inquiries",
   settings: "Settings",
   categories: "Onsite Categories",
   questions: "Onsite Questions",
   insights: "Helpful Insights",
   faqs: "FAQs",
   "dynamic-page": "Dynamic Pages",
+  website: "Website CMS",
+  pages: "Pages & Sections",
+  blogs: "Blogs & Articles",
+  banners: "Hero & Banners",
+  testimonials: "Testimonials",
 };
 
 const PAGE_ICONS: Record<string, ComponentType<{ className?: string }>> = {
   dashboard: LayoutDashboard,
   users: Users,
   admins: ShieldCheck,
+  queries: MailQuestion,
   settings: Settings,
   categories: BookMarked,
   questions: MessageCircleQuestion,
   insights: Lightbulb,
   faqs: HelpCircle,
   "dynamic-page": BookDashed,
+  website: Globe,
+  pages: LayoutTemplate,
+  blogs: Newspaper,
+  banners: ImageIcon,
+  testimonials: MessageSquareQuote,
 };
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);

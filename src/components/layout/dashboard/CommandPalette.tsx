@@ -40,12 +40,45 @@ export function CommandPalette({
   }, [open, onOpenChange]);
 
   const role = (admin.role as Role) || "admin";
-  const accessibleSections = NAV_SECTIONS.map(section => ({
-    ...section,
-    items: section.items.filter(
-      item => !item.requiredRoles || item.requiredRoles.includes(role)
-    ),
-  })).filter(section => section.items.length > 0);
+
+  const accessibleSections = NAV_SECTIONS.map(section => {
+    const flattenedItems: {
+      label: string;
+      category?: string;
+      href: string;
+      icon: React.ElementType;
+    }[] = [];
+
+    section.items.forEach(item => {
+      if (item.children) {
+        item.children.forEach(child => {
+          if (
+            child.href &&
+            !child.disabled &&
+            (!child.requiredRoles || child.requiredRoles.includes(role))
+          ) {
+            flattenedItems.push({
+              label: child.label,
+              category: item.label,
+              href: child.href,
+              icon: child.icon || item.icon,
+            });
+          }
+        });
+      } else if (item.href && (!item.requiredRoles || item.requiredRoles.includes(role))) {
+        flattenedItems.push({
+          label: item.label,
+          href: item.href,
+          icon: item.icon,
+        });
+      }
+    });
+
+    return {
+      title: section.title,
+      items: flattenedItems,
+    };
+  }).filter(section => section.items.length > 0);
 
   const handleSelect = (href: string) => {
     router.push(href);
@@ -59,22 +92,31 @@ export function CommandPalette({
         <CommandEmpty>No matching navigation pages found.</CommandEmpty>
         {accessibleSections.map(section => (
           <CommandGroup key={section.title} heading={section.title}>
-            {section.items.map(({ label, href, icon: Icon }) => (
+            {section.items.map(({ label, category, href, icon: Icon }) => (
               <CommandItem
                 key={href}
-                value={`${label} ${href}`}
+                value={`${category ? `${category} ` : ""}${label} ${href}`}
                 onSelect={() => handleSelect(href)}
               >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-data-[selected=true]:bg-primary group-data-[selected=true]:text-primary-foreground transition-colors">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-data-[selected=true]:bg-primary group-data-[selected=true]:text-white transition-colors">
                   <Icon className="h-4 w-4" />
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-sm font-semibold truncate">{label}</span>
-                  <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 group-data-[selected=true]:text-primary-foreground/90 truncate">
+                  <div className="flex items-center gap-1.5 truncate">
+                    {category && (
+                      <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 group-data-[selected=true]:text-primary/70">
+                        {category} &gt;
+                      </span>
+                    )}
+                    <span className="text-sm font-semibold truncate text-slate-900 dark:text-slate-100 group-data-[selected=true]:text-primary">
+                      {label}
+                    </span>
+                  </div>
+                  <span className="text-[10.5px] font-mono text-slate-400 dark:text-slate-500 group-data-[selected=true]:text-slate-600 dark:group-data-[selected=true]:text-slate-300 truncate">
                     {href}
                   </span>
                 </div>
-                <CommandShortcut className="flex items-center gap-1">
+                <CommandShortcut className="flex items-center gap-1 font-semibold text-slate-400 group-data-[selected=true]:text-primary">
                   <span>Jump</span>
                   <CornerDownLeft className="h-3 w-3" />
                 </CommandShortcut>

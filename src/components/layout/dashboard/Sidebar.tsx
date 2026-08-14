@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -17,6 +18,14 @@ import {
   FileText,
   DollarSign,
   Building2,
+  ChevronDown,
+  Smartphone,
+  Globe,
+  LayoutTemplate,
+  Newspaper,
+  Image as ImageIcon,
+  MessageSquareQuote,
+  MailQuestion,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -32,12 +41,22 @@ interface SidebarProps {
   role: Role | string | null;
 }
 
+export interface NavSubItem {
+  label: string;
+  href?: string;
+  icon?: React.ElementType;
+  badge?: string;
+  disabled?: boolean;
+  requiredRoles?: Role[];
+}
+
 export interface NavItem {
   label: string;
-  href: string;
+  href?: string;
   icon: React.ElementType;
   requiredRoles?: Role[];
   badge?: string;
+  children?: NavSubItem[];
 }
 
 export interface NavSection {
@@ -62,64 +81,143 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: ShieldCheck,
         requiredRoles: ["super_admin"],
       },
+      {
+        label: "User Inquiries",
+        href: "/dashboard/queries",
+        icon: MailQuestion,
+        requiredRoles: ["super_admin", "admin", "customer_support"],
+      },
     ],
   },
   {
     title: "Content & Management",
     items: [
       {
-        label: "Onsite Categories",
-        href: "/dashboard/categories",
-        icon: BookMarked,
-        requiredRoles: [
-          "super_admin",
-          "admin",
-          "customer_support",
-          "content_manager",
+        label: "App CMS",
+        icon: Smartphone,
+        children: [
+          {
+            label: "Categories",
+            href: "/dashboard/categories",
+            icon: BookMarked,
+            requiredRoles: [
+              "super_admin",
+              "admin",
+              "customer_support",
+              "content_manager",
+            ],
+          },
+          {
+            label: "Questions",
+            href: "/dashboard/questions",
+            icon: HelpCircle,
+            requiredRoles: [
+              "super_admin",
+              "admin",
+              "customer_support",
+              "content_manager",
+            ],
+          },
+          {
+            label: "Helpful Insights",
+            href: "/dashboard/insights",
+            icon: Lightbulb,
+            requiredRoles: [
+              "super_admin",
+              "admin",
+              "customer_support",
+              "content_manager",
+            ],
+          },
+          {
+            label: "FAQs",
+            href: "/dashboard/faqs",
+            icon: MessageCircleQuestion,
+            requiredRoles: [
+              "super_admin",
+              "admin",
+              "customer_support",
+              "content_manager",
+            ],
+          },
+          {
+            label: "Dynamic Pages",
+            href: "/dashboard/dynamic-page",
+            icon: BookDashed,
+            requiredRoles: [
+              "super_admin",
+              "admin",
+              "customer_support",
+              "content_manager",
+            ],
+          },
         ],
       },
       {
-        label: "Onsite Questions",
-        href: "/dashboard/questions",
-        icon: HelpCircle,
-        requiredRoles: [
-          "super_admin",
-          "admin",
-          "customer_support",
-          "content_manager",
-        ],
-      },
-      {
-        label: "Helpful Insights",
-        href: "/dashboard/insights",
-        icon: Lightbulb,
-        requiredRoles: [
-          "super_admin",
-          "admin",
-          "customer_support",
-          "content_manager",
-        ],
-      },
-      {
-        label: "FAQs",
-        href: "/dashboard/faqs",
-        icon: MessageCircleQuestion,
-        requiredRoles: [
-          "super_admin",
-          "admin",
-          "customer_support",
-          "content_manager",
-        ],
-      },
-      {
-        label: "Dynamic Pages",
-        href: "/dashboard/dynamic-page",
-        icon: BookDashed,
-        requiredRoles: [
-          "super_admin",
-          "admin",
-          "customer_support",
-          "content_manager",
+        label: "Website CMS",
+        icon: Globe,
+        badge: "Soon",
+        children: [
+          {
+            label: "Pages & Sections",
+            disabled: true,
+            icon: LayoutTemplate,
+            badge: "Soon",
+            requiredRoles: [
+              "super_admin",
+              "admin",
+              "customer_support",
+              "content_manager",
+            ],
+          },
+          {
+            label: "Blogs & Articles",
+            disabled: true,
+            icon: Newspaper,
+            badge: "Soon",
+            requiredRoles: [
+              "super_admin",
+              "admin",
+              "customer_support",
+              "content_manager",
+            ],
+          },
+          {
+            label: "Hero & Banners",
+            disabled: true,
+            icon: ImageIcon,
+            badge: "Soon",
+            requiredRoles: [
+              "super_admin",
+              "admin",
+              "customer_support",
+              "content_manager",
+            ],
+          },
+          {
+            label: "Testimonials",
+            disabled: true,
+            icon: MessageSquareQuote,
+            badge: "Soon",
+            requiredRoles: [
+              "super_admin",
+              "admin",
+              "customer_support",
+              "content_manager",
+            ],
+          },
+          {
+            label: "Website FAQs",
+            disabled: true,
+            icon: HelpCircle,
+            badge: "Soon",
+            requiredRoles: [
+              "super_admin",
+              "admin",
+              "customer_support",
+              "content_manager",
+            ],
+          },
         ],
       },
     ],
@@ -132,13 +230,38 @@ export const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-function hasAccess(item: NavItem, role: Role) {
+function hasAccess(item: NavItem | NavSubItem, role: Role) {
   return !item.requiredRoles || item.requiredRoles.includes(role);
 }
 
 export function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
   const currentRole = (role as Role) || "admin";
+
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    "App CMS": true,
+    "Website CMS": true,
+  });
+
+  // Automatically keep active group open when navigating
+  useEffect(() => {
+    NAV_SECTIONS.forEach(section => {
+      section.items.forEach(item => {
+        if (item.children) {
+          const isChildActive = item.children.some(child =>
+            pathname === child.href || pathname.startsWith(`${child.href}/`)
+          );
+          if (isChildActive) {
+            setOpenGroups(prev => ({ ...prev, [item.label]: true }));
+          }
+        }
+      });
+    });
+  }, [pathname]);
+
+  const toggleGroup = (groupLabel: string) => {
+    setOpenGroups(prev => ({ ...prev, [groupLabel]: !prev[groupLabel] }));
+  };
 
   const getRoleBadge = (userRole: string | null) => {
     switch (userRole) {
@@ -201,9 +324,19 @@ export function Sidebar({ role }: SidebarProps) {
       <ScrollArea className="flex-1 px-3.5 py-5">
         <div className="flex flex-col gap-5">
           {NAV_SECTIONS.map(section => {
-            const filteredItems = section.items.filter(item =>
-              hasAccess(item, currentRole),
-            );
+            const filteredItems = section.items
+              .map(item => {
+                if (item.children) {
+                  const filteredChildren = item.children.filter(child =>
+                    hasAccess(child, currentRole)
+                  );
+                  return filteredChildren.length > 0
+                    ? { ...item, children: filteredChildren }
+                    : null;
+                }
+                return hasAccess(item, currentRole) ? item : null;
+              })
+              .filter(Boolean) as NavItem[];
 
             if (filteredItems.length === 0) return null;
 
@@ -212,12 +345,127 @@ export function Sidebar({ role }: SidebarProps) {
                 <p className="px-3 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
                   {section.title}
                 </p>
-                <nav className="flex flex-col gap-0.5">
-                  {filteredItems.map(({ label, href, icon: Icon, badge }) => {
+                <nav className="flex flex-col gap-1">
+                  {filteredItems.map(item => {
+                    const { label, href, icon: Icon, badge, children } = item;
+
+                    // Group / Sub-menu handling
+                    if (children && children.length > 0) {
+                      const isOpen = openGroups[label] ?? true;
+                      const hasActiveChild = children.some(child =>
+                        pathname === child.href || pathname.startsWith(`${child.href}/`)
+                      );
+
+                      return (
+                        <div key={label} className="flex flex-col">
+                          <button
+                            type="button"
+                            onClick={() => toggleGroup(label)}
+                            className={`group flex items-center justify-between w-full rounded-xl px-3 py-2 text-[13px] font-medium transition-all ${
+                              hasActiveChild
+                                ? "text-slate-900 dark:text-white font-semibold bg-slate-100/70 dark:bg-slate-800/70"
+                                : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <Icon
+                                className={`h-[15px] w-[15px] shrink-0 transition-colors ${
+                                  hasActiveChild
+                                    ? "text-primary"
+                                    : "text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300"
+                                }`}
+                              />
+                              <span className="truncate">{label}</span>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {badge && (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-md bg-primary/10 text-primary">
+                                  {badge}
+                                </span>
+                              )}
+                              <ChevronDown
+                                className={`h-3.5 w-3.5 text-slate-400 dark:text-slate-500 transition-transform duration-200 ${
+                                  isOpen ? "rotate-180" : ""
+                                }`}
+                              />
+                            </div>
+                          </button>
+
+                          {/* Sub items collapsible list */}
+                          {isOpen && (
+                            <div className="mt-0.5 ml-3.5 pl-3 border-l border-slate-200/80 dark:border-slate-800 flex flex-col gap-0.5 py-1">
+                              {children.map(child => {
+                                const ChildIcon = child.icon;
+                                const isChildActive =
+                                  !child.disabled &&
+                                  child.href &&
+                                  (pathname === child.href ||
+                                    pathname.startsWith(`${child.href}/`));
+
+                                if (child.disabled || !child.href) {
+                                  return (
+                                    <div
+                                      key={child.label}
+                                      className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-medium text-slate-400 dark:text-slate-500 cursor-not-allowed select-none"
+                                    >
+                                      {ChildIcon && (
+                                        <ChildIcon className="h-3.5 w-3.5 shrink-0 text-slate-300 dark:text-slate-600" />
+                                      )}
+                                      <span className="flex-1 truncate">{child.label}</span>
+                                      {child.badge && (
+                                        <span className="text-[9px] font-medium px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200/60 dark:border-slate-700/60">
+                                          {child.badge}
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <Link
+                                    key={child.href}
+                                    href={child.href}
+                                    className={`group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-medium transition-all ${
+                                      isChildActive
+                                        ? "bg-primary/10 text-primary font-semibold"
+                                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white font-normal"
+                                    }`}
+                                  >
+                                    {isChildActive && (
+                                      <span className="absolute -left-[13px] top-1/2 -translate-y-1/2 w-1 h-3.5 bg-primary rounded-r-full" />
+                                    )}
+
+                                    {ChildIcon && (
+                                      <ChildIcon
+                                        className={`h-3.5 w-3.5 shrink-0 transition-colors ${
+                                          isChildActive
+                                            ? "text-primary"
+                                            : "text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300"
+                                        }`}
+                                      />
+                                    )}
+                                    <span className="flex-1 truncate">{child.label}</span>
+                                    {child.badge && (
+                                      <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded-full bg-primary/10 text-primary">
+                                        {child.badge}
+                                      </span>
+                                    )}
+                                  </Link>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    // Direct item handling
+                    if (!href) return null;
                     const isActive =
                       href === "/dashboard"
                         ? pathname === "/dashboard"
-                        : pathname.startsWith(href);
+                        : pathname === href || pathname.startsWith(`${href}/`);
 
                     return (
                       <Link
@@ -275,3 +523,4 @@ export function Sidebar({ role }: SidebarProps) {
     </aside>
   );
 }
+
