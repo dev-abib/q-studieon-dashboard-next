@@ -238,7 +238,12 @@ export function useChatSocket(
 
     const socket = io(`${SOCKET_URL}/chat`, {
       withCredentials: true,
-      transports: ["websocket", "polling"],
+      // Polling first: the live reverse proxy (Apache) does not forward
+      // WebSocket upgrades to the backend, so a websocket-first connection
+      // 400s on the upgrade and never falls back (tryAllTransports is off by
+      // default). Long-polling works through the proxy; a failed websocket
+      // upgrade probe leaves the polling connection intact.
+      transports: ["polling", "websocket"],
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
