@@ -27,7 +27,10 @@ import {
   MessageSquareQuote,
   MailQuestion,
   Activity,
+  MessageSquare,
+  CheckSquare,
 } from "lucide-react";
+import { useChatStore } from "@/features/chat/store/use-chat-store";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export type Role =
@@ -227,6 +230,18 @@ export const NAV_SECTIONS: NavSection[] = [
     title: "System",
     items: [
       {
+        label: "Team Chat",
+        href: "/dashboard/team-chat",
+        icon: MessageSquare,
+        requiredRoles: ["super_admin", "admin", "customer_support", "content_manager", "finance"],
+      },
+      {
+        label: "Tasks",
+        href: "/dashboard/tasks",
+        icon: CheckSquare,
+        requiredRoles: ["super_admin", "admin", "customer_support", "content_manager", "finance"],
+      },
+      {
         label: "System Status",
         href: "/dashboard/status",
         icon: Activity,
@@ -244,6 +259,7 @@ function hasAccess(item: NavItem | NavSubItem, role: Role) {
 export function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
   const currentRole = (role as Role) || "admin";
+  const unreadMentionCount = useChatStore((s) => s.unreadMentionCount);
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     "App CMS": true,
@@ -496,6 +512,11 @@ export function Sidebar({ role }: SidebarProps) {
                           }`}
                         />
                         <span className="flex-1 truncate">{label}</span>
+                        {href === "/dashboard/team-chat" && unreadMentionCount > 0 && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-red-500 text-white">
+                            {unreadMentionCount > 9 ? "9+" : unreadMentionCount}
+                          </span>
+                        )}
                         {badge && (
                           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                             {badge}

@@ -46,6 +46,7 @@ import { useLogOut } from "@/features/auth/hooks/use-logout";
 import { CommandPalette } from "@/components/layout/dashboard/CommandPalette";
 
 import { ThemeAccentPicker } from "@/components/layout/dashboard/ThemeAccentPicker";
+import { GlobalNotificationsPanel } from "@/components/layout/dashboard/GlobalNotificationsPanel";
 
 type HeaderProps = {
   admin: Admin;
@@ -256,6 +257,7 @@ export function Header({ admin }: HeaderProps) {
 
       {/* ── Right User Menu & Theme Picker ── */}
       <div className="flex items-center gap-2">
+        <GlobalNotificationsPanel />
         <ThemeAccentPicker />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

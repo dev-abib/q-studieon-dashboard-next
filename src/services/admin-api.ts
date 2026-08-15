@@ -105,6 +105,23 @@ export const adminApi = {
     return res.data;
   },
 
+  updatePermissions: async (
+    staffId: string,
+    permissions: {
+      canDeleteQueries?: boolean;
+      canViewUserDetails?: boolean;
+      canChangePassword?: boolean;
+      canManageFaqs?: boolean;
+      canManagePages?: boolean;
+      canManageTasks?: boolean;
+      canManagePayments?: boolean;
+      canManageReports?: boolean;
+    }
+  ) => {
+    const res = await api.patch(`/admin/update-permissions/${staffId}`, permissions);
+    return res.data;
+  },
+
   getStaffProfile: async (staffId: string) => {
     const res = await api.get(`/admin/staff-profile/${staffId || "me"}`);
     return res.data;

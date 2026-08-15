@@ -53,6 +53,11 @@ export interface StaffProfileData {
     canViewUserDetails: boolean;
     canDeleteQueries: boolean;
     canChangePassword: boolean;
+    canManageFaqs?: boolean;
+    canManagePages?: boolean;
+    canManageTasks?: boolean;
+    canManagePayments?: boolean;
+    canManageReports?: boolean;
     isSuperAdmin: boolean;
   };
   stats: {

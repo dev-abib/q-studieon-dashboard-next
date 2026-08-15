@@ -48,9 +48,7 @@ import {
   useStaffWorkTime,
   useAuditLogs,
 } from "@/features/admin/hooks/use-audit-logs";
-import { useToggleUserDetailsPermission } from "@/features/contact-queries/hooks/use-toggle-user-details-permission";
-import { useToggleDeletePermission } from "@/features/contact-queries/hooks/use-toggle-delete-permission";
-import { useTogglePasswordPermission } from "@/features/admin/hooks/use-toggle-password-permission";
+import { useUpdateAdminPermissions } from "@/features/admin/hooks/use-update-admin-permissions";
 import { useDeleteAdmin } from "@/features/auth/hooks/use-delete-admin";
 import { toast } from "sonner";
 
@@ -74,9 +72,7 @@ export default function AdminProfilePage() {
   });
 
   // Mutation hooks
-  const toggleUserDetailsMutation = useToggleUserDetailsPermission();
-  const toggleDeleteMutation = useToggleDeletePermission();
-  const togglePasswordMutation = useTogglePasswordPermission();
+  const updatePermissionsMutation = useUpdateAdminPermissions();
   const { mutate: deleteAdmin, isPending: isRevoking } = useDeleteAdmin();
 
   if (isLoading) {
@@ -144,23 +140,14 @@ export default function AdminProfilePage() {
     toast.success("IP copied to clipboard");
   };
 
-  const handleToggleUserDetails = () => {
-    toggleUserDetailsMutation.mutate(
-      { staffId: profile.id, canViewUserDetails: !permissions.canViewUserDetails },
-      { onSuccess: () => refetch() }
-    );
-  };
-
-  const handleToggleDelete = () => {
-    toggleDeleteMutation.mutate(
-      { staffId: profile.id, canDelete: !permissions.canDeleteQueries },
-      { onSuccess: () => refetch() }
-    );
-  };
-
-  const handleTogglePassword = () => {
-    togglePasswordMutation.mutate(
-      { staffId: profile.id, canChangePassword: !permissions.canChangePassword },
+  const handleTogglePermission = (field: string, currentValue: boolean) => {
+    updatePermissionsMutation.mutate(
+      {
+        staffId: profile.id,
+        permissions: {
+          [field]: !currentValue,
+        },
+      },
       { onSuccess: () => refetch() }
     );
   };
@@ -789,7 +776,7 @@ export default function AdminProfilePage() {
             </div>
           </DialogHeader>
 
-          <div className="space-y-3 pt-2">
+          <div className="space-y-3 pt-2 max-h-[380px] overflow-y-auto pr-1">
             <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold text-slate-800 dark:text-white">View User Details</p>
@@ -797,7 +784,7 @@ export default function AdminProfilePage() {
               </div>
               <button
                 type="button"
-                onClick={handleToggleUserDetails}
+                onClick={() => handleTogglePermission("canViewUserDetails", Boolean(permissions.canViewUserDetails))}
                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
                   permissions.canViewUserDetails ? "bg-primary" : "bg-slate-200 dark:bg-slate-700"
                 }`}
@@ -815,7 +802,7 @@ export default function AdminProfilePage() {
               </div>
               <button
                 type="button"
-                onClick={handleToggleDelete}
+                onClick={() => handleTogglePermission("canDeleteQueries", Boolean(permissions.canDeleteQueries))}
                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
                   permissions.canDeleteQueries ? "bg-primary" : "bg-slate-200 dark:bg-slate-700"
                 }`}
@@ -833,13 +820,103 @@ export default function AdminProfilePage() {
               </div>
               <button
                 type="button"
-                onClick={handleTogglePassword}
+                onClick={() => handleTogglePermission("canChangePassword", Boolean(permissions.canChangePassword))}
                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
                   permissions.canChangePassword ? "bg-primary" : "bg-slate-200 dark:bg-slate-700"
                 }`}
               >
                 <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
                   permissions.canChangePassword ? "translate-x-5" : "translate-x-0"
+                }`} />
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-slate-800 dark:text-white">Manage FAQs Knowledgebase</p>
+                <p className="text-[11px] text-slate-400">Create, edit, and sequence FAQs in help center.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleTogglePermission("canManageFaqs", Boolean(permissions.canManageFaqs))}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                  permissions.canManageFaqs ? "bg-primary" : "bg-slate-200 dark:bg-slate-700"
+                }`}
+              >
+                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
+                  permissions.canManageFaqs ? "translate-x-5" : "translate-x-0"
+                }`} />
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-slate-800 dark:text-white">Manage CMS Pages</p>
+                <p className="text-[11px] text-slate-400">Publish, modify, and delete dynamic static content pages.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleTogglePermission("canManagePages", Boolean(permissions.canManagePages))}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                  permissions.canManagePages ? "bg-primary" : "bg-slate-200 dark:bg-slate-700"
+                }`}
+              >
+                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
+                  permissions.canManagePages ? "translate-x-5" : "translate-x-0"
+                }`} />
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-slate-800 dark:text-white">Manage Tasks Assignment</p>
+                <p className="text-[11px] text-slate-400">Assign, delete, and manage general team tasks.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleTogglePermission("canManageTasks", Boolean(permissions.canManageTasks))}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                  permissions.canManageTasks ? "bg-primary" : "bg-slate-200 dark:bg-slate-700"
+                }`}
+              >
+                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
+                  permissions.canManageTasks ? "translate-x-5" : "translate-x-0"
+                }`} />
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-slate-800 dark:text-white">Manage Subscriptions & Payments</p>
+                <p className="text-[11px] text-slate-400">Track Stripe billing records and manually override VIP packages.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleTogglePermission("canManagePayments", Boolean(permissions.canManagePayments))}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                  permissions.canManagePayments ? "bg-primary" : "bg-slate-200 dark:bg-slate-700"
+                }`}
+              >
+                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
+                  permissions.canManagePayments ? "translate-x-5" : "translate-x-0"
+                }`} />
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-slate-800 dark:text-white">Manage Platform Reports</p>
+                <p className="text-[11px] text-slate-400">Generate financial audit logs and operational analytics reports.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleTogglePermission("canManageReports", Boolean(permissions.canManageReports))}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                  permissions.canManageReports ? "bg-primary" : "bg-slate-200 dark:bg-slate-700"
+                }`}
+              >
+                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
+                  permissions.canManageReports ? "translate-x-5" : "translate-x-0"
                 }`} />
               </button>
             </div>

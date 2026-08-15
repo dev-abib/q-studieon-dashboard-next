@@ -50,9 +50,7 @@ import { CreateAdminInput } from "@/features/auth/types/create-admin.types";
 import { createAdminSchema } from "@/features/auth/schema/create-admin.schema";
 import { useCreateAdmin } from "@/features/auth/hooks/use-create-admin";
 import { useDeleteAdmin } from "@/features/auth/hooks/use-delete-admin";
-import { useToggleUserDetailsPermission } from "@/features/contact-queries/hooks/use-toggle-user-details-permission";
-import { useToggleDeletePermission } from "@/features/contact-queries/hooks/use-toggle-delete-permission";
-import { useTogglePasswordPermission } from "@/features/admin/hooks/use-toggle-password-permission";
+import { useUpdateAdminPermissions } from "@/features/admin/hooks/use-update-admin-permissions";
 import { authApi } from "@/services/auth-api";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -76,6 +74,11 @@ interface Admin {
   canDeleteQueries?: boolean | null;
   canViewUserDetails?: boolean | null;
   canChangePassword?: boolean | null;
+  canManageFaqs?: boolean | null;
+  canManagePages?: boolean | null;
+  canManageTasks?: boolean | null;
+  canManagePayments?: boolean | null;
+  canManageReports?: boolean | null;
   profilePictureURL: string | null;
   createdAt: string;
 }
@@ -303,9 +306,7 @@ export default function Page() {
 
   const { mutate: createAdmin } = useCreateAdmin();
   const { mutate: deleteAdmin, isPending: isDeleting } = useDeleteAdmin();
-  const toggleUserDetailsMutation = useToggleUserDetailsPermission();
-  const toggleDeleteMutation = useToggleDeletePermission();
-  const togglePasswordMutation = useTogglePasswordPermission();
+  const updatePermissionsMutation = useUpdateAdminPermissions();
 
   const { mutate: sendInvite, isPending: isInviting } = useMutation({
     mutationFn: authApi.inviteMember,
@@ -351,39 +352,17 @@ export default function Page() {
     }
   }
 
-  function handleToggleUserDetails(admin: Admin) {
+  function handleTogglePermission(admin: Admin, field: string, currentValue: boolean) {
     if (!isSuperAdmin) {
       toast.error("Only Super Admins can configure staff permissions.");
       return;
     }
-    const nextState = !Boolean(admin.canViewUserDetails);
-    toggleUserDetailsMutation.mutate({
+    const nextState = !currentValue;
+    updatePermissionsMutation.mutate({
       staffId: admin.id,
-      canViewUserDetails: nextState,
-    });
-  }
-
-  function handleToggleDelete(admin: Admin) {
-    if (!isSuperAdmin) {
-      toast.error("Only Super Admins can configure staff permissions.");
-      return;
-    }
-    const nextState = !Boolean(admin.canDeleteQueries);
-    toggleDeleteMutation.mutate({
-      staffId: admin.id,
-      canDelete: nextState,
-    });
-  }
-
-  function handleTogglePassword(admin: Admin) {
-    if (!isSuperAdmin) {
-      toast.error("Only Super Admins can configure staff permissions.");
-      return;
-    }
-    const nextState = !Boolean(admin.canChangePassword);
-    togglePasswordMutation.mutate({
-      staffId: admin.id,
-      canChangePassword: nextState,
+      permissions: {
+        [field]: nextState,
+      },
     });
   }
 
@@ -683,8 +662,8 @@ export default function Page() {
                             {/* Toggle 1: View User Details */}
                             <button
                               type="button"
-                              onClick={() => handleToggleUserDetails(admin)}
-                              disabled={!isSuperAdmin || toggleUserDetailsMutation.isPending}
+                              onClick={() => handleTogglePermission(admin, "canViewUserDetails", Boolean(admin.canViewUserDetails))}
+                              disabled={!isSuperAdmin || updatePermissionsMutation.isPending}
                               title={
                                 canViewUsers
                                   ? "Click to revoke User Details viewing access"
@@ -703,8 +682,8 @@ export default function Page() {
                             {/* Toggle 2: Delete Contact Queries */}
                             <button
                               type="button"
-                              onClick={() => handleToggleDelete(admin)}
-                              disabled={!isSuperAdmin || toggleDeleteMutation.isPending}
+                              onClick={() => handleTogglePermission(admin, "canDeleteQueries", Boolean(admin.canDeleteQueries))}
+                              disabled={!isSuperAdmin || updatePermissionsMutation.isPending}
                               title={
                                 canDeleteQ
                                   ? "Click to revoke Contact Queries deletion access"
@@ -896,8 +875,8 @@ export default function Page() {
                           {/* Toggle View User Details */}
                           <button
                             type="button"
-                            onClick={() => handleToggleUserDetails(staff)}
-                            disabled={toggleUserDetailsMutation.isPending}
+                            onClick={() => handleTogglePermission(staff, "canViewUserDetails", Boolean(staff.canViewUserDetails))}
+                            disabled={updatePermissionsMutation.isPending}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
                               canView
                                 ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
@@ -911,8 +890,8 @@ export default function Page() {
                           {/* Toggle Delete Queries */}
                           <button
                             type="button"
-                            onClick={() => handleToggleDelete(staff)}
-                            disabled={toggleDeleteMutation.isPending}
+                            onClick={() => handleTogglePermission(staff, "canDeleteQueries", Boolean(staff.canDeleteQueries))}
+                            disabled={updatePermissionsMutation.isPending}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
                               canDel
                                 ? "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20"
@@ -985,7 +964,7 @@ export default function Page() {
                   <button
                     type="button"
                     onClick={() => {
-                      handleToggleUserDetails(selectedStaffForPermissions);
+                      handleTogglePermission(selectedStaffForPermissions, "canViewUserDetails", Boolean(selectedStaffForPermissions.canViewUserDetails));
                       setSelectedStaffForPermissions(prev =>
                         prev
                           ? {
@@ -1026,7 +1005,7 @@ export default function Page() {
                   <button
                     type="button"
                     onClick={() => {
-                      handleToggleDelete(selectedStaffForPermissions);
+                      handleTogglePermission(selectedStaffForPermissions, "canDeleteQueries", Boolean(selectedStaffForPermissions.canDeleteQueries));
                       setSelectedStaffForPermissions(prev =>
                         prev
                           ? {
@@ -1067,7 +1046,7 @@ export default function Page() {
                   <button
                     type="button"
                     onClick={() => {
-                      handleTogglePassword(selectedStaffForPermissions);
+                      handleTogglePermission(selectedStaffForPermissions, "canChangePassword", Boolean(selectedStaffForPermissions.canChangePassword));
                       setSelectedStaffForPermissions(prev =>
                         prev
                           ? {
@@ -1086,6 +1065,206 @@ export default function Page() {
                     <span
                       className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                         selectedStaffForPermissions.canChangePassword
+                          ? "translate-x-5"
+                          : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* 4. Manage FAQs Knowledgebase Switch */}
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 flex items-center justify-between gap-3">
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      Manage FAQs Knowledgebase
+                    </p>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      Create, update, and sequence help center FAQ questions and answers.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleTogglePermission(selectedStaffForPermissions, "canManageFaqs", Boolean(selectedStaffForPermissions.canManageFaqs));
+                      setSelectedStaffForPermissions(prev =>
+                        prev
+                          ? {
+                              ...prev,
+                              canManageFaqs: !prev.canManageFaqs,
+                            }
+                          : null,
+                      );
+                    }}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                      selectedStaffForPermissions.canManageFaqs
+                        ? "bg-primary"
+                        : "bg-slate-200 dark:bg-slate-700"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        selectedStaffForPermissions.canManageFaqs
+                          ? "translate-x-5"
+                          : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* 5. Manage CMS Pages Switch */}
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 flex items-center justify-between gap-3">
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      Manage CMS Pages
+                    </p>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      Create, edit, and publish dynamic platform pages.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleTogglePermission(selectedStaffForPermissions, "canManagePages", Boolean(selectedStaffForPermissions.canManagePages));
+                      setSelectedStaffForPermissions(prev =>
+                        prev
+                          ? {
+                              ...prev,
+                              canManagePages: !prev.canManagePages,
+                            }
+                          : null,
+                      );
+                    }}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                      selectedStaffForPermissions.canManagePages
+                        ? "bg-primary"
+                        : "bg-slate-200 dark:bg-slate-700"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        selectedStaffForPermissions.canManagePages
+                          ? "translate-x-5"
+                          : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* 6. Manage Tasks Assignment Switch */}
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 flex items-center justify-between gap-3">
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      Manage Tasks Assignment
+                    </p>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      Assign tasks to staff members and delete task records.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleTogglePermission(selectedStaffForPermissions, "canManageTasks", Boolean(selectedStaffForPermissions.canManageTasks));
+                      setSelectedStaffForPermissions(prev =>
+                        prev
+                          ? {
+                              ...prev,
+                              canManageTasks: !prev.canManageTasks,
+                            }
+                          : null,
+                      );
+                    }}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                      selectedStaffForPermissions.canManageTasks
+                        ? "bg-primary"
+                        : "bg-slate-200 dark:bg-slate-700"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        selectedStaffForPermissions.canManageTasks
+                          ? "translate-x-5"
+                          : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* 7. Manage Subscriptions & Payments Switch */}
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 flex items-center justify-between gap-3">
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      Manage Subscriptions & Payments
+                    </p>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      Grant manual subscription access and view revenue records.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleTogglePermission(selectedStaffForPermissions, "canManagePayments", Boolean(selectedStaffForPermissions.canManagePayments));
+                      setSelectedStaffForPermissions(prev =>
+                        prev
+                          ? {
+                              ...prev,
+                              canManagePayments: !prev.canManagePayments,
+                            }
+                          : null,
+                      );
+                    }}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                      selectedStaffForPermissions.canManagePayments
+                        ? "bg-primary"
+                        : "bg-slate-200 dark:bg-slate-700"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        selectedStaffForPermissions.canManagePayments
+                          ? "translate-x-5"
+                          : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* 8. Manage Platform Reports Switch */}
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 flex items-center justify-between gap-3">
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      Manage Platform Reports
+                    </p>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      Generate financial and system analytics audit reports.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleTogglePermission(selectedStaffForPermissions, "canManageReports", Boolean(selectedStaffForPermissions.canManageReports));
+                      setSelectedStaffForPermissions(prev =>
+                        prev
+                          ? {
+                              ...prev,
+                              canManageReports: !prev.canManageReports,
+                            }
+                          : null,
+                      );
+                    }}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                      selectedStaffForPermissions.canManageReports
+                        ? "bg-primary"
+                        : "bg-slate-200 dark:bg-slate-700"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        selectedStaffForPermissions.canManageReports
                           ? "translate-x-5"
                           : "translate-x-0"
                       }`}
