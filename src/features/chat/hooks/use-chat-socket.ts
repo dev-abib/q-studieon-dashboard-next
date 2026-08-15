@@ -6,6 +6,7 @@ import { io, Socket } from "socket.io-client";
 import { useChatStore } from "../store/use-chat-store";
 import type { ChatMessage, TypingIndicator, MentionNotification } from "../types/chat.types";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const SOCKET_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") ||
@@ -24,82 +25,109 @@ function webPushEnabled(): boolean {
   );
 }
 
-// ── Notification helpers ──────────────────────────────────────────────────────
+function registerServiceWorker() {
+  if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((reg) => {
+        console.log("[SW Registered successfully]:", reg.scope);
+      })
+      .catch((err) => {
+        console.warn("[SW Registration error]:", err);
+      });
+  }
+}
+
 function requestNotificationPermission() {
   if (typeof window === "undefined") return;
   if (!("Notification" in window)) return;
   if (Notification.permission === "default") {
-    Notification.requestPermission();
+    Notification.requestPermission().catch(() => {});
   }
+}
+
+let globalAudioCtx: AudioContext | null = null;
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (!globalAudioCtx) {
+    const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioCtxClass) {
+      globalAudioCtx = new AudioCtxClass();
+    }
+  }
+  if (globalAudioCtx && globalAudioCtx.state === "suspended") {
+    globalAudioCtx.resume().catch(() => {});
+  }
+  return globalAudioCtx;
+}
+
+if (typeof window !== "undefined") {
+  const unlockAudio = () => {
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+    window.removeEventListener("click", unlockAudio);
+    window.removeEventListener("keydown", unlockAudio);
+    window.removeEventListener("touchstart", unlockAudio);
+  };
+  window.addEventListener("click", unlockAudio);
+  window.addEventListener("keydown", unlockAudio);
+  window.addEventListener("touchstart", unlockAudio);
 }
 
 function playNotificationSound() {
   if (typeof window === "undefined") return;
+
+  // 1. HTML5 Audio play attempt
   try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-    
-    // First tone (D5)
-    const osc1 = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    osc1.type = "sine";
-    osc1.frequency.setValueAtTime(587.33, ctx.currentTime);
-    gain1.gain.setValueAtTime(0.08, ctx.currentTime);
-    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
-    osc1.connect(gain1);
-    gain1.connect(ctx.destination);
-    osc1.start();
-    osc1.stop(ctx.currentTime + 0.12);
-    
-    // Second tone (A5) after 100ms
-    setTimeout(() => {
-      try {
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-        osc2.type = "sine";
-        osc2.frequency.setValueAtTime(880, ctx.currentTime);
-        gain2.gain.setValueAtTime(0.08, ctx.currentTime);
-        gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
-        osc2.connect(gain2);
-        gain2.connect(ctx.destination);
-        osc2.start();
-        osc2.stop(ctx.currentTime + 0.18);
-      } catch {
-        // ignore Context closed
-      }
-    }, 90);
-  } catch (err) {
-    // browser autoplay blocks
-  }
+    const audio = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFb4x+kI2Xmqazt7y/wsfN1ODn6u3u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u");
+    audio.volume = 0.7;
+    audio.play().catch(() => {});
+  } catch {}
+
+  // 2. Web Audio API synthesized tone
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch (err) {}
 }
 
 function playAlarmSound() {
   if (typeof window === "undefined") return;
-  try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-    
-    const playBeep = (freq: number, delay: number, duration: number) => {
-      setTimeout(() => {
-        try {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = "triangle";
-          osc.frequency.setValueAtTime(freq, ctx.currentTime);
-          gain.gain.setValueAtTime(0.12, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start();
-          osc.stop(ctx.currentTime + duration);
-        } catch {}
-      }, delay);
-    };
 
-    playBeep(987.77, 0, 0.15); // B5 tone
-    playBeep(987.77, 180, 0.15); // B5 tone repeat
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(987.77, ctx.currentTime);
+    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.4);
   } catch (err) {}
 }
 
@@ -108,101 +136,78 @@ function showPushNotification(
   body: string,
   icon?: string,
   senderId?: string,
-  messageId?: string
+  messageId?: string,
+  targetUrl: string = "/dashboard/team-chat"
 ) {
   if (typeof window === "undefined") return;
-  if (typeof window !== "undefined" && !window.isSecureContext) {
-    console.warn(
-      "[Notifications Debug] Site is running in an INSECURE context (HTTP). Chrome/Edge security policies block Web Push and system notifications on insecure origins. Please access via localhost or HTTPS."
-    );
-  }
-  if (!("Notification" in window)) {
-    console.warn("[Notifications] Not supported in this browser");
-    return;
-  }
-  if (Notification.permission !== "granted") {
-    console.warn("[Notifications] Permission not granted");
-    return;
-  }
+  if (!("Notification" in window)) return;
 
-  // ▸ Resolve absolute URL to prevent browser dropping notifications in background tabs
-  let absoluteIcon = "";
-  try {
-    absoluteIcon = new URL(icon || "/favicon.ico", window.location.origin).href;
-  } catch {
-    absoluteIcon = "";
-  }
+  const sendNotification = () => {
+    try {
+      let absoluteIcon: string | undefined = undefined;
+      if (icon && (icon.startsWith("http://") || icon.startsWith("https://") || icon.startsWith("data:"))) {
+        absoluteIcon = icon;
+      } else if (icon && icon.startsWith("/")) {
+        absoluteIcon = window.location.origin + icon;
+      }
 
-  const payload = {
-    title,
-    body,
-    icon: absoluteIcon,
-    tag: `chat-msg-${messageId || Date.now()}`,
-    senderId,
-    url: `/dashboard/team-chat`,
-  };
-
-  try {
-    if ("serviceWorker" in navigator) {
-      console.log("[SW] Triggering background notification via registration");
-      navigator.serviceWorker.ready
-        .then((reg) => {
-          reg.showNotification(title, {
-            body: payload.body,
-            icon: payload.icon,
-            badge: payload.icon,
-            tag: payload.tag,
-            renotify: true,
-            data: { url: payload.url },
-          } as any);
-        })
-        .catch((err) => {
-          console.warn("[SW] Ready promise failed, falling back to direct notification:", err);
-          const notif = new Notification(title, {
-            body: payload.body,
-            icon: payload.icon,
-            badge: payload.icon,
-            tag: payload.tag,
-            renotify: true,
-          } as any);
-          setTimeout(() => notif.close(), 5000);
-          notif.onclick = () => {
-            window.focus();
-            notif.close();
-          };
-        });
-    } else {
-      console.log("[Notification] Direct fallback");
+      console.log("[Notification] Direct OS Notification trigger:", title);
       const notif = new Notification(title, {
-        body: payload.body,
-        icon: payload.icon,
-        badge: payload.icon,
-        tag: payload.tag,
-        renotify: true,
-      } as any);
-
-      // Auto-close after 5s
-      setTimeout(() => notif.close(), 5000);
+        body,
+        ...(absoluteIcon ? { icon: absoluteIcon } : {}),
+      });
 
       notif.onclick = () => {
         window.focus();
+        if (typeof window !== "undefined" && targetUrl) {
+          window.location.href = targetUrl;
+        }
         notif.close();
       };
+    } catch (err) {
+      console.warn("[OS Notification Direct Error]:", err);
     }
-  } catch (err) {
-    console.error("[Notification] Failed to display:", err);
+  };
+
+  if (Notification.permission === "granted") {
+    sendNotification();
+  } else if (Notification.permission === "default") {
+    Notification.requestPermission().then((permission) => {
+      if (permission === "granted") sendNotification();
+      else console.warn("[Notifications] Permission denied by user");
+    });
+  } else {
+    console.warn("[Notifications] Permission denied");
   }
 }
 
 // ── Room-key helper ───────────────────────────────────────────────────────────
-// For a DM message, the "partner" from the current user's perspective is:
-//   - The sender (if someone else sent it)
-//   - The dmPartnerId (if I sent it)
-//   - The currentUserId (if I sent it to myself, fallback)
 function dmRoomKey(msg: ChatMessage, currentUserId: string): string {
   const partnerId =
     msg.senderId === currentUserId ? msg.dmPartnerId! : msg.senderId;
   return `dm:${partnerId}`;
+}
+
+export function triggerSystemNotification(
+  title: string,
+  body: string,
+  type: "task" | "inquiry" | "mention" | "alert" | "system" = "inquiry",
+  targetUrl: string = "/dashboard/queries"
+) {
+  if (typeof window === "undefined") return;
+
+  const { systemNotifications, addSystemNotification, showToast } = useChatStore.getState();
+
+  const isDuplicate = systemNotifications.some(
+    (n) => n.title === title && n.body === body && Date.now() - new Date(n.timestamp).getTime() < 1000
+  );
+  if (isDuplicate) return;
+
+  addSystemNotification({ title, body, type, targetUrl });
+  playNotificationSound();
+  showPushNotification(title, body, undefined, undefined, undefined, targetUrl);
+  showToast(title, body);
+  toast(title, { description: body });
 }
 
 export function useChatSocket(
@@ -223,14 +228,12 @@ export function useChatSocket(
     incrementUnread,
     addPendingMention,
     setSurveillanceJoined,
-    showToast,
-    addSystemNotification,
   } = useChatStore();
 
   useEffect(() => {
     if (!currentUserId) return;
 
-    // Request browser notification permission on mount
+    registerServiceWorker();
     requestNotificationPermission();
 
     const socket = io(`${SOCKET_URL}/chat`, {
@@ -253,10 +256,6 @@ export function useChatSocket(
     };
     document.addEventListener("visibilitychange", handleVisibility);
 
-    // ── Optimistic-message safety net ─────────────────────────────────────────
-    // If the server never acknowledges a send and never broadcasts the echo
-    // (socket died mid-send, handler threw, etc.), remove the stuck temp
-    // message after a grace period so it doesn't linger as a ghost.
     const pruneTimer = setInterval(() => {
       useChatStore.getState().pruneStuckTempMessages();
     }, 5000);
@@ -264,9 +263,6 @@ export function useChatSocket(
     // ── Lifecycle ─────────────────────────────────────────────────────────────
     socket.on("connect", () => {
       setConnected(true);
-      // Re-join all group rooms. socket.io clears every room on the server when
-      // a socket drops, so on (re)connect we must re-emit joinGroup for each
-      // group we belong to — otherwise real-time group messages stop arriving.
       const { groups } = useChatStore.getState();
       for (const g of groups) {
         socket.emit("joinGroup", { groupId: g.id });
@@ -293,45 +289,30 @@ export function useChatSocket(
     socket.on("newMessage", ({ message }: { message: ChatMessage }) => {
       console.log("[Chat Debug] Received newMessage event. message:", message, "currentUserId:", currentUserId);
 
-      // ▸ FIX: compute room key correctly for both sender and recipient
       const key = message.groupId
         ? `group:${message.groupId}`
         : dmRoomKey(message, currentUserId ?? "");
 
       appendMessage(key, message);
 
-      // Play alert sound & show browser push notification if sender is someone else
       if (message.senderId !== currentUserId) {
-        const { activeConversation } = useChatStore.getState();
-        const isCurrentActive =
-          activeConversation &&
-          ((message.groupId &&
-            activeConversation.type === "group" &&
-            activeConversation.id === message.groupId) ||
-            (!message.groupId &&
-              activeConversation.type === "dm" &&
-              activeConversation.id === message.senderId));
+        const senderName = message.sender?.name ?? "Someone";
+        const snippet =
+          message.attachmentUrl && !message.content
+            ? `📎 ${message.attachmentName ?? "File"}`
+            : message.content.slice(0, 80);
 
-        const isWindowFocused = typeof document !== "undefined" && document.hasFocus();
-        if (!isWindowFocused || !isCurrentActive) {
-          playNotificationSound();
-          
-          const senderName = message.sender?.name ?? "Someone";
-          const snippet =
-            message.attachmentUrl && !message.content
-              ? `📎 ${message.attachmentName ?? "File"}`
-              : message.content.slice(0, 80);
-          if (!webPushEnabled()) {
-            showPushNotification(
-              `💬 ${senderName}`,
-              snippet,
-              message.sender?.profilePictureURL ?? undefined,
-              message.senderId,
-              message.id
-            );
-          }
-          showToast(`💬 ${senderName}`, snippet);
-        }
+        const notifTitle = message.groupId
+          ? `💬 ${senderName} in group`
+          : `💬 New message from ${senderName}`;
+
+        const targetUrl = message.groupId
+          ? `/dashboard/team-chat`
+          : `/dashboard/team-chat`;
+
+        triggerSystemNotification(notifTitle, `"${snippet}"`, message.groupId ? "task" : "inquiry", targetUrl);
+
+        queryClient.invalidateQueries({ queryKey: ["chat", key] });
       }
     });
 
@@ -344,7 +325,6 @@ export function useChatSocket(
     });
 
     socket.on("messageDeleted", ({ messageId }: { messageId: string }) => {
-      // Scan all rooms since we don't know which
       const { messages } = useChatStore.getState();
       for (const key of Object.keys(messages)) {
         removeMessage(key, messageId);
@@ -368,18 +348,8 @@ export function useChatSocket(
     socket.on("mentionNotification", (n: MentionNotification) => {
       incrementUnread();
       addPendingMention(n);
-      addSystemNotification({ title: `🔔 ${n.senderName} mentioned you`, body: `"${n.contentSnippet}"`, type: "mention" });
-      playNotificationSound();
-      if (!webPushEnabled()) {
-        showPushNotification(
-          `🔔 ${n.senderName} mentioned you`,
-          `"${n.contentSnippet}"`,
-          undefined,
-          n.dmPartnerId || undefined,
-          n.messageId
-        );
-      }
-      showToast(`🔔 ${n.senderName} mentioned you`, `"${n.contentSnippet}"`);
+      const mentionUrl = "/dashboard/team-chat";
+      triggerSystemNotification(`🔔 ${n.senderName} mentioned you`, `"${n.contentSnippet}"`, "mention", mentionUrl);
     });
 
     // ── Surveillance notification ─────────────────────────────────────────────
@@ -393,25 +363,8 @@ export function useChatSocket(
         roomLabel: string;
       }) => {
         console.log("[Chat Debug] Received suspiciousMessage alert:", data);
-        addSystemNotification({
-          title: `⚠️ Suspicious Activity Detected`,
-          body: `${data.senderEmail} flagged in ${data.roomLabel} for "${data.reason}"`,
-          type: "alert",
-        });
-        playAlarmSound();
-        if (!webPushEnabled()) {
-          showPushNotification(
-            `⚠️ SUSPICIOUS ACTIVITY DETECTED`,
-            `${data.senderEmail} flagged in ${data.roomLabel} for "${data.reason}"`,
-            "/favicon.ico",
-            data.senderId,
-            data.messageId
-          );
-        }
-        showToast(
-          `🚨 Suspicious Activity Detected`,
-          `${data.senderEmail} flagged in ${data.roomLabel}. Reason: ${data.reason}`
-        );
+        const alertUrl = "/dashboard/team-chat";
+        triggerSystemNotification(`⚠️ SUSPICIOUS ACTIVITY DETECTED`, `${data.senderEmail} flagged in ${data.roomLabel} for "${data.reason}"`, "alert", alertUrl);
         queryClient.invalidateQueries({ queryKey: ["chat", "surveillance"] });
       }
     );
@@ -419,24 +372,28 @@ export function useChatSocket(
     // ── Global System Push Notifications ──────────────────────────────────────
     socket.on(
       "systemNotification",
-      (data: { title: string; body: string; type?: string; data?: any }) => {
+      (data: { title: string; body: string; type?: string; data?: any; url?: string }) => {
+        if (data.data?.targetUserId && String(data.data.targetUserId) !== String(currentUserId)) {
+          return;
+        }
+
         console.log("[Global System Notification Received]:", data);
-        // Detect notification type from title/type for icon mapping
-        const notifType = data.type as any ??
+
+        const notifType = (data.type as any) ??
           (data.title.includes("Task") || data.title.includes("📋") || data.title.includes("📈")
             ? "task"
             : data.title.includes("Inquiry") || data.title.includes("📨")
+            ? "inquiry"
+            : data.title.includes("Report") || data.title.includes("📄")
             ? "inquiry"
             : data.title.includes("SUSPICIOUS") || data.title.includes("⚠️")
             ? "alert"
             : "system");
 
-        addSystemNotification({ title: data.title, body: data.body, type: notifType });
-        playNotificationSound();
-        if (!webPushEnabled()) {
-          showPushNotification(data.title, data.body);
-        }
-        showToast(data.title, data.body);
+        const targetUrl = data.url || data.data?.url || (notifType === "task" ? "/dashboard/tasks" : notifType === "inquiry" ? "/dashboard/queries" : "/dashboard");
+
+        triggerSystemNotification(data.title, data.body, notifType, targetUrl);
+
         queryClient.invalidateQueries({ queryKey: ["tasks"] });
         queryClient.invalidateQueries({ queryKey: ["contact-queries"] });
       }

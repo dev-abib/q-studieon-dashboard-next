@@ -49,6 +49,7 @@ export interface ChatGroup {
   name: string;
   description: string | null;
   avatarColor: string;
+  avatarUrl?: string | null;
   isArchived: boolean;
   createdById: string;
   createdAt: string;

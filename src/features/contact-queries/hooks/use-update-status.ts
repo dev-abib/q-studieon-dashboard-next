@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { contactQueriesApi } from '@/services/contact-queries.api';
 import { ContactQueryStatus } from '../types/contact-queries.types';
+import { triggerSystemNotification } from '@/features/chat/hooks/use-chat-socket';
 import { toast } from 'sonner';
 
 export const useUpdateQueryStatus = () => {

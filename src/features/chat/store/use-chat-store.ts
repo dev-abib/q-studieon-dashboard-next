@@ -20,6 +20,7 @@ export interface SystemNotification {
   type: "task" | "inquiry" | "mention" | "alert" | "system";
   timestamp: Date;
   read: boolean;
+  targetUrl?: string;
 }
 
 interface ChatState {
@@ -69,8 +70,37 @@ interface ChatState {
   markSystemNotificationsRead: () => void;
 }
 
-const roomKey = (conv: ActiveConversation) =>
-  `${conv.type}:${conv.id}`;
+const NOTIF_STORAGE_KEY = "dwellr_system_notifications";
+
+function loadStoredNotifications(): { systemNotifications: SystemNotification[]; unreadSystemCount: number } {
+  if (typeof window === "undefined") {
+    return { systemNotifications: [], unreadSystemCount: 0 };
+  }
+  try {
+    const raw = localStorage.getItem(NOTIF_STORAGE_KEY);
+    if (!raw) return { systemNotifications: [], unreadSystemCount: 0 };
+    const parsed = JSON.parse(raw);
+    const notifications = (parsed || []).map((n: any) => ({
+      ...n,
+      timestamp: new Date(n.timestamp),
+    }));
+    return {
+      systemNotifications: notifications,
+      unreadSystemCount: notifications.filter((n: any) => !n.read).length,
+    };
+  } catch {
+    return { systemNotifications: [], unreadSystemCount: 0 };
+  }
+}
+
+function saveStoredNotifications(list: SystemNotification[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(list));
+  } catch {}
+}
+
+const initialStored = loadStoredNotifications();
 
 export const useChatStore = create<ChatState>()(
   immer((set) => ({
@@ -87,8 +117,8 @@ export const useChatStore = create<ChatState>()(
     pendingMentions: [],
     isSurveillanceJoined: false,
     toast: null,
-    systemNotifications: [],
-    unreadSystemCount: 0,
+    systemNotifications: initialStored.systemNotifications,
+    unreadSystemCount: initialStored.unreadSystemCount,
 
     showToast: (title, body) => set({ toast: { title, body, visible: true } }),
     hideToast: () => set({ toast: null }),
@@ -141,9 +171,7 @@ export const useChatStore = create<ChatState>()(
     removeMessage: (key, messageId) =>
       set((state) => {
         if (!state.messages[key]) return;
-        state.messages[key] = state.messages[key].map((m) =>
-          m.id === messageId ? { ...m, isDeleted: true } : m
-        );
+        state.messages[key] = state.messages[key].filter((m) => m.id !== messageId);
       }),
 
     // Swap the optimistic temp copy for the server-confirmed message (used when
@@ -169,15 +197,18 @@ export const useChatStore = create<ChatState>()(
     // (no ack and no room broadcast) so they don't linger as ghost messages.
     pruneStuckTempMessages: (maxAgeMs = 15000) =>
       set((state) => {
-        const cutoff = Date.now() - maxAgeMs;
+        const now = Date.now();
         for (const key of Object.keys(state.messages)) {
-          const next = state.messages[key].filter((m) => {
-            if (!m.id.startsWith("temp-")) return true;
+          const stuck = state.messages[key].filter((m) => {
+            if (!m.id.startsWith("temp-")) return false;
             const ts = new Date(m.createdAt).getTime();
-            return Number.isNaN(ts) ? true : ts >= cutoff;
+            return now - ts > maxAgeMs;
           });
-          if (next.length !== state.messages[key].length) {
-            state.messages[key] = next;
+          if (stuck.length > 0) {
+            const stuckIds = new Set(stuck.map((m) => m.id));
+            state.messages[key] = state.messages[key].filter(
+              (m) => !stuckIds.has(m.id)
+            );
           }
         }
       }),
@@ -185,19 +216,11 @@ export const useChatStore = create<ChatState>()(
     setTyping: (key, indicator) =>
       set((state) => {
         if (!state.typing[key]) state.typing[key] = [];
-        if (!indicator.isTyping) {
-          state.typing[key] = state.typing[key].filter(
-            (t) => t.staffId !== indicator.staffId
-          );
-        } else {
-          const existing = state.typing[key].findIndex(
-            (t) => t.staffId === indicator.staffId
-          );
-          if (existing >= 0) {
-            state.typing[key][existing] = indicator;
-          } else {
-            state.typing[key] = [...state.typing[key], indicator];
-          }
+        state.typing[key] = state.typing[key].filter(
+          (t) => t.staffId !== indicator.staffId
+        );
+        if (indicator.isTyping) {
+          state.typing[key].push(indicator);
         }
       }),
 
@@ -226,23 +249,30 @@ export const useChatStore = create<ChatState>()(
           type: n.type,
           timestamp: new Date(),
           read: false,
+          targetUrl: n.targetUrl,
         };
         // Keep at most 50 notifications
         const updated = [newNotif, ...state.systemNotifications].slice(0, 50);
         state.systemNotifications = updated;
-        state.unreadSystemCount = updated.filter(x => !x.read).length;
+        state.unreadSystemCount = updated.filter((x) => !x.read).length;
+        saveStoredNotifications(updated);
       }),
 
     clearSystemNotifications: () =>
-      set({ systemNotifications: [], unreadSystemCount: 0 }),
+      set((state) => {
+        state.systemNotifications = [];
+        state.unreadSystemCount = 0;
+        saveStoredNotifications([]);
+      }),
 
     markSystemNotificationsRead: () =>
       set((state) => {
-        state.systemNotifications = state.systemNotifications.map(n => ({
+        state.systemNotifications = state.systemNotifications.map((n) => ({
           ...n,
           read: true,
         }));
         state.unreadSystemCount = 0;
+        saveStoredNotifications(state.systemNotifications);
       }),
   }))
 );

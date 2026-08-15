@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { ChatMessage, StaffSummary } from "../types/chat.types";
 import { useChatStore } from "../store/use-chat-store";
 import { UserProfileCard } from "./UserProfileCard";
+import { ImagePreviewModal } from "./ImagePreviewModal";
 import { Edit2, Trash2, Flag, AlertTriangle, ShieldAlert, FileText, Image as ImageIcon, Video, Music } from "lucide-react";
 
 interface Props {
@@ -24,19 +25,40 @@ function formatTime(dateStr: string) {
 }
 
 function parseContent(content: string, mentions: ChatMessage["mentions"], isSelf?: boolean) {
-  if (!mentions.length) return content;
+  if (!content) return "";
+
+  const markClass = isSelf
+    ? "bg-white/30 text-white rounded px-1.5 py-0.5 font-bold"
+    : "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 rounded px-1.5 py-0.5 font-bold";
 
   let result = content;
-  for (const m of mentions) {
-    const name = m.mentioned?.name ?? "someone";
-    const markClass = isSelf
-      ? "bg-white/20 text-white rounded px-1.5 py-0.5 font-bold"
-      : "bg-primary/10 text-primary dark:bg-primary/20 rounded px-1.5 py-0.5 font-bold";
-    result = result.replace(
-      new RegExp(`@${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "g"),
-      `<mark class="${markClass}">@${name}</mark>`
-    );
+
+  // Highlight @everyone / @all / @channel tags
+  result = result.replace(
+    /(^|\s)@(everyone|all|channel)(?=\s|$|[.,!?;:])/gi,
+    `$1<mark class="bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200 font-bold rounded px-1.5 py-0.5">@$2</mark>`
+  );
+
+  if (mentions?.length) {
+    for (const m of mentions) {
+      const name = m.mentioned?.name ?? "someone";
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      result = result.replace(
+        new RegExp(`(^|\\s)@${escaped}(?=\\s|$|[.,!?;:])`, "gi"),
+        `$1<mark class="${markClass}">@${name}</mark>`
+      );
+    }
   }
+
+  // Fallback regex for unmatched @Name
+  result = result.replace(
+    /(^|\s)@([A-Z][a-z0-9_]+(?:\s[A-Z][a-z0-9_]+)?)(?=\s|$|[.,!?;:])/g,
+    (match, p1, p2) => {
+      if (result.includes(`<mark`)) return match;
+      return `${p1}<mark class="${markClass}">@${p2}</mark>`;
+    }
+  );
+
   return result;
 }
 
@@ -52,6 +74,7 @@ export function MessageBubble({
 }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
+  const [showImageModal, setShowImageModal] = useState(false);
 
   const isSelf = message.senderId === currentUserId;
   const isSuperAdmin = currentUserRole === "super_admin" || isOwner;
@@ -164,27 +187,49 @@ export function MessageBubble({
             {/* Attachments rendering */}
             {message.attachmentUrl && (() => {
               const url = message.attachmentUrl;
-              const isImage = message.attachmentType === "image" || /\.(jpeg|jpg|gif|png|webp|svg|bmp)$/i.test(url);
-              const isVideo = message.attachmentType === "video" || /\.(mp4|webm|ogg|mov)$/i.test(url);
-              const isAudio = message.attachmentType === "audio" || /\.(mp3|wav|ogg|aac|flac|m4a)$/i.test(url);
+              const type = message.attachmentType?.toLowerCase();
+              const isImage =
+                type === "image" ||
+                /\.(jpeg|jpg|gif|png|webp|svg|bmp)($|\?)/i.test(url) ||
+                url.includes("/image/upload/") ||
+                url.includes("cloudinary.com");
+              const isVideo =
+                type === "video" ||
+                /\.(mp4|webm|ogg|mov)($|\?)/i.test(url) ||
+                url.includes("/video/upload/");
+              const isAudio =
+                type === "audio" ||
+                /\.(mp3|wav|ogg|aac|flac|m4a)($|\?)/i.test(url);
 
               return (
                 <div className={`mt-1.5 max-w-sm w-full flex ${isSelf ? "justify-end" : "justify-start"}`}>
                   {isImage && (
-                    <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 group/img shadow-sm max-w-full">
-                      <img
-                        src={url}
-                        alt={message.attachmentName ?? "Image"}
-                        className="max-h-56 w-auto object-contain cursor-pointer hover:opacity-95 transition-opacity"
-                        onClick={() => window.open(url, "_blank")}
-                      />
-                      <div
-                        className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm rounded-lg opacity-0 group-hover/img:opacity-100 transition-opacity p-1.5 text-white cursor-pointer"
-                        onClick={() => window.open(url, "_blank")}
-                      >
-                        <span className="text-[10px] font-medium">View Original</span>
+                    <>
+                      <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 group/img shadow-sm max-w-full">
+                        <img
+                          src={url}
+                          alt={message.attachmentName ?? "Image"}
+                          className="max-h-56 w-auto object-contain cursor-pointer hover:opacity-95 transition-opacity"
+                          onClick={() => setShowImageModal(true)}
+                        />
+                        <div
+                          className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm rounded-lg opacity-0 group-hover/img:opacity-100 transition-opacity px-2 py-1 text-white cursor-pointer flex items-center gap-1"
+                          onClick={() => setShowImageModal(true)}
+                        >
+                          <ImageIcon className="h-3 w-3" />
+                          <span className="text-[10px] font-medium">Expand Preview</span>
+                        </div>
                       </div>
-                    </div>
+
+                      {showImageModal && (
+                        <ImagePreviewModal
+                          imageUrl={url}
+                          imageName={message.attachmentName ?? "Image"}
+                          senderName={message.sender.name ?? undefined}
+                          onClose={() => setShowImageModal(false)}
+                        />
+                      )}
+                    </>
                   )}
 
                   {isVideo && (
@@ -271,7 +316,7 @@ export function MessageBubble({
         {(isSelf || isSuperAdmin) && onDelete && (
           <button
             onClick={() => onDelete(message.id)}
-            title="Delete message"
+            title={`Delete message by ${message.sender.name ?? "user"}`}
             className="p-1.5 rounded-lg text-slate-450 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -280,7 +325,7 @@ export function MessageBubble({
         {isSuperAdmin && !message.isFlagged && onFlag && (
           <button
             onClick={() => onFlag(message.id)}
-            title="Flag message"
+            title={`Flag message by ${message.sender.name ?? "user"}`}
             className="p-1.5 rounded-lg text-slate-450 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors"
           >
             <Flag className="h-3.5 w-3.5" />

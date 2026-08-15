@@ -8,7 +8,7 @@ import { GroupManageModal } from "./GroupManageModal";
 import { useCreateGroup } from "../hooks/use-chat-groups";
 import {
   Hash,
-  MessageSquare,
+  MessageCircle,
   Plus,
   Circle,
   Search,
@@ -76,7 +76,7 @@ export function ChatSidebar({ currentUserId, currentUserRole, isOwner }: Props) 
       {/* Header */}
       <div className="px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5 text-primary" />
+          <MessageCircle className="h-5 w-5 text-primary" />
           <h2 className="font-semibold text-slate-900 dark:text-white">Conversations</h2>
         </div>
         {/* Mention bell */}
@@ -160,12 +160,20 @@ export function ChatSidebar({ currentUserId, currentUserRole, isOwner }: Props) 
                         : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                     }`}
                   >
-                    <div
-                      className="h-8 w-8 rounded-lg flex items-center justify-center text-white shrink-0 text-xs font-bold"
-                      style={{ backgroundColor: g.avatarColor }}
-                    >
-                      <Hash className="h-4 w-4" />
-                    </div>
+                    {g.avatarUrl ? (
+                      <img
+                        src={g.avatarUrl}
+                        alt={g.name}
+                        className="h-8 w-8 rounded-lg object-cover shrink-0 shadow-sm border border-slate-200/40"
+                      />
+                    ) : (
+                      <div
+                        className="h-8 w-8 rounded-lg flex items-center justify-center text-white shrink-0 text-xs font-bold shadow-sm"
+                        style={{ backgroundColor: g.avatarColor || "#6366f1" }}
+                      >
+                        {g.name?.slice(0, 2).toUpperCase() || <Hash className="h-4 w-4" />}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <span className="truncate block font-semibold text-slate-800 dark:text-slate-200">

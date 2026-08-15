@@ -11,6 +11,7 @@ import { useCurrentUser } from "@/features/admin/hooks/use-get-met";
 import { adminSchema } from "@/features/auth/schema/admin.schema";
 import type { StaffSummary, ActiveConversation } from "@/features/chat/types/chat.types";
 import {
+  MessagesSquare,
   MessageSquare,
   ShieldAlert,
   Wifi,
@@ -57,7 +58,7 @@ export default function TeamChatPage() {
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
         <div className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5 text-primary" />
+          <MessagesSquare className="h-5 w-5 text-primary" />
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
             Team Chat
           </h1>

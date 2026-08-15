@@ -11,9 +11,12 @@ import type {
   ChatMessage,
   StaffSummary,
 } from "../types/chat.types";
-import { Hash, User, Loader2, ChevronUp } from "lucide-react";
+import { Hash, User, Loader2, ChevronUp, Settings, Users, UserPlus, Info } from "lucide-react";
 import { chatApi } from "@/services/chat.api";
 import { useQueryClient } from "@tanstack/react-query";
+import { GroupManageModal } from "./GroupManageModal";
+import { GroupInfoDrawer } from "./GroupInfoDrawer";
+import { useUpdateGroup, useArchiveGroup } from "../hooks/use-chat-groups";
 
 interface Props {
   conversation: ActiveConversation;
@@ -39,6 +42,11 @@ export function ChatWindow({
     groups,
     onlineStaffIds,
   } = useChatStore();
+
+  const updateGroup = useUpdateGroup();
+  const archiveGroup = useArchiveGroup();
+  const [showGroupManage, setShowGroupManage] = useState(false);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
 
   const qc = useQueryClient();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -219,31 +227,121 @@ export function ChatWindow({
       : null;
 
   return (
-    <div className="flex flex-col h-full min-w-0 flex-1">
+    <div className="flex h-full min-w-0 flex-1 overflow-hidden relative">
+      <div className="flex flex-col h-full min-w-0 flex-1">
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900">
         {conversation.type === "group" ? (
           <>
-            <div
-              className="h-8 w-8 rounded-xl flex items-center justify-center text-white shrink-0"
-              style={{ backgroundColor: group?.avatarColor ?? "#6366f1" }}
-            >
-              <Hash className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="font-semibold text-sm text-slate-900 dark:text-white">
-                {group?.name ?? conversation.label}
-              </p>
+            {group?.avatarUrl ? (
+              <img
+                src={group.avatarUrl}
+                alt={group.name}
+                className="h-10 w-10 rounded-xl object-cover shrink-0 shadow-sm border border-slate-200 dark:border-slate-700"
+              />
+            ) : (
+              <div
+                className="h-10 w-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm text-sm font-bold"
+                style={{ backgroundColor: group?.avatarColor ?? "#6366f1" }}
+              >
+                {group?.name?.slice(0, 2).toUpperCase() || <Hash className="h-5 w-5" />}
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="font-semibold text-sm text-slate-900 dark:text-white truncate">
+                  {group?.name ?? conversation.label}
+                </p>
+                {group && (
+                  <span className="text-[10px] font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full shrink-0">
+                    {group.members.length} member{group.members.length !== 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
               {group?.description && (
-                <p className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-xs">
+                <p className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-md">
                   {group.description}
                 </p>
               )}
             </div>
+
+            {/* Group Members Avatars Stack */}
             {group && (
-              <span className="ml-auto text-xs text-slate-400 shrink-0">
-                {group.members.length} member{group.members.length !== 1 ? "s" : ""}
-              </span>
+              <div className="flex items-center gap-2 ml-auto shrink-0">
+                <div className="hidden sm:flex items-center -space-x-2 overflow-hidden mr-2">
+                  {group.members.slice(0, 5).map((m) => (
+                    <div
+                      key={m.staffId}
+                      title={m.staff?.name ?? "Member"}
+                      className="inline-block h-7 w-7 rounded-full ring-2 ring-white dark:ring-slate-900 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-700 dark:text-slate-200"
+                    >
+                      {m.staff?.profilePictureURL ? (
+                        <img src={m.staff.profilePictureURL} className="h-full w-full rounded-full object-cover" alt="" />
+                      ) : (
+                        m.staff?.name?.[0]?.toUpperCase() ?? "M"
+                      )}
+                    </div>
+                  ))}
+                  {group.members.length > 5 && (
+                    <div className="h-7 w-7 rounded-full ring-2 ring-white dark:ring-slate-900 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                      +{group.members.length - 5}
+                    </div>
+                  )}
+                </div>
+
+                {/* Group Info & Settings Buttons */}
+                <button
+                  onClick={() => setShowGroupInfo((v) => !v)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-colors shadow-sm ${
+                    showGroupInfo
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750"
+                  }`}
+                >
+                  <Info className="h-3.5 w-3.5" />
+                  <span>Group Info</span>
+                </button>
+
+                {(currentUserRole === "super_admin" || isOwner || group.createdById === currentUserId) && (
+                  <button
+                    onClick={() => setShowGroupManage(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors shadow-sm"
+                  >
+                    <Settings className="h-3.5 w-3.5 text-primary" />
+                    <span>Settings</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Group Manage Modal */}
+            {showGroupManage && group && (
+              <GroupManageModal
+                mode="edit"
+                group={group}
+                staffList={staffList}
+                isLoading={updateGroup.isPending || archiveGroup.isPending}
+                onConfirm={(payload) => {
+                  updateGroup.mutate(
+                    { groupId: group.id, payload },
+                    {
+                      onSuccess: () => setShowGroupManage(false),
+                      onError: (err: any) => {
+                        alert(err?.response?.data?.message || "Failed to save group changes");
+                      },
+                    }
+                  );
+                }}
+                onArchive={() => {
+                  archiveGroup.mutate(group.id, {
+                    onSuccess: () => setShowGroupManage(false),
+                    onError: (err: any) => {
+                      alert(err?.response?.data?.message || "Failed to archive group");
+                    },
+                  });
+                }}
+                onClose={() => setShowGroupManage(false)}
+              />
             )}
           </>
         ) : (() => {
@@ -395,6 +493,24 @@ export function ChatWindow({
             </div>
           </div>
         </div>
+      )}
+      </div>
+
+      {/* Side-by-side Group Info Drawer */}
+      {showGroupInfo && group && (
+        <GroupInfoDrawer
+          group={group}
+          currentUserId={currentUserId}
+          currentUserRole={currentUserRole}
+          isOwner={isOwner}
+          onlineStaffIds={onlineStaffIds}
+          onStartDm={onStartDm}
+          onEditGroup={() => {
+            setShowGroupInfo(false);
+            setShowGroupManage(true);
+          }}
+          onClose={() => setShowGroupInfo(false)}
+        />
       )}
     </div>
   );

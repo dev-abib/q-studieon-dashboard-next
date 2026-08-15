@@ -117,7 +117,7 @@ export interface UserDirectoryItem {
   };
 }
 
-export function getUserEngagementTier(u: UserDirectoryItem) {
+function getUserEngagementTier(u: UserDirectoryItem) {
   const reports = u._count?.reports || 0;
   const now = new Date();
   const lastLogin = u.lastLoginAt ? new Date(u.lastLoginAt) : new Date(u.createdAt);

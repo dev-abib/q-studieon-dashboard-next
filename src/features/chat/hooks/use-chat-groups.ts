@@ -16,8 +16,16 @@ export function useChatGroups() {
   });
 
   useEffect(() => {
-    if (query.data) setGroups(query.data);
-  }, [query.data]);
+    if (query.data) {
+      setGroups(query.data);
+      const socket = useChatStore.getState().socket;
+      if (socket && socket.connected) {
+        query.data.forEach((g) => {
+          socket.emit("joinGroup", { groupId: g.id });
+        });
+      }
+    }
+  }, [query.data, setGroups]);
 
   return query;
 }
@@ -26,15 +34,36 @@ export function useCreateGroup() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: chatApi.createGroup,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["chat", "groups"] }),
+    onSuccess: (newGroup) => {
+      qc.invalidateQueries({ queryKey: ["chat", "groups"] });
+      if (newGroup) {
+        const { groups, setGroups } = useChatStore.getState();
+        setGroups([newGroup, ...groups]);
+      }
+    },
   });
 }
 
 export function useUpdateGroup() {
   const qc = useQueryClient();
+  const { setGroups } = useChatStore();
   return useMutation({
     mutationFn: ({ groupId, payload }: { groupId: string; payload: any }) =>
       chatApi.updateGroup(groupId, payload),
+    onSuccess: (updatedGroup) => {
+      qc.invalidateQueries({ queryKey: ["chat", "groups"] });
+      if (updatedGroup) {
+        const { groups } = useChatStore.getState();
+        setGroups(groups.map((g) => (g.id === updatedGroup.id ? { ...g, ...updatedGroup } : g)));
+      }
+    },
+  });
+}
+
+export function useLeaveGroup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (groupId: string) => chatApi.leaveGroup(groupId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["chat", "groups"] }),
   });
 }

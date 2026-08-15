@@ -19,6 +19,7 @@ export const chatApi = {
     name: string;
     description?: string;
     avatarColor?: string;
+    avatarUrl?: string;
     memberIds: string[];
   }): Promise<ChatGroup> => {
     const res = await api.post("/chat/groups", payload);
@@ -31,11 +32,16 @@ export const chatApi = {
       name?: string;
       description?: string;
       avatarColor?: string;
+      avatarUrl?: string;
       memberIds?: string[];
     }
   ): Promise<ChatGroup> => {
     const res = await api.patch(`/chat/groups/${groupId}`, payload);
     return res.data?.data ?? res.data;
+  },
+
+  leaveGroup: async (groupId: string): Promise<void> => {
+    await api.post(`/chat/groups/${groupId}/leave`);
   },
 
   archiveGroup: async (groupId: string): Promise<void> => {

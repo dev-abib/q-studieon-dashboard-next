@@ -162,7 +162,7 @@ function formatTimeAgo(dateStr: string) {
   });
 }
 
-export default function QueriesPage() {
+function QueriesPageContent() {
   const searchParams = useSearchParams();
   const urlSearch = searchParams.get("search") || "";
   const urlStatus = (searchParams.get("status") as ContactQueryStatus) || "ALL";
@@ -174,6 +174,7 @@ export default function QueriesPage() {
 
   // Filters & State
   const [search, setSearch] = useState(urlSearch);
+  const [searchVal, setSearchVal] = useState(urlSearch);
   const [statusFilter, setStatusFilter] = useState<ContactQueryStatus | "ALL">(urlStatus);
   const [priorityFilter, setPriorityFilter] = useState<ContactQueryPriority | "ALL">(urlPriority);
   const [registeredFilter, setRegisteredFilter] = useState<"ALL" | "REGISTERED" | "GUEST">("ALL");
@@ -183,10 +184,20 @@ export default function QueriesPage() {
   const [sortBy, setSortBy] = useState<SortField>("createdAt");
   const [sortOrder, setSortOrder] = useState<SortDir>("desc");
 
+  // Debounce search input changes to prevent constant API refetching
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setSearch(searchVal);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(handler);
+  }, [searchVal]);
+
   // Keep search in sync if search param in URL changes
   useEffect(() => {
     const q = searchParams.get("search");
-    if (q !== null && q !== search) {
+    if (q !== null && q !== searchVal) {
+      setSearchVal(q);
       setSearch(q);
       setPage(1);
     }
@@ -270,24 +281,28 @@ export default function QueriesPage() {
   const queries = queriesRes?.data || [];
   const meta = queriesRes?.meta;
 
-  // Selected query object derived from queries or activeQueryId
+  // Selected query object derived from queries or activeQueryId (no incorrect fallback to queries[0])
   const activeQuery = useMemo(() => {
     if (!queries || queries.length === 0) return null;
     if (activeQueryId) {
-      const found = queries.find(q => q.id === activeQueryId);
-      if (found) return found;
+      return queries.find(q => q.id === activeQueryId) || null;
     }
     return queries[0] || null;
   }, [queries, activeQueryId]);
 
-  // Set default active query on first load in split mode
+  // Set default active query on first load, or sync if currently selected query disappears (e.g. filtered out)
   useEffect(() => {
-    if (queries.length > 0 && !activeQueryId) {
-      setActiveQueryId(queries[0].id);
-      setCustomSubject(`Re: ${queries[0].subject}`);
-      setReplyMessage("");
+    if (queries.length > 0) {
+      const activeExists = queries.some(q => q.id === activeQueryId);
+      if (!activeQueryId || !activeExists) {
+        setActiveQueryId(queries[0].id);
+        setCustomSubject(`Re: ${queries[0].subject}`);
+        setReplyMessage("");
+      }
     }
   }, [queries, activeQueryId]);
+
+
 
   // Reply mutation for active inquiry
   const replyMutation = useReplyQuery(activeQuery?.id || "");
@@ -402,11 +417,7 @@ export default function QueriesPage() {
       setReplyMessage("");
       if (replyOpen) setReplyOpen(false);
 
-      // Auto-advance to next inquiry in queue if available in split mode
-      const currentIndex = queries.findIndex(q => q.id === activeQuery.id);
-      if (currentIndex !== -1 && currentIndex < queries.length - 1) {
-        handleSelectQueryInSplit(queries[currentIndex + 1]);
-      }
+
     } catch {
       // Handled by hook
     }
@@ -803,167 +814,222 @@ export default function QueriesPage() {
       {/* ─── Compact Quick Metric Ribbon ──────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {/* Total Inquiries */}
-        <div
-          onClick={() => {
-            setStatusFilter("ALL");
-            setPriorityFilter("ALL");
-            setPage(1);
-          }}
-          className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs cursor-pointer hover:border-primary/40 transition-all flex items-center justify-between group"
-        >
-          <div>
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-              Total Inquiries
-            </p>
-            <p className="text-xl font-bold text-slate-900 dark:text-white mt-0.5 group-hover:text-primary transition-colors">
-              {stats?.total ?? queries.length}
-            </p>
-          </div>
-          <div className="h-8.5 w-8.5 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
-            <MailQuestion className="h-4 w-4" />
-          </div>
-        </div>
+        {(() => {
+          const isTotalActive = statusFilter === "ALL" && priorityFilter === "ALL" && registeredFilter === "ALL" && assignedFilter === "ALL" && !search;
+          return (
+            <div
+              onClick={() => {
+                setStatusFilter("ALL");
+                setPriorityFilter("ALL");
+                setRegisteredFilter("ALL");
+                setAssignedFilter("ALL");
+                setSearchVal("");
+                setSearch("");
+                setPage(1);
+              }}
+              className={`p-3 rounded-2xl border shadow-2xs cursor-pointer transition-all flex items-center justify-between group ${
+                isTotalActive
+                  ? "border-primary bg-primary/5 dark:bg-primary/10 ring-1 ring-primary/20"
+                  : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-primary/40"
+              }`}
+            >
+              <div>
+                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  Total Inquiries
+                </p>
+                <p className="text-xl font-bold text-slate-900 dark:text-white mt-0.5 group-hover:text-primary transition-colors">
+                  {stats?.total ?? queries.length}
+                </p>
+              </div>
+              <div className="h-8.5 w-8.5 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+                <MailQuestion className="h-4 w-4" />
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Pending Response */}
-        <div
-          onClick={() => {
-            setStatusFilter("PENDING");
-            setPage(1);
-          }}
-          className={`p-3 rounded-2xl bg-white dark:bg-slate-900 border shadow-2xs cursor-pointer transition-all flex items-center justify-between ${
-            statusFilter === "PENDING"
-              ? "border-amber-500 ring-1 ring-amber-500/30 bg-amber-50/20"
-              : "border-slate-200/80 dark:border-slate-800 hover:border-amber-400"
-          }`}
-        >
-          <div>
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-              Pending Action
-            </p>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
-                {stats?.pending ?? 0}
-              </p>
-              {Boolean(stats?.urgentCount) && (
-                <span className="text-[10px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.2 rounded-md">
-                  {stats?.urgentCount} Urgent
-                </span>
-              )}
+        {(() => {
+          const isPendingActive = statusFilter === "PENDING" && priorityFilter === "ALL" && registeredFilter === "ALL" && assignedFilter === "ALL" && !search;
+          return (
+            <div
+              onClick={() => {
+                setStatusFilter("PENDING");
+                setPriorityFilter("ALL");
+                setRegisteredFilter("ALL");
+                setAssignedFilter("ALL");
+                setSearchVal("");
+                setSearch("");
+                setPage(1);
+              }}
+              className={`p-3 rounded-2xl border shadow-2xs cursor-pointer transition-all flex items-center justify-between group ${
+                isPendingActive
+                  ? "border-amber-500 bg-amber-50/20 dark:bg-amber-950/20 ring-1 ring-amber-500/30"
+                  : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-amber-400"
+              }`}
+            >
+              <div>
+                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  Pending Action
+                </p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
+                    {stats?.pending ?? 0}
+                  </p>
+                  {Boolean(stats?.urgentCount) && (
+                    <span className="text-[9.5px] font-bold text-red-600 dark:text-red-400 bg-red-500/10 px-1.5 py-0.2 rounded-md">
+                      {stats?.urgentCount} Urgent
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="h-8.5 w-8.5 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
+                <Clock className="h-4 w-4" />
+              </div>
             </div>
-          </div>
-          <div className="h-8.5 w-8.5 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
-            <Clock className="h-4 w-4" />
-          </div>
-        </div>
+          );
+        })()}
 
         {/* Resolved / Replied */}
-        <div
-          onClick={() => {
-            setStatusFilter("RESOLVED");
-            setPage(1);
-          }}
-          className={`p-3 rounded-2xl bg-white dark:bg-slate-900 border shadow-2xs cursor-pointer transition-all flex items-center justify-between ${
-            statusFilter === "RESOLVED"
-              ? "border-emerald-500 ring-1 ring-emerald-500/30 bg-emerald-50/20"
-              : "border-slate-200/80 dark:border-slate-800 hover:border-emerald-400"
-          }`}
-        >
-          <div>
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-              Resolved Cases
-            </p>
-            <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
-              {stats?.resolved ?? 0}
-            </p>
-          </div>
-          <div className="h-8.5 w-8.5 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
-            <CheckCircle2 className="h-4 w-4" />
-          </div>
-        </div>
+        {(() => {
+          const isResolvedActive = statusFilter === "RESOLVED" && priorityFilter === "ALL" && registeredFilter === "ALL" && assignedFilter === "ALL" && !search;
+          return (
+            <div
+              onClick={() => {
+                setStatusFilter("RESOLVED");
+                setPriorityFilter("ALL");
+                setRegisteredFilter("ALL");
+                setAssignedFilter("ALL");
+                setSearchVal("");
+                setSearch("");
+                setPage(1);
+              }}
+              className={`p-3 rounded-2xl border shadow-2xs cursor-pointer transition-all flex items-center justify-between group ${
+                isResolvedActive
+                  ? "border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20 ring-1 ring-emerald-500/30"
+                  : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-emerald-400"
+              }`}
+            >
+              <div>
+                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  Resolved Cases
+                </p>
+                <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  {stats?.resolved ?? 0}
+                </p>
+              </div>
+              <div className="h-8.5 w-8.5 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Registered App Users */}
-        <div
-          onClick={() => {
-            setRegisteredFilter(prev => (prev === "REGISTERED" ? "ALL" : "REGISTERED"));
-            setPage(1);
-          }}
-          className={`p-3 rounded-2xl bg-white dark:bg-slate-900 border shadow-2xs cursor-pointer transition-all flex items-center justify-between ${
-            registeredFilter === "REGISTERED"
-              ? "border-primary ring-1 ring-primary/30 bg-primary/5"
-              : "border-slate-200/80 dark:border-slate-800 hover:border-primary/40"
-          }`}
-        >
-          <div>
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-              Registered Users
-            </p>
-            <p className="text-xl font-bold text-primary mt-0.5">
-              {stats?.registeredUserCount ?? 0}
-            </p>
-          </div>
-          <div className="h-8.5 w-8.5 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
-            <UserCheck className="h-4 w-4" />
-          </div>
-        </div>
+        {(() => {
+          const isRegisteredActive = registeredFilter === "REGISTERED" && statusFilter === "ALL" && priorityFilter === "ALL" && assignedFilter === "ALL" && !search;
+          return (
+            <div
+              onClick={() => {
+                setRegisteredFilter("REGISTERED");
+                setStatusFilter("ALL");
+                setPriorityFilter("ALL");
+                setAssignedFilter("ALL");
+                setSearchVal("");
+                setSearch("");
+                setPage(1);
+              }}
+              className={`p-3 rounded-2xl border shadow-2xs cursor-pointer transition-all flex items-center justify-between group ${
+                isRegisteredActive
+                  ? "border-primary bg-primary/5 dark:bg-primary/10 ring-1 ring-primary/20"
+                  : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-primary/40"
+              }`}
+            >
+              <div>
+                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  Registered Users
+                </p>
+                <p className="text-xl font-bold text-primary mt-0.5">
+                  {stats?.registeredUserCount ?? 0}
+                </p>
+              </div>
+              <div className="h-8.5 w-8.5 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+                <UserCheck className="h-4 w-4" />
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* ─── Modern Filter & Staff Hub Strip ──────────────────────────────── */}
-      <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-2.5">
-        <div className="flex flex-col md:flex-row gap-2 items-stretch md:items-center justify-between">
+      <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/85 dark:border-slate-800 shadow-2xs space-y-3">
+        <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
           {/* Search Box */}
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <Input
-              value={search}
-              onChange={e => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
+              value={searchVal}
+              onChange={e => setSearchVal(e.target.value)}
               placeholder="Search sender, email, subject, or message content..."
-              className="pl-8.5 pr-8 rounded-xl text-xs h-8 bg-slate-50/50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700"
+              className="pl-9.5 pr-8 rounded-xl text-xs h-8 bg-slate-50/50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 focus-visible:ring-primary/20"
             />
-            {search && (
+            {searchVal && (
               <button
                 type="button"
                 onClick={() => {
+                  setSearchVal("");
                   setSearch("");
                   setPage(1);
                 }}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
 
-          {/* Pill Filters */}
-          <div className="flex flex-wrap items-center gap-1.5 text-xs">
-            {/* Status Pills */}
-            <div className="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800/80 p-0.5 border border-slate-200/60 dark:border-slate-700/60">
-              {(["ALL", "PENDING", "IN_PROGRESS", "RESOLVED"] as const).map(st => (
-                <button
-                  key={st}
-                  type="button"
-                  onClick={() => {
-                    setStatusFilter(st);
-                    setPage(1);
-                  }}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
-                    statusFilter === st
-                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs"
-                      : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
-                  }`}
+          {/* Filters Row */}
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            {/* Status Selector */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl h-8 text-[11px] gap-1.5 bg-slate-50/50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 hover:border-slate-300"
                 >
-                  {st === "ALL"
-                    ? "All Status"
-                    : st === "PENDING"
-                    ? "Pending"
-                    : st === "IN_PROGRESS"
-                    ? "In Progress"
-                    : "Resolved"}
-                </button>
-              ))}
-            </div>
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                  <span>
+                    {statusFilter === "ALL"
+                      ? "All Statuses"
+                      : statusFilter === "PENDING"
+                      ? "Pending"
+                      : statusFilter === "IN_PROGRESS"
+                      ? "In Progress"
+                      : "Resolved"}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44 rounded-xl text-xs">
+                <DropdownMenuLabel className="text-[11px] text-slate-400">Filter by Status</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => { setStatusFilter("ALL"); setPage(1); }}>
+                  All Statuses
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => { setStatusFilter("PENDING"); setPage(1); }} className="flex items-center justify-between">
+                  <span>Pending</span>
+                  {getStatusBadge("PENDING")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setStatusFilter("IN_PROGRESS"); setPage(1); }} className="flex items-center justify-between">
+                  <span>In Progress</span>
+                  {getStatusBadge("IN_PROGRESS")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setStatusFilter("RESOLVED"); setPage(1); }} className="flex items-center justify-between">
+                  <span>Resolved</span>
+                  {getStatusBadge("RESOLVED")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Priority Filter Dropdown */}
             <DropdownMenu>
@@ -971,16 +1037,16 @@ export default function QueriesPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-xl h-7.5 text-[11px] gap-1.5 bg-slate-50/50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700"
+                  className="rounded-xl h-8 text-[11px] gap-1.5 bg-slate-50/50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 hover:border-slate-300"
                 >
-                  <Zap className="h-3 w-3 text-amber-500" />
+                  <Zap className="h-3.5 w-3.5 text-amber-500" />
                   <span>
                     {priorityFilter === "ALL" ? "Priority" : `${priorityFilter}`}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44 rounded-xl text-xs">
-                <DropdownMenuLabel className="text-[11px]">Filter by Priority</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-[11px] text-slate-400">Filter by Priority</DropdownMenuLabel>
                 <DropdownMenuItem
                   onClick={() => {
                     setPriorityFilter("ALL");
@@ -1006,15 +1072,50 @@ export default function QueriesPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* User Type Filter Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl h-8 text-[11px] gap-1.5 bg-slate-50/50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 hover:border-slate-300"
+                >
+                  <UserCheck className="h-3.5 w-3.5 text-primary" />
+                  <span>
+                    {registeredFilter === "ALL"
+                      ? "All User Types"
+                      : registeredFilter === "REGISTERED"
+                      ? "Registered Users"
+                      : "Guests / Non-Users"}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44 rounded-xl text-xs">
+                <DropdownMenuLabel className="text-[11px] text-slate-400">Filter by User Type</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => { setRegisteredFilter("ALL"); setPage(1); }}>
+                  All User Types
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => { setRegisteredFilter("REGISTERED"); setPage(1); }} className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <span>Registered Users</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setRegisteredFilter("GUEST"); setPage(1); }} className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-slate-400" />
+                  <span>Guests</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             {/* Staff Filter Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-xl h-7.5 text-[11px] gap-1.5 bg-slate-50/50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700"
+                  className="rounded-xl h-8 text-[11px] gap-1.5 bg-slate-50/50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 hover:border-slate-300"
                 >
-                  <Users className="h-3 w-3 text-slate-400" />
+                  <Users className="h-3.5 w-3.5 text-slate-400" />
                   <span>
                     {assignedFilter === "ALL"
                       ? "Assignee"
@@ -1077,7 +1178,7 @@ export default function QueriesPage() {
                 variant="ghost"
                 size="sm"
                 onClick={handleResetFilters}
-                className="h-7.5 px-2 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900"
+                className="h-8 px-2.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-900 hover:bg-slate-100"
               >
                 Reset
               </Button>
@@ -1085,11 +1186,75 @@ export default function QueriesPage() {
           </div>
         </div>
 
+        {/* Active Filters Row */}
+        {(statusFilter !== "ALL" ||
+          priorityFilter !== "ALL" ||
+          registeredFilter !== "ALL" ||
+          assignedFilter !== "ALL" ||
+          search) && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-1.5 text-[10.5px]">
+            <span className="text-slate-400 font-semibold uppercase tracking-wider text-[9px] mr-1">Active Filters:</span>
+            
+            {search && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-semibold border border-primary/20">
+                Search: "{search}"
+                <button type="button" onClick={() => { setSearchVal(""); setSearch(""); }} className="hover:text-slate-700 text-slate-400">
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </span>
+            )}
+
+            {statusFilter !== "ALL" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-semibold border border-blue-200/50 dark:border-blue-900/30">
+                Status: {statusFilter.toLowerCase()}
+                <button type="button" onClick={() => setStatusFilter("ALL")} className="hover:text-blue-700 text-blue-400">
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </span>
+            )}
+
+            {priorityFilter !== "ALL" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-405 font-semibold border border-amber-200/50 dark:border-amber-900/30">
+                Priority: {priorityFilter.toLowerCase()}
+                <button type="button" onClick={() => setPriorityFilter("ALL")} className="hover:text-amber-700 text-amber-400">
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </span>
+            )}
+
+            {registeredFilter !== "ALL" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-200/55 dark:border-emerald-900/30">
+                User: {registeredFilter === "REGISTERED" ? "registered" : "guest"}
+                <button type="button" onClick={() => setRegisteredFilter("ALL")} className="hover:text-emerald-700 text-emerald-400">
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </span>
+            )}
+
+            {assignedFilter !== "ALL" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 font-semibold border border-violet-200/50 dark:border-violet-900/30">
+                Assignee: {assignedFilter === "UNASSIGNED" ? "unassigned" : staffMembers.find(s => s.id === assignedFilter)?.name || "Staff"}
+                <button type="button" onClick={() => setAssignedFilter("ALL")} className="hover:text-violet-750 text-violet-400">
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </span>
+            )}
+
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="text-slate-400 hover:text-slate-900 font-bold ml-1 hover:underline text-[10px]"
+            >
+              Clear All
+            </button>
+          </div>
+        )}
+
         {/* Live Staff Workload Badges Ribbon */}
         {stats?.staffWorkload && stats.staffWorkload.length > 0 && (
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 overflow-x-auto pb-1 text-xs [scrollbar-width:none]">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0">
-              Team Workload:
+          <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 overflow-x-auto pb-1 text-xs [scrollbar-width:none]">
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0 mr-1">
+              Staff filter:
             </span>
             <button
               type="button"
@@ -1097,10 +1262,10 @@ export default function QueriesPage() {
                 setAssignedFilter("ALL");
                 setPage(1);
               }}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold shrink-0 transition-all ${
+              className={`h-7 px-3 rounded-full text-xs font-semibold shrink-0 transition-all ${
                 assignedFilter === "ALL"
                   ? "bg-primary text-primary-foreground shadow-2xs"
-                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+                  : "bg-slate-100 dark:bg-slate-850 text-slate-700 dark:text-slate-300 hover:bg-slate-200"
               }`}
             >
               All ({stats.total})
@@ -1111,32 +1276,40 @@ export default function QueriesPage() {
                 setAssignedFilter("UNASSIGNED");
                 setPage(1);
               }}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold shrink-0 transition-all ${
+              className={`h-7 px-3 rounded-full text-xs font-semibold shrink-0 transition-all ${
                 assignedFilter === "UNASSIGNED"
                   ? "bg-amber-500 text-white shadow-2xs"
-                  : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 hover:bg-amber-100"
+                  : "bg-amber-50 dark:bg-amber-955/35 text-amber-700 dark:text-amber-400 hover:bg-amber-100"
               }`}
             >
               Unassigned ({stats.unassignedCount ?? 0})
             </button>
-            {stats.staffWorkload.map(staff => (
-              <button
-                key={staff.staffId}
-                type="button"
-                onClick={() => {
-                  setAssignedFilter(staff.staffId);
-                  setPage(1);
-                }}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold shrink-0 flex items-center gap-1.5 transition-all ${
-                  assignedFilter === staff.staffId
-                    ? "bg-primary text-primary-foreground shadow-2xs"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200"
-                }`}
-              >
-                <span>{staff.staffName.split(" ")[0]}</span>
-                <span className="opacity-70 text-[10px]">({staff.total})</span>
-              </button>
-            ))}
+            {stats.staffWorkload.map(staff => {
+              const isActive = assignedFilter === staff.staffId;
+              return (
+                <button
+                  key={staff.staffId}
+                  type="button"
+                  onClick={() => {
+                    setAssignedFilter(staff.staffId);
+                    setPage(1);
+                  }}
+                  className={`h-7 pl-1.5 pr-3 rounded-full text-xs font-semibold shrink-0 flex items-center gap-1.5 transition-all border ${
+                    isActive
+                      ? "bg-primary text-primary-foreground border-primary shadow-2xs"
+                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-350 text-slate-700 dark:text-slate-300"
+                  }`}
+                >
+                  <div className="h-4.5 w-4.5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-[9.5px] shrink-0 border border-primary/20">
+                    {staff.staffName ? staff.staffName[0].toUpperCase() : "S"}
+                  </div>
+                  <span>{staff.staffName.split(" ")[0]}</span>
+                  <span className={`text-[9.5px] px-1 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-slate-100 dark:bg-slate-850 text-slate-400"}`}>
+                    {staff.total}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -2816,5 +2989,19 @@ export default function QueriesPage() {
         </DialogContent>
       </Dialog>
     </section>
+  );
+}
+
+export default function QueriesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full min-h-screen flex items-center justify-center">
+          <Loader2 className="h-6 w-6 text-primary animate-spin" />
+        </div>
+      }
+    >
+      <QueriesPageContent />
+    </Suspense>
   );
 }

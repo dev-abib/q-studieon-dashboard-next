@@ -41,22 +41,27 @@ export function MentionInput({ staffList, onSend, onTyping, disabled, placeholde
   } | null>(null);
 
   // Collect @mentions from value.
-  // Match the full staff name after "@" (e.g. "@Alice Smith") rather than
-  // extracting a raw token, which would greedily swallow the rest of the
-  // sentence ("@Alice Smith hey" -> "alice smith hey") and never match.
   const extractMentionedIds = useCallback(
     (text: string): string[] => {
-      return staffList
-        .filter((s) => {
-          if (!s.name) return false;
-          const escaped = s.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const re = new RegExp(
-            `(^|\\s)@${escaped}(?=\\s|$|[.,!?;:])`,
-            "i"
-          );
-          return re.test(text);
-        })
-        .map((s) => s.id);
+      const ids = new Set<string>();
+
+      // Check if text mentions everyone / all / channel
+      const mentionsEveryone = /(^|\s)@(everyone|all|channel)(?=\s|$|[.,!?;:])/i.test(text);
+      if (mentionsEveryone) {
+        staffList.forEach((s) => ids.add(s.id));
+      }
+
+      // Individual user mentions
+      staffList.forEach((s) => {
+        if (!s.name) return;
+        const escaped = s.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const re = new RegExp(`(^|\\s)@${escaped}(?=\\s|$|[.,!?;:])`, "i");
+        if (re.test(text)) {
+          ids.add(s.id);
+        }
+      });
+
+      return Array.from(ids);
     },
     [staffList]
   );
@@ -72,9 +77,26 @@ export function MentionInput({ staffList, onSend, onTyping, disabled, placeholde
     if (match) {
       const q = match[1].toLowerCase();
       setMentionQuery(q);
-      setSuggestions(
-        staffList.filter((s) => s.name?.toLowerCase().includes(q)).slice(0, 6)
+
+      const everyoneItem: StaffSummary = {
+        id: "EVERYONE_TAG",
+        name: "everyone",
+        email: "Notify all group members",
+        role: "system",
+        profilePictureURL: null,
+      };
+
+      const matchedStaff = staffList.filter((s) =>
+        s.name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q)
       );
+
+      const items: StaffSummary[] = [];
+      if ("everyone".startsWith(q) || "all".startsWith(q) || q === "") {
+        items.push(everyoneItem);
+      }
+      items.push(...matchedStaff);
+
+      setSuggestions(items.slice(0, 7));
       setSelectedSuggestion(0);
     } else {
       setMentionQuery(null);
@@ -134,16 +156,38 @@ export function MentionInput({ staffList, onSend, onTyping, disabled, placeholde
     setIsUploading(true);
     try {
       const uploaded = await chatApi.uploadAttachment(file);
-      setAttachment({
-        url: uploaded.url,
-        type: uploaded.type,
-        name: uploaded.name,
-        sizeBytes: uploaded.sizeBytes,
-        publicId: uploaded.publicId,
-      });
+      if (uploaded?.url) {
+        setAttachment({
+          url: uploaded.url,
+          type: uploaded.type,
+          name: uploaded.name,
+          sizeBytes: uploaded.sizeBytes,
+          publicId: uploaded.publicId,
+        });
+      } else {
+        throw new Error("No URL returned");
+      }
     } catch (error) {
-      console.error("Upload failed", error);
-      alert("File upload failed. Please try again.");
+      console.warn("[Attachment Upload] Cloudinary upload unavailable, using Data URL fallback:", error);
+      const mime = file.type;
+      let type = "document";
+      if (mime.startsWith("image/")) type = "image";
+      else if (mime.startsWith("video/")) type = "video";
+      else if (mime.startsWith("audio/")) type = "audio";
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          setAttachment({
+            url: reader.result,
+            type,
+            name: file.name,
+            sizeBytes: file.size,
+            publicId: `local-${Date.now()}`,
+          });
+        }
+      };
+      reader.readAsDataURL(file);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -218,23 +262,44 @@ export function MentionInput({ staffList, onSend, onTyping, disabled, placeholde
         </div>
       )}
 
-      {attachment && (
-        <div className="flex items-center justify-between gap-2 text-xs bg-slate-100 dark:bg-slate-800 rounded-xl p-2 border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center gap-2 min-w-0">
-            {getAttachmentIcon(attachment.type)}
-            <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-xs">
-              {attachment.name}
-            </span>
-            <span className="text-[10px] text-slate-400">({formatSize(attachment.sizeBytes)})</span>
+      {attachment && (() => {
+        const type = attachment.type?.toLowerCase();
+        const isImg =
+          type === "image" ||
+          /\.(jpeg|jpg|gif|png|webp|svg|bmp)($|\?)/i.test(attachment.url) ||
+          attachment.url.includes("/image/upload/") ||
+          attachment.url.includes("cloudinary.com");
+        return (
+          <div className="flex items-center justify-between gap-3 text-xs bg-slate-100 dark:bg-slate-800 rounded-2xl p-2.5 border border-slate-200 dark:border-slate-700 shadow-sm animate-in fade-in duration-150">
+            <div className="flex items-center gap-3 min-w-0">
+              {isImg ? (
+                <div className="relative h-12 w-12 rounded-xl overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 bg-black/5">
+                  <img src={attachment.url} alt={attachment.name} className="h-full w-full object-cover" />
+                </div>
+              ) : (
+                <div className="p-2 rounded-xl bg-primary/10 text-primary shrink-0">
+                  {getAttachmentIcon(attachment.type)}
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-xs">
+                  {attachment.name}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  {isImg ? "Image attachment • " : ""}{formatSize(attachment.sizeBytes)}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setAttachment(null)}
+              title="Remove attachment"
+              className="p-1.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            onClick={() => setAttachment(null)}
-            className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Input row */}
       <div className="flex items-end gap-2 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700 px-3 py-2 focus-within:ring-2 focus-within:ring-primary/30 transition-all">

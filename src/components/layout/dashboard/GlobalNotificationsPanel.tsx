@@ -1,5 +1,7 @@
+// src/components/layout/dashboard/GlobalNotificationsPanel.tsx
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -64,6 +66,7 @@ const TYPE_CONFIG: Record<
 };
 
 export function GlobalNotificationsPanel() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [panelPos, setPanelPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -75,6 +78,21 @@ export function GlobalNotificationsPanel() {
     markSystemNotificationsRead,
     clearSystemNotifications,
   } = useChatStore();
+
+  const handleNotifItemClick = (notif: SystemNotification) => {
+    setOpen(false);
+    if (notif.targetUrl) {
+      router.push(notif.targetUrl);
+    } else if (notif.type === "task") {
+      router.push("/dashboard/tasks");
+    } else if (notif.type === "inquiry") {
+      router.push("/dashboard/queries");
+    } else if (notif.type === "mention" || notif.type === "alert") {
+      router.push("/dashboard/team-chat");
+    } else {
+      router.push("/dashboard");
+    }
+  };
 
   // Position the portal panel relative to the bell button
   useEffect(() => {
@@ -110,11 +128,10 @@ export function GlobalNotificationsPanel() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
-  // Mark all as read when panel opens
+  // Mark all as read immediately when panel opens
   useEffect(() => {
     if (open && unreadSystemCount > 0) {
-      const timer = setTimeout(() => markSystemNotificationsRead(), 800);
-      return () => clearTimeout(timer);
+      markSystemNotificationsRead();
     }
   }, [open, unreadSystemCount, markSystemNotificationsRead]);
 
@@ -147,7 +164,18 @@ export function GlobalNotificationsPanel() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          {unreadSystemCount > 0 && (
+            <button
+              type="button"
+              onClick={() => markSystemNotificationsRead()}
+              className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-primary hover:bg-primary/10 flex items-center gap-1 transition-all border border-primary/20"
+              title="Mark all as read"
+            >
+              <CheckCheck className="h-3.5 w-3.5" />
+              <span>Mark read</span>
+            </button>
+          )}
           {systemNotifications.length > 0 && (
             <button
               type="button"
@@ -189,7 +217,8 @@ export function GlobalNotificationsPanel() {
             return (
               <div
                 key={notif.id}
-                className={`flex gap-3 items-start px-4 py-3.5 transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/40 ${
+                onClick={() => handleNotifItemClick(notif)}
+                className={`flex gap-3 items-start px-4 py-3.5 cursor-pointer transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/40 ${
                   !notif.read ? "bg-primary/[0.03] dark:bg-primary/[0.05]" : ""
                 }`}
               >
