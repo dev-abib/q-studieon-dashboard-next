@@ -31,7 +31,6 @@ import {
   UserCheck,
   Briefcase,
   Activity,
-  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,12 +40,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Sidebar } from "@/components/layout/dashboard/Sidebar";
 
 import { Admin } from "@/features/admin/types/admin.types";
 import { useLogOut } from "@/features/auth/hooks/use-logout";
@@ -139,7 +132,6 @@ export function Header({ admin }: HeaderProps) {
   const router = useRouter();
   const { mutate: logOutMutation, isPending } = useLogOut();
   const [searchOpen, setSearchOpen] = useState(false);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const handleLogOut = () => {
     logOutMutation();
@@ -207,30 +199,9 @@ export function Header({ admin }: HeaderProps) {
   const RoleBadgeIcon = roleBadge.icon;
 
   return (
-    <header className="h-16 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm mb-4 sm:mb-6 flex items-center justify-between px-3.5 sm:px-6 transition-all gap-2">
-      {/* ── Page Title / Breadcrumb & Mobile Menu ── */}
-      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-        {/* Mobile Hamburger Drawer Trigger */}
-        <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-          <SheetTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden h-9 w-9 rounded-xl border border-slate-200/80 dark:border-slate-800 shrink-0 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-              aria-label="Open navigation menu"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-72 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-            <Sidebar
-              role={admin?.role ?? null}
-              className="w-full border-none rounded-none shadow-none"
-              onNavigate={() => setMobileNavOpen(false)}
-            />
-          </SheetContent>
-        </Sheet>
-
+    <header className="h-16 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm mb-6 flex items-center justify-between px-6 transition-all">
+      {/* ── Page Title / Breadcrumb ── */}
+      <div className="flex items-center gap-3 min-w-0">
         <div className="hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
           <PageIcon className="h-5 w-5" />
         </div>

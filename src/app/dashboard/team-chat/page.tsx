@@ -54,7 +54,7 @@ export default function TeamChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-5rem)] -m-2 sm:-m-4 lg:-m-6 bg-white dark:bg-slate-900 overflow-hidden">
+    <div className="flex flex-col h-full gap-0 -m-6">
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
         <div className="flex items-center gap-2">

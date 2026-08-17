@@ -77,13 +77,13 @@ export function PasswordForm() {
     return (
       <div className="flex flex-col rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
         {/* ── Card Header ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 px-4 sm:px-6 py-4 bg-slate-50/50 dark:bg-slate-800/20">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4 bg-slate-50/50 dark:bg-slate-800/20">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
               <Lock className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">
+              <p className="text-base font-semibold text-slate-900 dark:text-white">
                 Password & Security
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -91,13 +91,13 @@ export function PasswordForm() {
               </p>
             </div>
           </div>
-          <span className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 shrink-0">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
             <Lock className="h-3 w-3" />
             Restricted by Super Admin
           </span>
         </div>
 
-        <div className="p-4 sm:p-6 flex flex-col gap-4">
+        <div className="p-6 flex flex-col gap-4">
           <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
             <ShieldAlert className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div>
@@ -146,12 +146,12 @@ export function PasswordForm() {
   return (
     <div className="flex flex-col rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
       {/* ── Card Header ── */}
-      <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 px-4 sm:px-6 py-4 bg-slate-50/50 dark:bg-slate-800/20">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+      <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 px-6 py-4 bg-slate-50/50 dark:bg-slate-800/20">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <ShieldCheck className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">
+          <p className="text-base font-semibold text-slate-900 dark:text-white">
             Password & Security
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -160,7 +160,7 @@ export function PasswordForm() {
         </div>
       </div>
 
-      <div className="p-4 sm:p-6 flex flex-col gap-5">
+      <div className="p-6 flex flex-col gap-5">
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
           {/* Current Password */}
           <div className="flex flex-col gap-1.5">

@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import type { ChatGroup, StaffSummary } from "../types/chat.types";
-import { X, Plus, Trash2, Users, Hash, Check } from "lucide-react";
+import { X, Plus, Trash2, Users, Hash } from "lucide-react";
 
 const AVATAR_COLORS = [
   "#6366f1", "#ec4899", "#f59e0b", "#10b981", "#3b82f6",
@@ -168,13 +168,17 @@ export function GroupManageModal(props: Props) {
                     )}
                     <span className="flex-1 font-medium truncate">{s.name}</span>
                     <div
-                      className={`h-4 w-4 rounded border flex items-center justify-center transition-colors ${
+                      className={`h-4 w-4 rounded border-2 flex items-center justify-center transition-colors ${
                         selected
-                          ? "border-primary bg-primary text-primary-foreground"
+                          ? "border-primary bg-primary text-white"
                           : "border-slate-300 dark:border-slate-600"
                       }`}
                     >
-                      {selected && <Check className="h-3 w-3" />}
+                      {selected && (
+                        <svg viewBox="0 0 8 8" className="h-2.5 w-2.5 fill-current">
+                          <path d="M1 4l2 2 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+                        </svg>
+                      )}
                     </div>
                   </button>
                 );

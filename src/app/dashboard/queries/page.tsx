@@ -862,7 +862,7 @@ function QueriesPageContent() {
       </PageHeader>
 
       {/* ─── Compact Quick Metric Ribbon ──────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {/* Total Inquiries */}
         {(() => {
           const isTotalActive =
@@ -2251,8 +2251,8 @@ function QueriesPageContent() {
       ) : (
         /* ─── DUAL VIEW: 2. TABULAR GRID VIEW ─────────────────────────────── */
         <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs overflow-hidden">
-          <div className="overflow-x-auto [scrollbar-width:thin]">
-            <table className="w-full text-left text-xs border-collapse min-w-[850px]">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 text-slate-500 dark:text-slate-400 font-semibold">
                   <th className="py-3 px-3 sm:px-4 w-10 text-center">

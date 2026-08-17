@@ -535,147 +535,12 @@ export default function Page() {
           </div>
         </div>
 
-        {/* Mobile View: Responsive Staff Cards (< md) */}
-        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
-          {isLoading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="p-4 space-y-3 animate-pulse">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 bg-slate-100 dark:bg-slate-800 rounded-xl" />
-                  <div className="space-y-1.5 flex-1">
-                    <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-md w-1/3" />
-                    <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-md w-1/2" />
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : admins.length > 0 ? (
-            admins.map(admin => {
-              const pal = avatarPalette(admin.name ?? "");
-              const initials = (admin.name ?? "??").slice(0, 2).toUpperCase();
-              const isAdminSuper = admin.role === "super_admin" || admin.role === "superadmin" || admin.isOwner;
-              const canViewUsers = isAdminSuper || Boolean(admin.canViewUserDetails);
-              const canDeleteQ = isAdminSuper || Boolean(admin.canDeleteQueries);
-
-              return (
-                <div key={admin.id} className="p-4 space-y-3.5 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                  {/* Top: Avatar, Name & Role Badge */}
-                  <div className="flex items-start justify-between gap-3">
-                    <Link href={`/dashboard/admins/${admin.id}`} className="flex items-center gap-3 min-w-0">
-                      <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 border ${pal.bg}`}>
-                        {admin.profilePictureURL ? (
-                          <Image
-                            src={admin.profilePictureURL}
-                            alt=""
-                            className="h-10 w-10 rounded-xl object-cover"
-                            width={40}
-                            height={40}
-                          />
-                        ) : (
-                          initials
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
-                          {admin.name}
-                        </h3>
-                        <p className="text-xs text-slate-400 truncate flex items-center gap-1">
-                          <Mail className="h-3 w-3 shrink-0" />
-                          {admin.email}
-                        </p>
-                      </div>
-                    </Link>
-                    <RoleBadge role={admin.role} isOwner={admin.isOwner} />
-                  </div>
-
-                  {/* Permissions & Date Row */}
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    {isAdminSuper ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-lg">
-                        <Crown className="h-3 w-3 fill-primary" />
-                        All Privileges (Full Access)
-                      </span>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => handleTogglePermission(admin, "canViewUserDetails", Boolean(admin.canViewUserDetails))}
-                          disabled={!isSuperAdmin || updatePermissionsMutation.isPending}
-                          className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[10.5px] font-semibold ${
-                            canViewUsers
-                              ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700"
-                          }`}
-                        >
-                          <Eye className="h-2.5 w-2.5" />
-                          User Profiles: {canViewUsers ? "Granted" : "Restricted"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleTogglePermission(admin, "canDeleteQueries", Boolean(admin.canDeleteQueries))}
-                          disabled={!isSuperAdmin || updatePermissionsMutation.isPending}
-                          className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[10.5px] font-semibold ${
-                            canDeleteQ
-                              ? "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30"
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700"
-                          }`}
-                        >
-                          <Trash2 className="h-2.5 w-2.5" />
-                          Delete Inquiries: {canDeleteQ ? "Granted" : "Restricted"}
-                        </button>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Actions & Joined Date Bar */}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-400">
-                    <span className="flex items-center gap-1.5 text-[11px]">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(admin.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <Link
-                        href={`/dashboard/admins/${admin.id}`}
-                        className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-primary hover:bg-primary/10 flex items-center gap-1"
-                      >
-                        <UserCheck className="h-3.5 w-3.5" />
-                        <span>Profile</span>
-                      </Link>
-                      {!isAdminSuper && isSuperAdmin && (
-                        <button
-                          onClick={() => setSelectedStaffForPermissions(admin)}
-                          className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-primary"
-                        >
-                          <Sliders className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                      {!admin.isOwner && (
-                        <button
-                          disabled={isDeleting}
-                          onClick={() => setDeleteTarget(admin)}
-                          className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="p-8 text-center text-xs text-slate-400">
-              No team members found.
-            </div>
-          )}
-        </div>
-
-        {/* Desktop View: Compact Table (md:block) */}
-        <div className="hidden md:block overflow-x-auto [scrollbar-width:thin]">
-          <table className="w-full text-left border-collapse min-w-[750px]">
+        {/* Data Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                <th className="px-4 py-3">
+              <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                <th className="px-6 py-3.5">
                   <SortButton
                     label="Member Name"
                     active={sortField === "name"}
@@ -683,7 +548,7 @@ export default function Page() {
                     onClick={() => handleSort("name")}
                   />
                 </th>
-                <th className="px-4 py-3">
+                <th className="px-6 py-3.5">
                   <SortButton
                     label="Email Address"
                     active={sortField === "email"}
@@ -691,7 +556,7 @@ export default function Page() {
                     onClick={() => handleSort("email")}
                   />
                 </th>
-                <th className="px-4 py-3">
+                <th className="px-6 py-3.5">
                   <SortButton
                     label="Role"
                     active={sortField === "role"}
@@ -699,10 +564,10 @@ export default function Page() {
                     onClick={() => handleSort("role")}
                   />
                 </th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <th className="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Granular Privileges
                 </th>
-                <th className="px-4 py-3">
+                <th className="px-6 py-3.5">
                   <SortButton
                     label="Joined Date"
                     active={sortField === "createdAt"}
@@ -710,7 +575,7 @@ export default function Page() {
                     onClick={() => handleSort("createdAt")}
                   />
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400">
+                <th className="px-6 py-3.5 text-right text-xs font-medium uppercase tracking-wider text-slate-400">
                   Actions
                 </th>
               </tr>
@@ -720,7 +585,7 @@ export default function Page() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td colSpan={6} className="px-4 py-3.5">
+                    <td colSpan={6} className="px-6 py-4">
                       <div className="h-8 bg-slate-100 dark:bg-slate-800 rounded-xl w-full" />
                     </td>
                   </tr>
@@ -741,28 +606,28 @@ export default function Page() {
                       className="group hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors text-xs"
                     >
                       {/* Name */}
-                      <td className="px-4 py-3.5">
+                      <td className="px-6 py-4">
                         <Link
                           href={`/dashboard/admins/${admin.id}`}
-                          className="flex items-center gap-2.5 group/link hover:opacity-80 transition-opacity"
+                          className="flex items-center gap-3 group/link hover:opacity-80 transition-opacity"
                         >
                           <div
-                            className={`h-8 w-8 rounded-xl flex items-center justify-center font-semibold text-xs border shrink-0 ${pal.bg}`}
+                            className={`h-9 w-9 rounded-xl flex items-center justify-center font-semibold text-xs border ${pal.bg}`}
                           >
                             {admin.profilePictureURL ? (
                               <Image
                                 src={admin.profilePictureURL}
                                 alt=""
-                                className="h-8 w-8 rounded-xl object-cover"
-                                width={32}
-                                height={32}
+                                className="h-9 w-9 rounded-xl object-cover"
+                                width={36}
+                                height={36}
                               />
                             ) : (
                               initials
                             )}
                           </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-semibold text-sm text-slate-900 dark:text-white group-hover/link:text-primary transition-colors flex items-center gap-1.5 truncate">
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-sm text-slate-900 dark:text-white group-hover/link:text-primary transition-colors flex items-center gap-1.5">
                               {admin.name}
                             </span>
                             <span className="text-[11px] text-slate-400 group-hover/link:underline">
@@ -773,27 +638,27 @@ export default function Page() {
                       </td>
 
                       {/* Email */}
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        <span className="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400">
+                      <td className="px-6 py-4">
+                        <span className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
                           <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                           {admin.email}
                         </span>
                       </td>
 
                       {/* Role */}
-                      <td className="px-4 py-3.5 whitespace-nowrap">
+                      <td className="px-6 py-4">
                         <RoleBadge role={admin.role} isOwner={admin.isOwner} />
                       </td>
 
                       {/* Granular Permissions Column */}
-                      <td className="px-4 py-3.5">
+                      <td className="px-6 py-4">
                         {isAdminSuper ? (
                           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-lg">
                             <Crown className="h-3 w-3 fill-primary" />
                             All Privileges (Full Access)
                           </span>
                         ) : (
-                          <div className="flex items-center gap-1.5 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap">
                             {/* Toggle 1: View User Details */}
                             <button
                               type="button"
@@ -804,14 +669,14 @@ export default function Page() {
                                   ? "Click to revoke User Details viewing access"
                                   : "Click to grant User Details viewing access"
                               }
-                              className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[10.5px] font-semibold transition-all ${
+                              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all ${
                                 canViewUsers
                                   ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
                                   : "bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
                               }`}
                             >
                               <Eye className="h-3 w-3" />
-                              <span>Profiles: {canViewUsers ? "Yes" : "No"}</span>
+                              <span>User Profiles: {canViewUsers ? "Granted" : "Restricted"}</span>
                             </button>
 
                             {/* Toggle 2: Delete Contact Queries */}
@@ -824,22 +689,22 @@ export default function Page() {
                                   ? "Click to revoke Contact Queries deletion access"
                                   : "Click to grant Contact Queries deletion access"
                               }
-                              className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[10.5px] font-semibold transition-all ${
+                              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all ${
                                 canDeleteQ
                                   ? "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20"
                                   : "bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
                               }`}
                             >
                               <Trash2 className="h-3 w-3" />
-                              <span>Delete: {canDeleteQ ? "Yes" : "No"}</span>
+                              <span>Delete Inquiries: {canDeleteQ ? "Granted" : "Restricted"}</span>
                             </button>
                           </div>
                         )}
                       </td>
 
                       {/* Joined Date */}
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        <span className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                      <td className="px-6 py-4">
+                        <span className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                           <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                           {new Date(admin.createdAt).toLocaleDateString(
                             "en-US",
@@ -849,8 +714,8 @@ export default function Page() {
                       </td>
 
                       {/* Actions */}
-                      <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
                           {/* View Profile & Duties */}
                           <Link
                             href={`/dashboard/admins/${admin.id}`}
@@ -897,7 +762,7 @@ export default function Page() {
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-4 py-12 text-center text-xs font-medium text-slate-400"
+                    className="px-6 py-12 text-center text-xs font-medium text-slate-400"
                   >
                     No team members found.
                   </td>

@@ -617,7 +617,7 @@ export default function UsersPage() {
       </PageHeader>
 
       {/* ── Stat Cards Grid (5-column layout matching dashboard) ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard
           icon={Users}
           label="Total Users"
@@ -737,167 +737,11 @@ export default function UsersPage() {
         </div>
 
         {/* Table Content */}
-        {/* Mobile View: Responsive User Cards (< md) */}
-        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
-          {isLoading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="p-4 space-y-3 animate-pulse">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 bg-slate-100 dark:bg-slate-800 rounded-xl" />
-                  <div className="space-y-1.5 flex-1">
-                    <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-md w-1/3" />
-                    <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-md w-1/2" />
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : filteredUsers.length > 0 ? (
-            filteredUsers.map(u => {
-              const pal = avatarPalette(u.name ?? u.email ?? "");
-              const initials = (u.name ?? u.email ?? "??").slice(0, 2).toUpperCase();
-              const isBlocked = Boolean(u.blockedUntil && new Date(u.blockedUntil) > new Date());
-              const isDeleted = Boolean(u.isDeleted);
-              const daysToPurge = getDaysRemaining(u.purgeAt);
-              const reportsCount = u._count?.reports || 0;
-              const queriesCount = u._count?.contactQueries || 0;
-
-              return (
-                <div key={u.id} className="p-4 space-y-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                  {/* Top: Avatar, Name & Status Badge */}
-                  <div className="flex items-start justify-between gap-2">
-                    <Link href={`/dashboard/users/${u.id}`} className="flex items-center gap-3 min-w-0">
-                      <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 border overflow-hidden ${pal.bg}`}>
-                        {u.profilePictureURL ? (
-                          <Image
-                            src={u.profilePictureURL}
-                            alt=""
-                            className="h-full w-full object-cover"
-                            width={40}
-                            height={40}
-                          />
-                        ) : (
-                          initials
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate">
-                            {u.name || "Anonymous User"}
-                          </h3>
-                          {u.isOtpVerified && (
-                            <ShieldCheck className="h-3.5 w-3.5 text-sky-500 shrink-0" />
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-400 truncate">
-                          {u.email}
-                        </p>
-                      </div>
-                    </Link>
-
-                    <div>
-                      {isDeleted ? (
-                        <Badge variant="destructive" className="text-[10px] font-medium py-0.5 px-2">
-                          Deleted ({daysToPurge}d)
-                        </Badge>
-                      ) : isBlocked ? (
-                        <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[10px] font-medium py-0.5 px-2">
-                          Suspended
-                        </Badge>
-                      ) : u.isPaid ? (
-                        <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px] font-medium py-0.5 px-2">
-                          Paid
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-slate-600 dark:text-slate-400 text-[10px] font-medium py-0.5 px-2">
-                          Free
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Chips: Role & Activity */}
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    {u.userRole && (
-                      <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[11px]">
-                        {formatPersonaRole(u.userRole)}
-                      </span>
-                    )}
-                    <span className="text-[11px] text-slate-400">
-                      {reportsCount > 0 ? `${reportsCount} reports` : "0 reports"} • {queriesCount > 0 ? `${queriesCount} inquiries` : "0 inquiries"}
-                    </span>
-                  </div>
-
-                  {/* Actions & Joined Date Bar */}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-400">
-                    <span className="text-[11px] flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {formatDate(u.createdAt)}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <Link
-                        href={`/dashboard/users/${u.id}`}
-                        className="h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-primary flex items-center gap-1"
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        <span>View</span>
-                      </Link>
-
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 rounded-lg text-slate-500 hover:text-slate-800"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48 rounded-xl p-1 shadow-lg text-xs">
-                          <DropdownMenuItem
-                            onClick={() => handleOpenEmailModal(u)}
-                            disabled={Boolean(u.isGuest)}
-                            className="gap-2 cursor-pointer font-medium"
-                          >
-                            <Mail className="h-3.5 w-3.5 text-slate-400" />
-                            <span>Send Direct Email</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              if (u.isPaid) {
-                                setRevokeTarget(u);
-                                setRevokeReason("");
-                              } else {
-                                setGrantTarget(u);
-                                setGrantPlan("1_month");
-                                setGrantReason("");
-                                setGrantCustomEndDate("");
-                              }
-                            }}
-                            className="gap-2 cursor-pointer font-medium text-purple-600 dark:text-purple-400"
-                          >
-                            <Sparkles className="h-3.5 w-3.5" />
-                            <span>{u.isPaid ? "Manage Access" : "Grant Subscription"}</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="p-8 text-center text-xs text-slate-400">
-              No users found.
-            </div>
-          )}
-        </div>
-
-        {/* Desktop View: Compact Table (md:block) */}
-        <div className="hidden md:block overflow-x-auto [scrollbar-width:thin]">
-          <table className="w-full text-left border-collapse min-w-[780px]">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">
-                <th className="px-4 py-3">
+                <th className="px-6 py-3.5">
                   <SortButton
                     label="User Name & Identity"
                     active={sortField === "name"}
@@ -905,7 +749,7 @@ export default function UsersPage() {
                     onClick={() => handleSort("name")}
                   />
                 </th>
-                <th className="px-4 py-3">
+                <th className="px-6 py-3.5">
                   <SortButton
                     label="Email Address"
                     active={sortField === "email"}
@@ -913,10 +757,10 @@ export default function UsersPage() {
                     onClick={() => handleSort("email")}
                   />
                 </th>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <th className="px-6 py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
                   Role
                 </th>
-                <th className="px-4 py-3">
+                <th className="px-6 py-3.5">
                   <SortButton
                     label="Account Status"
                     active={sortField === "status"}
@@ -924,10 +768,10 @@ export default function UsersPage() {
                     onClick={() => handleSort("status")}
                   />
                 </th>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <th className="px-6 py-3.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
                   Activity
                 </th>
-                <th className="px-4 py-3">
+                <th className="px-6 py-3.5">
                   <SortButton
                     label="Joined Date"
                     active={sortField === "createdAt"}
@@ -935,7 +779,7 @@ export default function UsersPage() {
                     onClick={() => handleSort("createdAt")}
                   />
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <th className="px-6 py-3.5 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">
                   Actions
                 </th>
               </tr>
@@ -945,8 +789,8 @@ export default function UsersPage() {
               {isLoading ? (
                 Array.from({ length: limit }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td colSpan={7} className="px-4 py-3.5">
-                      <div className="h-8 bg-slate-100 dark:bg-slate-800 rounded-xl w-full" />
+                    <td colSpan={7} className="px-6 py-4">
+                      <div className="h-9 bg-slate-100 dark:bg-slate-800 rounded-xl w-full" />
                     </td>
                   </tr>
                 ))
@@ -971,29 +815,29 @@ export default function UsersPage() {
                       className="hover:bg-slate-50/50 dark:hover:bg-slate-850/50 transition-colors"
                     >
                       {/* Name & Identity */}
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5 min-w-[180px]">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3 min-w-[200px]">
                           <Link
                             href={`/dashboard/users/${u.id}`}
                             className="relative shrink-0"
                           >
                             <div
-                              className={`h-8 w-8 rounded-xl flex items-center justify-center font-bold text-xs border overflow-hidden ${pal.bg}`}
+                              className={`h-9 w-9 rounded-xl flex items-center justify-center font-bold text-xs border overflow-hidden ${pal.bg}`}
                             >
                               {u.profilePictureURL ? (
                                 <Image
                                   src={u.profilePictureURL}
                                   alt=""
                                   className="h-full w-full object-cover"
-                                  width={32}
-                                  height={32}
+                                  width={36}
+                                  height={36}
                                 />
                               ) : (
                                 initials
                               )}
                             </div>
                             <span
-                              className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-white dark:border-slate-900 ${
+                              className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-slate-900 ${
                                 isDeleted
                                   ? "bg-rose-500"
                                   : isBlocked
@@ -1009,7 +853,7 @@ export default function UsersPage() {
                             <div className="flex items-center gap-1.5">
                               <Link
                                 href={`/dashboard/users/${u.id}`}
-                                className="font-semibold text-sm text-slate-900 dark:text-white hover:text-primary transition-colors truncate max-w-[150px]"
+                                className="font-semibold text-sm text-slate-900 dark:text-white hover:text-primary transition-colors truncate max-w-[170px]"
                               >
                                 {u.name || "Anonymous User"}
                               </Link>
@@ -1019,7 +863,7 @@ export default function UsersPage() {
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center gap-1 text-[10.5px] text-slate-400 font-mono">
+                            <div className="flex items-center gap-1 text-[11px] text-slate-400 font-mono">
                               <span>ID: {u.id.slice(0, 8)}…</span>
                               <button
                                 type="button"
@@ -1039,14 +883,14 @@ export default function UsersPage() {
                       </td>
 
                       {/* Email */}
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
                           {u.email}
                         </span>
                       </td>
 
                       {/* Role / Persona */}
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         {u.userRole ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[11px] border border-slate-200/60 dark:border-slate-700/60">
                             {formatPersonaRole(u.userRole)}
@@ -1057,35 +901,35 @@ export default function UsersPage() {
                       </td>
 
                       {/* Account Status Badge */}
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         {isDeleted ? (
-                          <Badge variant="destructive" className="text-[10.5px] font-medium py-0.5 px-2">
+                          <Badge variant="destructive" className="text-[11px] font-medium py-0.5 px-2">
                             Deleted ({daysToPurge}d left)
                           </Badge>
                         ) : isBlocked ? (
-                          <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[10.5px] font-medium py-0.5 px-2">
+                          <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[11px] font-medium py-0.5 px-2">
                             Suspended
                           </Badge>
                         ) : u.adminGrantedAccess ? (
-                          <Badge className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20 text-[10.5px] font-medium py-0.5 px-2">
+                          <Badge className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20 text-[11px] font-medium py-0.5 px-2">
                             Admin Grant
                           </Badge>
                         ) : u.isPaid ? (
-                          <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10.5px] font-medium py-0.5 px-2">
+                          <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[11px] font-medium py-0.5 px-2">
                             Paid ({u.billingCycle || "Monthly"})
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 text-[10.5px] font-medium py-0.5 px-2">
+                          <Badge variant="outline" className="text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 text-[11px] font-medium py-0.5 px-2">
                             Free Tier
                           </Badge>
                         )}
                       </td>
 
                       {/* Usage & Activity */}
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
                           {reportsCount > 0 && queriesCount > 0
-                            ? `${reportsCount} rpts • ${queriesCount} inq`
+                            ? `${reportsCount} reports • ${queriesCount} inquiries`
                             : reportsCount > 0
                             ? `${reportsCount} ${reportsCount === 1 ? 'report' : 'reports'}`
                             : queriesCount > 0
@@ -1095,16 +939,16 @@ export default function UsersPage() {
                       </td>
 
                       {/* Joined Date */}
-                      <td className="px-4 py-3 whitespace-nowrap text-slate-500 dark:text-slate-400">
+                      <td className="px-6 py-4 whitespace-nowrap text-slate-500 dark:text-slate-400">
                         {formatDate(u.createdAt)}
                       </td>
 
                       {/* Quick Actions */}
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
                           <Link
                             href={`/dashboard/users/${u.id}`}
-                            className="h-8 px-2.5 inline-flex items-center justify-center gap-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-primary hover:bg-primary/5 hover:border-primary/30 transition-all shadow-2xs"
+                            className="h-8 px-3 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-primary hover:bg-primary/5 hover:border-primary/30 transition-all shadow-2xs"
                           >
                             <Eye className="h-3.5 w-3.5" />
                             <span>View</span>
@@ -1205,7 +1049,7 @@ export default function UsersPage() {
                                     className="gap-2 cursor-pointer font-medium text-rose-600"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
-                                    <span>Soft Delete Account</span>
+                                    <span>Soft-Delete Account</span>
                                   </DropdownMenuItem>
                                 )
                               )}
@@ -1220,9 +1064,9 @@ export default function UsersPage() {
                 <tr>
                   <td
                     colSpan={7}
-                    className="px-4 py-12 text-center text-xs font-medium text-slate-400"
+                    className="px-6 py-14 text-center text-xs font-medium text-slate-400"
                   >
-                    No users found matching your search or filters.
+                    No users found matching your criteria.
                   </td>
                 </tr>
               )}
