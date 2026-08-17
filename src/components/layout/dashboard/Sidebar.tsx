@@ -265,10 +265,7 @@ export function Sidebar({ role, className = "", onNavigate }: SidebarProps) {
 
   const totalChatUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
 
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    "App CMS": true,
-    "Website CMS": true,
-  });
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   // Automatically keep active group open when navigating
   useEffect(() => {
@@ -384,7 +381,7 @@ export function Sidebar({ role, className = "", onNavigate }: SidebarProps) {
 
                     // Group / Sub-menu handling
                     if (children && children.length > 0) {
-                      const isOpen = openGroups[label] ?? true;
+                      const isOpen = openGroups[label] ?? false;
                       const hasActiveChild = children.some(child =>
                         pathname === child.href || pathname.startsWith(`${child.href}/`)
                       );
