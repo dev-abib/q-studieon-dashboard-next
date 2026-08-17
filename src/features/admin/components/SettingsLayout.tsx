@@ -27,7 +27,7 @@ export default function SettingsLayout() {
   const colorInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <section className="w-full flex flex-col gap-6 min-h-screen pb-20">
+    <section className="w-full flex flex-col gap-6">
       {/* ── Page Header ── */}
       <PageHeader
         kicker="Account & Security"
