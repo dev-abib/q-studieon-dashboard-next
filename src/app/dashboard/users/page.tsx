@@ -737,8 +737,8 @@ export default function UsersPage() {
         </div>
 
         {/* Table Content */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto [scrollbar-width:thin]">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">
                 <th className="px-6 py-3.5">
