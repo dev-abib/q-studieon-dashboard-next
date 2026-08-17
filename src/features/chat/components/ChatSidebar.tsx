@@ -36,6 +36,7 @@ export function ChatSidebar({ currentUserId, currentUserRole, isOwner }: Props) 
     clearPendingMentions,
     clearUnread,
     messages,
+    unreadCounts,
   } = useChatStore();
 
   const [dmSearch, setDmSearch] = useState("");
@@ -67,6 +68,29 @@ export function ChatSidebar({ currentUserId, currentUserRole, isOwner }: Props) 
       s.name?.toLowerCase().includes(dmSearch.toLowerCase()) ||
       s.email?.toLowerCase().includes(dmSearch.toLowerCase())
   );
+
+  // Real-time sorting: channels with latest message jump to top
+  const sortedGroups = [...groups].sort((a, b) => {
+    const roomKeyA = `group:${a.id}`;
+    const roomKeyB = `group:${b.id}`;
+    const lastMsgA = messages[roomKeyA]?.slice(-1)[0];
+    const lastMsgB = messages[roomKeyB]?.slice(-1)[0];
+    const timeA = lastMsgA ? new Date(lastMsgA.createdAt).getTime() : new Date(a.createdAt).getTime();
+    const timeB = lastMsgB ? new Date(lastMsgB.createdAt).getTime() : new Date(b.createdAt).getTime();
+    return timeB - timeA;
+  });
+
+  // Real-time sorting: DMs with latest messages jump to top
+  const sortedStaff = [...filteredStaff].sort((a, b) => {
+    const roomKeyA = `dm:${a.id}`;
+    const roomKeyB = `dm:${b.id}`;
+    const lastMsgA = messages[roomKeyA]?.slice(-1)[0];
+    const lastMsgB = messages[roomKeyB]?.slice(-1)[0];
+    const timeA = lastMsgA ? new Date(lastMsgA.createdAt).getTime() : 0;
+    const timeB = lastMsgB ? new Date(lastMsgB.createdAt).getTime() : 0;
+    if (timeA !== timeB) return timeB - timeA;
+    return (a.name || "").localeCompare(b.name || "");
+  });
 
   const isActive = (conv: ActiveConversation) =>
     activeConversation?.type === conv.type && activeConversation?.id === conv.id;
@@ -138,17 +162,18 @@ export function ChatSidebar({ currentUserId, currentUserRole, isOwner }: Props) 
               </button>
             )}
           </div>
-          {groups.length === 0 ? (
+          {sortedGroups.length === 0 ? (
             <p className="text-xs text-slate-400 dark:text-slate-500 px-2 py-1">
               {isSuperAdmin ? "Create your first channel →" : "No channels yet"}
             </p>
           ) : (
             <div className="space-y-0.5">
-              {groups.map((g) => {
+              {sortedGroups.map((g) => {
                 const conv: ActiveConversation = { type: "group", id: g.id, label: g.name };
                 const active = isActive(conv);
                 const roomKey = `group:${g.id}`;
                 const lastMsg = messages[roomKey]?.slice(-1)[0];
+                const unread = unreadCounts[roomKey] || 0;
 
                 return (
                   <button
@@ -175,21 +200,28 @@ export function ChatSidebar({ currentUserId, currentUserRole, isOwner }: Props) 
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-1">
                         <span className="truncate block font-semibold text-slate-800 dark:text-slate-200">
                           {g.name}
                         </span>
                         {lastMsg && (
-                          <span className="text-[10px] text-slate-400 font-normal">
+                          <span className="text-[10px] text-slate-400 font-normal shrink-0">
                             {new Date(lastMsg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5 font-normal">
-                        {lastMsg
-                          ? `${lastMsg.sender.name ?? "Someone"}: ${lastMsg.content || "📎 File"}`
-                          : "No messages yet"}
-                      </p>
+                      <div className="flex items-center justify-between gap-1 mt-0.5">
+                        <p className="text-xs text-slate-400 dark:text-slate-500 truncate font-normal">
+                          {lastMsg
+                            ? `${lastMsg.sender.name ?? "Someone"}: ${lastMsg.content || "📎 File"}`
+                            : "No messages yet"}
+                        </p>
+                        {unread > 0 && (
+                          <span className="min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shrink-0 shadow-xs animate-in zoom-in-50 duration-150">
+                            {unread > 99 ? "99+" : unread}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </button>
                 );
@@ -219,12 +251,13 @@ export function ChatSidebar({ currentUserId, currentUserRole, isOwner }: Props) 
           </div>
 
           <div className="space-y-0.5">
-            {filteredStaff.map((s) => {
+            {sortedStaff.map((s) => {
               const conv: ActiveConversation = { type: "dm", id: s.id, label: s.name ?? "?" };
               const active = isActive(conv);
               const online = onlineStaffIds.includes(s.id);
               const roomKey = `dm:${s.id}`;
               const lastMsg = messages[roomKey]?.slice(-1)[0];
+              const unread = unreadCounts[roomKey] || 0;
 
               return (
                 <button
@@ -257,19 +290,26 @@ export function ChatSidebar({ currentUserId, currentUserRole, isOwner }: Props) 
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-1">
                       <span className="truncate block font-medium text-slate-800 dark:text-slate-200">
                         {s.name}
                       </span>
                       {lastMsg && (
-                        <span className="text-[9px] text-slate-400 font-normal">
+                        <span className="text-[9px] text-slate-400 font-normal shrink-0">
                           {new Date(lastMsg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5 font-normal">
-                      {lastMsg ? lastMsg.content || "📎 File" : "No messages yet"}
-                    </p>
+                    <div className="flex items-center justify-between gap-1 mt-0.5">
+                      <p className="text-xs text-slate-400 dark:text-slate-500 truncate font-normal">
+                        {lastMsg ? lastMsg.content || "📎 File" : "No messages yet"}
+                      </p>
+                      {unread > 0 && (
+                        <span className="min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shrink-0 shadow-xs animate-in zoom-in-50 duration-150">
+                          {unread > 99 ? "99+" : unread}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </button>
               );

@@ -357,6 +357,21 @@ export function useChatSocket(
       triggerSystemNotification(`🔔 ${n.senderName} mentioned you`, `"${n.contentSnippet}"`, "mention", mentionUrl);
     });
 
+    // ── Group member updates ───────────────────────────────────────────────
+    socket.on("groupMemberAdded", (data: { groupId: string; group?: any; addedStaffId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ["chat", "groups"] });
+      if (data.group) {
+        useChatStore.getState().updateGroup(data.group);
+      }
+    });
+
+    socket.on("groupMemberRemoved", (data: { groupId: string; group?: any; removedStaffId: string }) => {
+      queryClient.invalidateQueries({ queryKey: ["chat", "groups"] });
+      if (data.group) {
+        useChatStore.getState().updateGroup(data.group);
+      }
+    });
+
     // ── Surveillance notification ─────────────────────────────────────────────
     socket.on(
       "suspiciousMessage",

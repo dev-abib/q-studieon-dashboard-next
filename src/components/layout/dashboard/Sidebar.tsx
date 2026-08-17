@@ -260,6 +260,8 @@ export function Sidebar({ role }: SidebarProps) {
   const pathname = usePathname();
   const currentRole = (role as Role) || "admin";
   const unreadMentionCount = useChatStore((s) => s.unreadMentionCount);
+  const totalUnreadChatCount = useChatStore((s) => s.totalUnreadChatCount);
+  const totalChatUnread = unreadMentionCount + totalUnreadChatCount;
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     "App CMS": true,
@@ -512,9 +514,9 @@ export function Sidebar({ role }: SidebarProps) {
                           }`}
                         />
                         <span className="flex-1 truncate">{label}</span>
-                        {href === "/dashboard/team-chat" && unreadMentionCount > 0 && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-red-500 text-white">
-                            {unreadMentionCount > 9 ? "9+" : unreadMentionCount}
+                        {href === "/dashboard/team-chat" && totalChatUnread > 0 && (
+                          <span className="min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full bg-rose-500 text-white flex items-center justify-center shrink-0 shadow-xs animate-in zoom-in-50">
+                            {totalChatUnread > 99 ? "99+" : totalChatUnread}
                           </span>
                         )}
                         {badge && (

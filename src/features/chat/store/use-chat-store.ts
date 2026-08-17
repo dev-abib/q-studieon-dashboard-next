@@ -40,6 +40,9 @@ interface ChatState {
   toast: { title: string; body: string; visible: boolean } | null;
   systemNotifications: SystemNotification[];
   unreadSystemCount: number;
+  // Unread message count per roomKey e.g. "group:xyz" -> 3, "dm:abc" -> 1
+  unreadCounts: Record<string, number>;
+  totalUnreadChatCount: number;
 
   // Actions
   showToast: (title: string, body: string) => void;
@@ -48,9 +51,11 @@ interface ChatState {
   setConnected: (v: boolean) => void;
   setActiveConversation: (conv: ActiveConversation | null) => void;
   setGroups: (groups: ChatGroup[]) => void;
+  updateGroup: (group: ChatGroup) => void;
   setDmPartners: (partners: StaffSummary[]) => void;
   setStaffList: (list: StaffSummary[]) => void;
   setOnlineStaff: (ids: string[]) => void;
+  clearUnreadForRoom: (roomKey: string) => void;
   prependMessages: (roomKey: string, msgs: ChatMessage[]) => void;
   appendMessage: (roomKey: string, msg: ChatMessage) => void;
   replaceMessage: (roomKey: string, msg: ChatMessage) => void;
@@ -119,17 +124,42 @@ export const useChatStore = create<ChatState>()(
     toast: null,
     systemNotifications: initialStored.systemNotifications,
     unreadSystemCount: initialStored.unreadSystemCount,
+    unreadCounts: {},
+    totalUnreadChatCount: 0,
 
     showToast: (title, body) => set({ toast: { title, body, visible: true } }),
     hideToast: () => set({ toast: null }),
 
     setSocket: (socket) => set({ socket }),
     setConnected: (v) => set({ isConnected: v }),
-    setActiveConversation: (conv) => set({ activeConversation: conv }),
+    setActiveConversation: (conv) =>
+      set((state) => {
+        state.activeConversation = conv;
+        if (conv) {
+          const roomKey = conv.type === "group" ? `group:${conv.id}` : `dm:${conv.id}`;
+          delete state.unreadCounts[roomKey];
+          state.totalUnreadChatCount = Object.values(state.unreadCounts).reduce((a, b) => a + b, 0);
+        }
+      }),
     setGroups: (groups) => set({ groups }),
+    updateGroup: (group) =>
+      set((state) => {
+        const idx = state.groups.findIndex((g) => g.id === group.id);
+        if (idx >= 0) {
+          state.groups[idx] = group;
+        } else {
+          state.groups.unshift(group);
+        }
+      }),
     setDmPartners: (partners) => set({ dmPartners: partners }),
     setStaffList: (list) => set({ staffList: list }),
     setOnlineStaff: (ids) => set({ onlineStaffIds: ids }),
+
+    clearUnreadForRoom: (roomKey) =>
+      set((state) => {
+        delete state.unreadCounts[roomKey];
+        state.totalUnreadChatCount = Object.values(state.unreadCounts).reduce((a, b) => a + b, 0);
+      }),
 
     prependMessages: (key, msgs) =>
       set((state) => {
@@ -157,6 +187,18 @@ export const useChatStore = create<ChatState>()(
           state.messages[key][tempIdx] = msg;
         } else {
           state.messages[key] = [...state.messages[key], msg];
+        }
+
+        // Check if message should increment unread for this room
+        const activeKey = state.activeConversation
+          ? state.activeConversation.type === "group"
+            ? `group:${state.activeConversation.id}`
+            : `dm:${state.activeConversation.id}`
+          : null;
+
+        if (activeKey !== key && !msg.id.startsWith("temp-")) {
+          state.unreadCounts[key] = (state.unreadCounts[key] || 0) + 1;
+          state.totalUnreadChatCount = Object.values(state.unreadCounts).reduce((a, b) => a + b, 0);
         }
       }),
 

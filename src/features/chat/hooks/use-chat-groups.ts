@@ -68,6 +68,38 @@ export function useLeaveGroup() {
   });
 }
 
+export function useAddGroupMember() {
+  const qc = useQueryClient();
+  const { setGroups } = useChatStore();
+  return useMutation({
+    mutationFn: ({ groupId, staffId }: { groupId: string; staffId: string }) =>
+      chatApi.addGroupMember(groupId, staffId),
+    onSuccess: (updatedGroup) => {
+      qc.invalidateQueries({ queryKey: ["chat", "groups"] });
+      if (updatedGroup) {
+        const { groups } = useChatStore.getState();
+        setGroups(groups.map((g) => (g.id === updatedGroup.id ? { ...g, ...updatedGroup } : g)));
+      }
+    },
+  });
+}
+
+export function useRemoveGroupMember() {
+  const qc = useQueryClient();
+  const { setGroups } = useChatStore();
+  return useMutation({
+    mutationFn: ({ groupId, staffId }: { groupId: string; staffId: string }) =>
+      chatApi.removeGroupMember(groupId, staffId),
+    onSuccess: (updatedGroup) => {
+      qc.invalidateQueries({ queryKey: ["chat", "groups"] });
+      if (updatedGroup) {
+        const { groups } = useChatStore.getState();
+        setGroups(groups.map((g) => (g.id === updatedGroup.id ? { ...g, ...updatedGroup } : g)));
+      }
+    },
+  });
+}
+
 export function useArchiveGroup() {
   const qc = useQueryClient();
   return useMutation({

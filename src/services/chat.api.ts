@@ -44,6 +44,16 @@ export const chatApi = {
     await api.post(`/chat/groups/${groupId}/leave`);
   },
 
+  addGroupMember: async (groupId: string, staffId: string): Promise<ChatGroup> => {
+    const res = await api.post(`/chat/groups/${groupId}/members`, { staffId });
+    return res.data?.data ?? res.data;
+  },
+
+  removeGroupMember: async (groupId: string, staffId: string): Promise<ChatGroup> => {
+    const res = await api.delete(`/chat/groups/${groupId}/members/${staffId}`);
+    return res.data?.data ?? res.data;
+  },
+
   archiveGroup: async (groupId: string): Promise<void> => {
     await api.delete(`/chat/groups/${groupId}`);
   },
