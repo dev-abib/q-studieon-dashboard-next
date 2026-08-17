@@ -112,13 +112,13 @@ export function ProfileForm() {
   return (
     <div className="flex flex-col rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
       {/* ── Card Header ── */}
-      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4 bg-slate-50/50 dark:bg-slate-800/20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 px-4 sm:px-6 py-4 bg-slate-50/50 dark:bg-slate-800/20">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <User className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-base font-semibold text-slate-900 dark:text-white">
+            <p className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">
               Personal Details
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -127,14 +127,14 @@ export function ProfileForm() {
           </div>
         </div>
         {admin?.data?.role && (
-          <span className="hidden sm:inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 capitalize">
+          <span className="self-start sm:self-auto inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 capitalize shrink-0">
             <ShieldCheck className="h-3.5 w-3.5 text-primary" />
             {admin.data.role.replace("_", " ")}
           </span>
         )}
       </div>
 
-      <div className="p-6 flex flex-col gap-6">
+      <div className="p-4 sm:p-6 flex flex-col gap-6">
         {/* ── Avatar Upload Section ── */}
         <div className="flex flex-col items-center sm:flex-row sm:items-center gap-6 p-4.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
           <div className="relative group">
