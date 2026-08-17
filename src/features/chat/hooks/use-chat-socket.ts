@@ -151,10 +151,12 @@ function showPushNotification(
         absoluteIcon = window.location.origin + icon;
       }
 
-      // Try Service Worker registration first (standard on Chrome, Edge, and mobile)
+      // Check for active service worker with timeout protection to prevent hanging
       if ("serviceWorker" in navigator) {
         try {
-          const reg = await navigator.serviceWorker.ready;
+          const swPromise = navigator.serviceWorker.getRegistration();
+          const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 300));
+          const reg: any = await Promise.race([swPromise, timeoutPromise]);
           if (reg && "showNotification" in reg) {
             await reg.showNotification(title, {
               body,
@@ -163,10 +165,11 @@ function showPushNotification(
               data: { url: targetUrl },
               tag: `dwellr-${Date.now()}`,
             });
+            console.log("[Notification] SW Notification triggered successfully:", title);
             return;
           }
         } catch (swErr) {
-          console.warn("[SW Notification Error, fallback to direct]:", swErr);
+          console.warn("[SW Notification Error, falling back to direct]:", swErr);
         }
       }
 
