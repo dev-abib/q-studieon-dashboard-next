@@ -16,7 +16,7 @@ export async function proxy(req: NextRequest) {
   const isAuthenticated = Boolean(accessToken || refreshToken);
 
   // Root route redirect: send directly to /dashboard or /login
-  if (pathname === "/") {
+  if (pathname === "/" || pathname === "/index.html" || pathname === "/index.php") {
     const url = req.nextUrl.clone();
     url.pathname = isAuthenticated ? "/dashboard" : "/login";
     return NextResponse.redirect(url);
