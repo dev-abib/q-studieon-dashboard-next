@@ -128,11 +128,11 @@ export default function DashboardLayout({
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden bg-slate-50/70 dark:bg-slate-950 p-4 lg:p-6 gap-6">
-        <Sidebar role={admin?.role ?? null} />
+      <div className="flex flex-1 overflow-hidden bg-slate-50/70 dark:bg-slate-950 p-2 sm:p-4 lg:p-6 gap-3 lg:gap-6">
+        <Sidebar role={admin?.role ?? null} className="hidden lg:flex" />
         <div className="flex flex-col flex-1 overflow-hidden min-w-0">
           {admin && <Header admin={admin} />}
-          <main className="flex-1 overflow-y-auto rounded-2xl bg-white/40 dark:bg-slate-900/40 border border-slate-100/80 dark:border-slate-800/80 p-6 backdrop-blur-sm shadow-sm flex flex-col min-h-0">
+          <main className="flex-1 overflow-y-auto rounded-2xl bg-white/40 dark:bg-slate-900/40 border border-slate-100/80 dark:border-slate-800/80 p-3 sm:p-5 lg:p-6 backdrop-blur-sm shadow-sm flex flex-col min-h-0">
             {children}
           </main>
         </div>

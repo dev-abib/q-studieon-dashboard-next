@@ -43,6 +43,8 @@ export type Role =
 
 interface SidebarProps {
   role: Role | string | null;
+  className?: string;
+  onNavigate?: () => void;
 }
 
 export interface NavSubItem {
@@ -256,12 +258,12 @@ function hasAccess(item: NavItem | NavSubItem, role: Role) {
   return !item.requiredRoles || item.requiredRoles.includes(role);
 }
 
-export function Sidebar({ role }: SidebarProps) {
+export function Sidebar({ role, className = "", onNavigate }: SidebarProps) {
   const pathname = usePathname();
-  const currentRole = (role as Role) || "admin";
-  const unreadMentionCount = useChatStore((s) => s.unreadMentionCount);
-  const totalUnreadChatCount = useChatStore((s) => s.totalUnreadChatCount);
-  const totalChatUnread = unreadMentionCount + totalUnreadChatCount;
+  const currentRole = (role as Role) || "user";
+  const { unreadCounts } = useChatStore();
+
+  const totalChatUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     "App CMS": true,
@@ -327,10 +329,16 @@ export function Sidebar({ role }: SidebarProps) {
   const RoleIcon = roleInfo.icon;
 
   return (
-    <aside className="w-64 shrink-0 rounded-2xl h-full bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 shadow-xs flex flex-col overflow-hidden transition-colors">
+    <aside
+      className={`w-64 shrink-0 rounded-2xl h-full bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 shadow-xs flex flex-col overflow-hidden transition-colors ${className}`}
+    >
       {/* ── Brand Logo ── */}
       <div className="h-16 shrink-0 flex items-center px-5 border-b border-slate-100 dark:border-slate-800">
-        <Link href="/dashboard" className="flex items-center gap-3 group">
+        <Link
+          href="/dashboard"
+          onClick={() => onNavigate?.()}
+          className="flex items-center gap-3 group"
+        >
           <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shadow-xs group-hover:scale-105 transition-transform">
             <Building2 className="h-5 w-5" />
           </div>
@@ -451,6 +459,7 @@ export function Sidebar({ role }: SidebarProps) {
                                   <Link
                                     key={child.href}
                                     href={child.href}
+                                    onClick={() => onNavigate?.()}
                                     className={`group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-medium transition-all ${
                                       isChildActive
                                         ? "bg-primary/10 text-primary font-semibold"
@@ -496,6 +505,7 @@ export function Sidebar({ role }: SidebarProps) {
                       <Link
                         key={href}
                         href={href}
+                        onClick={() => onNavigate?.()}
                         className={`group relative flex items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all ${
                           isActive
                             ? "bg-primary/10 text-primary font-semibold"
