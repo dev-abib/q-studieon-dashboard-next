@@ -199,12 +199,15 @@ export function TaskBoard({ currentUserId, userRole, isOwner }: Props) {
 
   const formatDueDate = (dueDateStr: string | null, status: TaskStatus) => {
     if (!dueDateStr) return { text: "No due date", isOverdue: false, isDueToday: false, label: "" };
-    if (status === "COMPLETED") {
-      const d = new Date(dueDateStr);
-      return { text: d.toLocaleDateString([], { month: "short", day: "numeric" }), isOverdue: false, isDueToday: false, label: "Done" };
+    const due = new Date(dueDateStr);
+    if (isNaN(due.getTime()) || due.getFullYear() < 2020) {
+      return { text: "No due date", isOverdue: false, isDueToday: false, label: "" };
     }
 
-    const due = new Date(dueDateStr);
+    if (status === "COMPLETED") {
+      return { text: due.toLocaleDateString([], { month: "short", day: "numeric" }), isOverdue: false, isDueToday: false, label: "Done" };
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const diffTime = due.getTime() - today.getTime();
@@ -212,6 +215,14 @@ export function TaskBoard({ currentUserId, userRole, isOwner }: Props) {
 
     if (diffDays < 0) {
       const days = Math.abs(diffDays);
+      if (days > 180) {
+        return {
+          text: due.toLocaleDateString([], { month: "short", day: "numeric" }),
+          isOverdue: true,
+          isDueToday: false,
+          label: "Overdue",
+        };
+      }
       return {
         text: `${days}d overdue`,
         isOverdue: true,
@@ -404,7 +415,7 @@ export function TaskBoard({ currentUserId, userRole, isOwner }: Props) {
           />
         </div>
       ) : (
-        <div className="flex-1 w-full min-h-0 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 pb-2">
+        <div className="flex-1 w-full min-h-0 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 overflow-hidden">
           {columns.map((col) => {
             const colTasks = tasks.filter((t) => t.status === col.status);
             const isDragTarget = dragOverCol === col.status;
@@ -422,7 +433,7 @@ export function TaskBoard({ currentUserId, userRole, isOwner }: Props) {
                   if (dragOverCol === col.status) setDragOverCol(null);
                 }}
                 onDrop={(e) => handleDropOnColumn(col.status, e)}
-                className={`flex flex-col h-full rounded-2xl border transition-all duration-200 p-3.5 min-w-0 w-full ${col.bg} ${
+                className={`flex flex-col h-full min-h-0 overflow-hidden rounded-2xl border transition-all duration-200 p-3.5 min-w-0 w-full ${col.bg} ${
                   isDragTarget
                     ? "ring-2 ring-primary border-primary bg-primary/10 dark:bg-primary/15 shadow-xl scale-[1.008]"
                     : col.border
