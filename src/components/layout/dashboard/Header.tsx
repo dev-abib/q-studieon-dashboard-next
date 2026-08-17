@@ -31,6 +31,7 @@ import {
   UserCheck,
   Briefcase,
   Activity,
+  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +45,7 @@ import {
 import { Admin } from "@/features/admin/types/admin.types";
 import { useLogOut } from "@/features/auth/hooks/use-logout";
 import { CommandPalette } from "@/components/layout/dashboard/CommandPalette";
+import { useSidebarStore } from "@/stores/use-sidebar-store";
 
 import { ThemeAccentPicker } from "@/components/layout/dashboard/ThemeAccentPicker";
 import { GlobalNotificationsPanel } from "@/components/layout/dashboard/GlobalNotificationsPanel";
@@ -198,18 +200,30 @@ export function Header({ admin }: HeaderProps) {
   const roleBadge = getRoleBadge(admin.role);
   const RoleBadgeIcon = roleBadge.icon;
 
+  const toggleSidebar = useSidebarStore((s) => s.toggle);
+
   return (
-    <header className="h-16 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm mb-6 flex items-center justify-between px-6 transition-all">
-      {/* ── Page Title / Breadcrumb ── */}
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-          <PageIcon className="h-5 w-5" />
+    <header className="h-14 sm:h-16 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm mb-4 sm:mb-6 flex items-center justify-between px-3 sm:px-5 lg:px-6 transition-all gap-2 sm:gap-3">
+      {/* ── Mobile Hamburger & Page Title / Breadcrumb ── */}
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        {/* Hamburger Menu Toggle (Mobile / Tablet) */}
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className="lg:hidden flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700/70 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer shrink-0"
+          aria-label="Toggle navigation menu"
+        >
+          <Menu className="h-4.5 w-4.5" />
+        </button>
+
+        <div className="hidden sm:flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+          <PageIcon className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
         </div>
         <div className="flex flex-col min-w-0">
-          <nav className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500">
+          <nav className="hidden sm:flex items-center gap-1 text-[10px] font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500">
             <Link
               href="/dashboard"
-              className="hover:text-primary transition-colors"
+              className="hover:text-primary transition-colors truncate max-w-[80px]"
             >
               Dashboard
             </Link>
@@ -219,10 +233,10 @@ export function Header({ admin }: HeaderProps) {
                 .join("/")}`;
               return (
                 <div key={href} className="flex items-center gap-1">
-                  <ChevronRight className="h-3 w-3 text-slate-300 dark:text-slate-600" />
+                  <ChevronRight className="h-3 w-3 text-slate-300 dark:text-slate-600 shrink-0" />
                   <Link
                     href={href}
-                    className="hover:text-primary transition-colors"
+                    className="hover:text-primary transition-colors truncate max-w-[90px]"
                   >
                     {BREADCRUMB_MAP[segment] || segment}
                   </Link>
@@ -230,17 +244,17 @@ export function Header({ admin }: HeaderProps) {
               );
             })}
           </nav>
-          <h1 className="text-base font-semibold text-slate-900 dark:text-white truncate leading-tight">
+          <h1 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white truncate leading-tight">
             {pageTitle}
           </h1>
         </div>
       </div>
 
-      {/* ── Center Quick Search Pill ── */}
+      {/* ── Center Quick Search Pill (Desktop) ── */}
       <button
         type="button"
         onClick={() => setSearchOpen(true)}
-        className="hidden lg:flex items-center gap-2 bg-slate-100/80 dark:bg-slate-800/60 px-3.5 py-1.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-slate-400 text-xs cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        className="hidden md:flex items-center gap-2 bg-slate-100/80 dark:bg-slate-800/60 px-3.5 py-1.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-slate-400 text-xs cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
       >
         <Search className="h-3.5 w-3.5 text-slate-400" />
         <span className="font-medium">Quick search...</span>
@@ -256,14 +270,24 @@ export function Header({ admin }: HeaderProps) {
       />
 
       {/* ── Right User Menu & Theme Picker ── */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        {/* Mobile Quick Search Icon Button */}
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          className="md:hidden flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/60 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          aria-label="Quick search"
+        >
+          <Search className="h-4 w-4" />
+        </button>
+
         <GlobalNotificationsPanel />
         <ThemeAccentPicker />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="relative h-11 px-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition-all focus-visible:ring-0 cursor-pointer"
+              className="relative h-9 sm:h-11 px-1.5 sm:px-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 transition-all focus-visible:ring-0 cursor-pointer"
             >
               <div className="relative flex items-center">
                 <HeaderAvatar

@@ -29,8 +29,10 @@ import {
   Activity,
   MessageSquare,
   CheckSquare,
+  X,
 } from "lucide-react";
 import { useChatStore } from "@/features/chat/store/use-chat-store";
+import { useSidebarStore } from "@/stores/use-sidebar-store";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export type Role =
@@ -326,10 +328,18 @@ export function Sidebar({ role }: SidebarProps) {
   const roleInfo = getRoleBadge(role);
   const RoleIcon = roleInfo.icon;
 
-  return (
-    <aside className="w-64 shrink-0 rounded-2xl h-full bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 shadow-xs flex flex-col overflow-hidden transition-colors">
-      {/* ── Brand Logo ── */}
-      <div className="h-16 shrink-0 flex items-center px-5 border-b border-slate-100 dark:border-slate-800">
+  const isMobileOpen = useSidebarStore((s) => s.isOpen);
+  const closeSidebar = useSidebarStore((s) => s.close);
+
+  // Automatically close mobile sidebar on navigation
+  useEffect(() => {
+    closeSidebar();
+  }, [pathname, closeSidebar]);
+
+  const renderContent = (isMobileDrawer = false) => (
+    <>
+      {/* ── Brand Logo & Mobile Close Button ── */}
+      <div className="h-16 shrink-0 flex items-center justify-between px-5 border-b border-slate-100 dark:border-slate-800">
         <Link href="/dashboard" className="flex items-center gap-3 group">
           <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shadow-xs group-hover:scale-105 transition-transform">
             <Building2 className="h-5 w-5" />
@@ -343,6 +353,16 @@ export function Sidebar({ role }: SidebarProps) {
             </span>
           </div>
         </Link>
+        {isMobileDrawer && (
+          <button
+            type="button"
+            onClick={closeSidebar}
+            className="lg:hidden p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            aria-label="Close navigation"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {/* ── Navigation Items ── */}
@@ -550,7 +570,31 @@ export function Sidebar({ role }: SidebarProps) {
           </div>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop Persistent Sidebar */}
+      <aside className="hidden lg:flex w-64 shrink-0 rounded-2xl h-full bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 shadow-xs flex-col overflow-hidden transition-colors">
+        {renderContent(false)}
+      </aside>
+
+      {/* Mobile Slide-Over Drawer */}
+      {isMobileOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+            onClick={closeSidebar}
+          />
+          {/* Drawer Panel */}
+          <aside className="relative w-72 max-w-[85vw] h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-left duration-200 z-10">
+            {renderContent(true)}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }
 
