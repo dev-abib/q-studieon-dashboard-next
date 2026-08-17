@@ -106,7 +106,7 @@
   },
   {
     "route": "/dashboard/queries",
-    "firstLoadUncompressedJsBytes": 1370954,
+    "firstLoadUncompressedJsBytes": 1370995,
     "firstLoadChunkPaths": [
       ".next\\static\\chunks\\16uoptt-h9pgj.js",
       ".next\\static\\chunks\\16-fnnmgabnky.js",
@@ -121,7 +121,7 @@
       ".next\\static\\chunks\\178j_66s~uy6a.js",
       ".next\\static\\chunks\\0cjy34uh4e1j2.js",
       ".next\\static\\chunks\\0snk136b08cqa.js",
-      ".next\\static\\chunks\\01wx7z0i_6ath.js",
+      ".next\\static\\chunks\\0w-gm2x6809ac.js",
       ".next\\static\\chunks\\0yb2wil16uz6h.js",
       ".next\\static\\chunks\\0qjkk1xj6hg7y.js",
       ".next\\static\\chunks\\0itiyyj-mcj8k.js",

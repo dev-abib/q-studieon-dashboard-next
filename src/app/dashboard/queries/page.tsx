@@ -733,7 +733,7 @@ function QueriesPageContent() {
   const activeIndex = queries.findIndex(q => q.id === activeQuery?.id);
 
   return (
-    <section className="w-full flex flex-col gap-6 min-h-screen pb-20">
+    <section className="w-full h-full flex flex-col -m-6 p-4 sm:p-5 min-h-0 overflow-hidden bg-slate-50/50 dark:bg-slate-950">
       {/* ─── Header ───────────────────────────────────────────────────────── */}
       <PageHeader
         kicker="Support & Communications"
@@ -1316,7 +1316,7 @@ function QueriesPageContent() {
 
       {/* ─── DUAL VIEW: 1. SPLIT MASTER-DETAIL INBOX VIEW ─────────────────── */}
       {viewMode === "split" ? (
-        <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs overflow-hidden flex flex-col lg:flex-row h-[740px] max-h-[880px]">
+        <div className="flex-1 min-h-0 w-full rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs overflow-hidden flex flex-col lg:flex-row">
           {/* Left: Fixed-Width Scrollable Inquiry List */}
           <div
             className={`w-full lg:w-[360px] xl:w-[400px] shrink-0 border-r border-slate-100 dark:border-slate-800 flex flex-col h-full min-h-0 bg-slate-50/40 dark:bg-slate-950/20 ${
@@ -1356,7 +1356,7 @@ function QueriesPageContent() {
             </div>
 
             {/* List Body with overscroll-contain */}
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain [scrollbar-width:thin] p-2 space-y-1">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar p-2 space-y-1">
               {isLoading ? (
                 <div className="py-16 text-center text-slate-400 flex flex-col items-center gap-2">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -1709,7 +1709,7 @@ function QueriesPageContent() {
                 </div>
 
                 {/* Middle: Scrollable Conversation Content with overscroll-contain */}
-                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain [scrollbar-width:thin] p-4 sm:p-5 space-y-3.5">
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar p-4 sm:p-5 space-y-3.5">
                   {/* Status & Assignment Banner */}
                   <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-2 text-xs">
                     <div className="flex items-center gap-2">
