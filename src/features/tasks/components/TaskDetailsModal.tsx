@@ -395,32 +395,34 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
             </div>
 
             {/* Comment Input Form */}
-            <form
-              onSubmit={handleAddComment}
-              className="p-4 sm:p-5 pb-5 sm:pb-6 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 flex gap-2.5 items-center"
-            >
-              <input
-                type="text"
-                placeholder="Write a comment / discussion update..."
-                value={commentContent}
-                onChange={(e) => setCommentContent(e.target.value)}
-                className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-750 bg-slate-50 dark:bg-slate-850 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-primary/20"
-              />
-              <button
-                type="submit"
-                disabled={!commentContent.trim() || createComment.isPending}
-                className="px-3.5 py-2 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-xs disabled:opacity-50 shrink-0 flex items-center justify-center gap-1 font-semibold text-xs active:scale-95"
+            <div className="p-4 sm:p-5 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+              <form
+                onSubmit={handleAddComment}
+                className="flex gap-2 items-center bg-slate-50 dark:bg-slate-850 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-750"
               >
-                {createComment.isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <>
-                    <Send className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Post</span>
-                  </>
-                )}
-              </button>
-            </form>
+                <input
+                  type="text"
+                  placeholder="Write a comment / discussion update..."
+                  value={commentContent}
+                  onChange={(e) => setCommentContent(e.target.value)}
+                  className="flex-1 px-3 py-1.5 text-xs bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden"
+                />
+                <button
+                  type="submit"
+                  disabled={!commentContent.trim() || createComment.isPending}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all shadow-xs disabled:opacity-50 shrink-0 flex items-center justify-center gap-1.5 font-semibold text-xs active:scale-95"
+                >
+                  {createComment.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <>
+                      <Send className="h-3.5 w-3.5" />
+                      <span className="font-bold">Post</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       </div>
