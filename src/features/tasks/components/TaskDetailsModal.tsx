@@ -29,7 +29,7 @@ interface Props {
 
 export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) {
   const isAdmin = userRole === "admin" || userRole === "super_admin" || !!isOwner;
-  const { staffList } = useChatStore();
+  const { staffList, showToast } = useChatStore();
   const { data: task, isLoading, error } = useTaskDetails(taskId);
 
   const updateTask = useUpdateTask(taskId);
@@ -84,6 +84,10 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
       onSuccess: () => {
         setCommentContent("");
         setJustCommented(true);
+        showToast(
+          "Discussion Comment Posted 💬",
+          `Your comment on "${task?.title || 'Task'}" has been shared with the team.`
+        );
         setTimeout(() => setJustCommented(false), 3000);
         setTimeout(() => {
           commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -393,7 +397,7 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
             {/* Comment Input Form */}
             <form
               onSubmit={handleAddComment}
-              className="p-3 sm:p-4 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 flex gap-2"
+              className="p-4 sm:p-5 pb-5 sm:pb-6 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 flex gap-2.5 items-center"
             >
               <input
                 type="text"

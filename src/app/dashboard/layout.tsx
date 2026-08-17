@@ -107,21 +107,21 @@ export default function DashboardLayout({
       
       {/* Global In-App Toast Notification Alert */}
       {toast?.visible && (
-        <div className="fixed top-5 right-5 z-[9999] max-w-md w-full bg-slate-950/95 text-white dark:bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-2xl shadow-2xl p-4 flex items-start gap-3.5 animate-in fade-in slide-in-from-top-4 duration-300 ring-1 ring-white/10">
-          <div className="h-9 w-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary shrink-0 mt-0.5 shadow-xs">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 md:left-auto md:right-6 md:translate-x-0 z-[99999] max-w-md w-[calc(100%-2rem)] md:w-full bg-white dark:bg-slate-900 border-2 border-slate-300/90 dark:border-slate-700 rounded-2xl shadow-2xl p-4 flex items-start gap-3.5 animate-in fade-in slide-in-from-top-4 duration-300 ring-2 ring-primary/20">
+          <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0 mt-0.5 shadow-2xs border border-primary/20">
             <MessageSquare className="h-5 w-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-white tracking-wide truncate">
+            <p className="text-xs font-extrabold text-black dark:text-white tracking-wider uppercase">
               {toast.title}
             </p>
-            <p className="text-xs text-slate-200 mt-1 line-clamp-3 leading-relaxed font-normal">
+            <p className="text-xs text-black dark:text-slate-100 mt-1 line-clamp-3 leading-relaxed font-semibold">
               {toast.body}
             </p>
           </div>
           <button
             onClick={hideToast}
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg shrink-0 transition-colors"
+            className="p-1.5 text-slate-400 hover:text-black dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg shrink-0 transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
