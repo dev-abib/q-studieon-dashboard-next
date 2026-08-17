@@ -30,24 +30,24 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-950 p-6 overflow-hidden">
+    <div className="flex flex-col h-full w-full bg-slate-50/50 dark:bg-slate-950 p-4 sm:p-6 overflow-hidden min-h-0">
       {/* Title block */}
-      <div className="flex items-center gap-2.5 mb-5 shrink-0">
-        <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+      <div className="flex items-center gap-2.5 mb-4 shrink-0">
+        <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0 shadow-2xs">
           <ClipboardList className="h-5 w-5" />
         </div>
         <div>
           <h1 className="text-lg font-bold text-slate-900 dark:text-white leading-none">
             Task Manager
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-450 mt-1">
-            Assign tasks to team members, set priorities, and track status progress.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Assign tasks to team members, set priorities, and drag & drop across status columns.
           </p>
         </div>
       </div>
 
       {/* Main Board view */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 w-full">
         <TaskBoard
           currentUserId={admin.id}
           userRole={admin.role}
