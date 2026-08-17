@@ -430,32 +430,3 @@
 .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 116, 139, 0.6);
 }
-
-/* Sonner Toasts - Crisp High Contrast Text */
-[data-sonner-toaster] [data-description],
-[data-sonner-toast] [data-description],
-.cn-toast [data-description] {
-  color: #000000 !important;
-  font-weight: 600 !important;
-  opacity: 1 !important;
-}
-
-[data-sonner-toaster] [data-title],
-[data-sonner-toast] [data-title],
-.cn-toast [data-title] {
-  color: #000000 !important;
-  font-weight: 800 !important;
-  opacity: 1 !important;
-}
-
-.dark [data-sonner-toaster] [data-description],
-.dark [data-sonner-toast] [data-description],
-.dark .cn-toast [data-description] {
-  color: #f1f5f9 !important;
-}
-
-.dark [data-sonner-toaster] [data-title],
-.dark [data-sonner-toast] [data-title],
-.dark .cn-toast [data-title] {
-  color: #ffffff !important;
-}

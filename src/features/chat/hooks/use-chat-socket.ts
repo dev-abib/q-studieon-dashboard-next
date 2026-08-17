@@ -207,7 +207,6 @@ export function triggerSystemNotification(
   playNotificationSound();
   showPushNotification(title, body, undefined, undefined, undefined, targetUrl);
   showToast(title, body);
-  toast(title, { description: body });
 }
 
 export function useChatSocket(

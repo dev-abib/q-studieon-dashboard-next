@@ -14,28 +14,32 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group"
       icons={{
         success: (
-          <CircleCheckIcon className="size-4 text-emerald-500" />
+          <CircleCheckIcon className="size-4" />
         ),
         info: (
-          <InfoIcon className="size-4 text-primary" />
+          <InfoIcon className="size-4" />
         ),
         warning: (
-          <TriangleAlertIcon className="size-4 text-amber-500" />
+          <TriangleAlertIcon className="size-4" />
         ),
         error: (
-          <OctagonXIcon className="size-4 text-red-500" />
+          <OctagonXIcon className="size-4" />
         ),
         loading: (
-          <Loader2Icon className="size-4 animate-spin text-primary" />
+          <Loader2Icon className="size-4 animate-spin" />
         ),
       }}
+      style={
+        {
+          "--normal-bg": "var(--popover)",
+          "--normal-text": "var(--popover-foreground)",
+          "--normal-border": "var(--border)",
+          "--border-radius": "var(--radius)",
+        } as React.CSSProperties
+      }
       toastOptions={{
         classNames: {
-          toast: "cn-toast font-sans bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 shadow-2xl rounded-2xl p-4 text-black dark:text-white ring-2 ring-primary/15",
-          title: "text-xs font-bold text-black dark:text-white uppercase tracking-wider",
-          description: "!text-black dark:!text-slate-100 font-semibold text-xs leading-relaxed mt-0.5",
-          actionButton: "bg-primary text-primary-foreground font-semibold text-xs",
-          cancelButton: "bg-muted text-muted-foreground font-semibold text-xs",
+          toast: "cn-toast",
         },
       }}
       {...props}
