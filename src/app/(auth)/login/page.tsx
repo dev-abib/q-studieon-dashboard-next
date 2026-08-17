@@ -35,31 +35,30 @@ export default function LoginPage() {
   };
 
   return (
-    <section className="min-h-screen p-10  w-full relative ">
-      <div className=" bg-gray-100 h-[90vh] shadow-2xl w-full flex flex-row justify-between ">
-        <div className="w-[50%] h-full flex items-center justify-center ">
-          <div className=" flex flex-col gap-y-6">
-            <div className=" flex flex-col gap-y-4">
-              <h1 className="text-off-gray font-bold text-5xl tracking-[4.031px] ">
-                {" "}
-                {process.env.NEXT_PUBLIC_SITE_NAME as string}{" "}
+    <section className="min-h-screen p-4 sm:p-6 md:p-10 w-full flex items-center justify-center bg-slate-100/60 dark:bg-slate-950">
+      <div className="bg-white dark:bg-slate-900 min-h-[540px] md:h-[88vh] max-w-5xl shadow-2xl rounded-3xl overflow-hidden w-full flex flex-col md:flex-row justify-between border border-slate-200/80 dark:border-slate-800">
+        <div className="w-full md:w-1/2 p-6 sm:p-10 lg:p-12 flex items-center justify-center">
+          <div className="flex flex-col gap-y-6 w-full max-w-sm">
+            <div className="flex flex-col gap-y-2">
+              <h1 className="text-slate-900 dark:text-white font-extrabold text-3xl sm:text-4xl md:text-5xl tracking-tight">
+                {process.env.NEXT_PUBLIC_SITE_NAME || "Dwellr"}
               </h1>
-              <p className="text-lg text-gray-500">
+              <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 font-medium">
                 Sign in to access your dashboard
               </p>
             </div>
 
-            <div className="flex flex-col gap-y-5 w-full relative ">
+            <div className="flex flex-col gap-y-5 w-full relative">
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div className="space-y-1">
                   <Input
                     type="email"
                     placeholder="Email address"
                     {...register("email")}
-                    className="h-11"
+                    className="h-11 rounded-xl text-sm"
                   />
                   {errors.email && (
-                    <p className="text-sm text-red-500">
+                    <p className="text-xs text-rose-500">
                       {errors.email.message}
                     </p>
                   )}
@@ -69,10 +68,10 @@ export default function LoginPage() {
                   <PasswordInput
                     placeholder="Password"
                     {...register("password")}
-                    className="h-11"
+                    className="h-11 rounded-xl text-sm"
                   />
                   {errors.password && (
-                    <p className="text-sm text-red-500">
+                    <p className="text-xs text-rose-500">
                       {errors.password.message}
                     </p>
                   )}
@@ -88,14 +87,14 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
-                  className="w-full h-11 text-md rounded-xl cursor-pointer "
+                  className="w-full h-11 text-sm font-semibold rounded-xl cursor-pointer"
                   disabled={isPending}
                 >
                   {isPending ? "Signing in..." : "Sign in"}
                 </Button>
               </form>
 
-              <p className="text-sm text-center text-gray-400">
+              <p className="text-xs text-center text-slate-400 dark:text-slate-500">
                 Protected admin area • Unauthorized access is monitored
               </p>
             </div>
@@ -108,7 +107,7 @@ export default function LoginPage() {
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
           }}
-          className=" flex w-[50%] h-full items-center justify-center  "
+          className="hidden md:flex md:w-1/2 h-full items-center justify-center"
         ></div>
       </div>
     </section>
