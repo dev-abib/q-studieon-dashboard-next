@@ -19,6 +19,12 @@
 # production
 /build
 
+# next.js cache and dev files (allow production .next to be tracked for DreamHost VPS deploy)
+.next/cache/
+.next/dev/
+.next/lock
+.next/*.lock
+
 # misc
 .DS_Store
 *.pem
@@ -38,5 +44,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-/.next/
