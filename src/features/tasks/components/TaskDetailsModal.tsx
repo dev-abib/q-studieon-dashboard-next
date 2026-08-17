@@ -42,7 +42,7 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const commentsContainerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll discussion to bottom on initial load and when new comments arrive
+  // Auto-scroll discussion to bottom on load and on new comment
   useEffect(() => {
     if (task?.comments && task.comments.length > 0) {
       commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -94,7 +94,7 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-10 flex items-center justify-center shadow-2xl">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
@@ -104,7 +104,7 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
 
   if (error || !task) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 text-center max-w-sm border border-slate-200 dark:border-slate-800 shadow-2xl">
           <p className="text-sm text-red-500 font-semibold mb-4">Failed to load task details</p>
           <button
@@ -126,17 +126,17 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/65 backdrop-blur-xs animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl h-[90vh] max-h-[850px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/75 backdrop-blur-xs overflow-y-auto animate-fade-in">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl w-full max-w-4xl max-h-[86vh] shadow-2xl overflow-hidden flex flex-col my-auto relative animate-in zoom-in-95 duration-150 ring-1 ring-black/5">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-200/80 dark:border-slate-800 shrink-0 bg-slate-50/70 dark:bg-slate-900/80">
           <div className="flex items-center gap-2.5 flex-wrap">
             <span className={`px-2.5 py-1 rounded-lg text-xs font-extrabold uppercase tracking-wider border ${priorityColors[task.priority]}`}>
-              {task.priority}
+              {task.priority} Priority
             </span>
             <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
               <span>Created by</span>
-              <span className="font-semibold text-slate-700 dark:text-slate-200">
+              <span className="font-semibold text-slate-800 dark:text-slate-200">
                 {task.creator?.name ?? task.creator?.email ?? "Admin"}
               </span>
             </div>
@@ -154,9 +154,9 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
             )}
             <button
               onClick={onClose}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+              className="p-2 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4.5 w-4.5" />
             </button>
           </div>
         </div>
@@ -164,19 +164,19 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
         {/* Content Body Split */}
         <div className="flex flex-col md:flex-row flex-1 overflow-hidden min-h-0">
           {/* Left Panel: Task Info, Lifecycle & Progress */}
-          <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800 min-h-0 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 border-b md:border-b-0 md:border-r border-slate-200/80 dark:border-slate-800 min-h-0 custom-scrollbar">
             <div>
               <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug">
                 {task.title}
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 whitespace-pre-wrap leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-2 whitespace-pre-wrap leading-relaxed">
                 {task.description || "No description provided."}
               </p>
             </div>
 
             {/* Lifecycle Status Stepper */}
-            <div className="space-y-3 pt-2">
-              <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            <div className="space-y-2.5 pt-2">
+              <h4 className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Status Lifecycle
               </h4>
               <div className="flex flex-wrap gap-2">
@@ -191,7 +191,7 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
                   let activeClasses = "";
                   switch (statusItem.value) {
                     case "TODO":
-                      activeClasses = "bg-slate-200 dark:bg-slate-750 text-slate-800 dark:text-white border-slate-350 dark:border-slate-600 font-bold shadow-xs";
+                      activeClasses = "bg-slate-200 dark:bg-slate-750 text-slate-900 dark:text-white border-slate-400 dark:border-slate-600 font-bold shadow-xs";
                       break;
                     case "IN_PROGRESS":
                       activeClasses = "bg-blue-600 text-white border-blue-700 shadow-md font-bold";
@@ -226,20 +226,20 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
             </div>
 
             {/* Team member & Due Date */}
-            <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-              <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            <div className="space-y-3 pt-3 border-t border-slate-200/80 dark:border-slate-800">
+              <h4 className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Teammate & Timeline
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 mb-1">
+                  <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
                     Assignee
                   </label>
                   <select
                     value={task.assigneeId}
                     disabled={!isAdmin}
                     onChange={(e) => handleAssigneeChange(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-850 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-primary/20 disabled:opacity-75"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-850 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-primary/20 disabled:opacity-75 font-medium"
                   >
                     {staffList.map((s) => (
                       <option key={s.id} value={s.id}>
@@ -250,14 +250,14 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 mb-1">
+                  <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
                     Priority Level
                   </label>
                   <select
                     value={task.priority}
                     disabled={!isAdmin}
                     onChange={(e) => handlePriorityChange(e.target.value as TaskPriority)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-850 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-primary/20 disabled:opacity-75"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-850 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-primary/20 disabled:opacity-75 font-medium"
                   >
                     <option value="LOW">Low Priority</option>
                     <option value="MEDIUM">Medium Priority</option>
@@ -267,10 +267,10 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-medium text-slate-400 dark:text-slate-500 mb-1">
+                  <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
                     Due Date
                   </label>
-                  <div className="flex items-center gap-2 px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-850/60 text-slate-700 dark:text-slate-300">
+                  <div className="flex items-center gap-2 px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-850/60 text-slate-800 dark:text-slate-200 font-medium">
                     <Calendar className="h-3.5 w-3.5 text-primary" />
                     <span>
                       {task.dueDate ? new Date(task.dueDate).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" }) : "No due date set"}
@@ -281,9 +281,9 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
             </div>
 
             {/* Progress Adjuster */}
-            <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <div className="space-y-3 pt-3 border-t border-slate-200/80 dark:border-slate-800">
               <div className="flex items-center justify-between text-xs font-semibold">
-                <span className="text-slate-400 uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+                <span className="text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
                   <TrendingUp className="h-3.5 w-3.5 text-primary" />
                   Task Progress
                 </span>
@@ -306,7 +306,7 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
                     className={`px-3 py-1 rounded-xl text-[11px] font-bold border transition-all ${
                       task.progress === val
                         ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                        : "border-slate-200 dark:border-slate-750 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 bg-white dark:bg-slate-850"
+                        : "border-slate-200 dark:border-slate-750 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 bg-white dark:bg-slate-850"
                     }`}
                   >
                     {val}% {val === 0 ? "(Start)" : val === 100 ? "(Done)" : ""}
@@ -317,9 +317,9 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
           </div>
 
           {/* Right Panel: Discussion / Comments Feed */}
-          <div className="w-full md:w-[380px] flex flex-col overflow-hidden bg-slate-50/50 dark:bg-slate-900/40 min-h-0">
+          <div className="w-full md:w-[380px] flex flex-col overflow-hidden bg-slate-50/70 dark:bg-slate-900/50 min-h-0">
             {/* Header info */}
-            <div className="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white dark:bg-slate-900">
+            <div className="px-5 py-3.5 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white dark:bg-slate-900">
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 text-primary" />
                 <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200">
@@ -337,19 +337,19 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
               )}
             </div>
 
-            {/* Scrollable Comments List with Full Overflow-Y */}
+            {/* Scrollable Comments List */}
             <div
               ref={commentsContainerRef}
               className="flex-1 overflow-y-auto p-4 space-y-3.5 min-h-0 custom-scrollbar overscroll-contain"
             >
               {!task.comments || task.comments.length === 0 ? (
-                <div className="h-full min-h-[160px] flex flex-col items-center justify-center text-slate-400 gap-2 p-4 text-center">
+                <div className="h-full min-h-[180px] flex flex-col items-center justify-center text-slate-400 gap-2 p-4 text-center">
                   <div className="h-10 w-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
                     <MessageSquare className="h-5 w-5 opacity-60" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">No comments yet</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Post an update or question below to notify the team.</p>
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">No comments yet</p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Post an update or question below to notify the team.</p>
                   </div>
                 </div>
               ) : (
@@ -380,7 +380,7 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
                           })}
                         </span>
                       </div>
-                      <p className="text-slate-600 dark:text-slate-300 leading-relaxed break-words text-[11px]">
+                      <p className="text-slate-700 dark:text-slate-200 leading-relaxed break-words text-[11px]">
                         {comment.content}
                       </p>
                     </div>
@@ -393,14 +393,14 @@ export function TaskDetailsModal({ taskId, userRole, isOwner, onClose }: Props) 
             {/* Comment Input Form */}
             <form
               onSubmit={handleAddComment}
-              className="p-3 sm:p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 flex gap-2"
+              className="p-3 sm:p-4 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 flex gap-2"
             >
               <input
                 type="text"
                 placeholder="Write a comment / discussion update..."
                 value={commentContent}
                 onChange={(e) => setCommentContent(e.target.value)}
-                className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-750 bg-slate-50 dark:bg-slate-850 text-slate-900 dark:text-white placeholder:text-slate-450 focus:outline-hidden focus:ring-2 focus:ring-primary/20"
+                className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-750 bg-slate-50 dark:bg-slate-850 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-primary/20"
               />
               <button
                 type="submit"
