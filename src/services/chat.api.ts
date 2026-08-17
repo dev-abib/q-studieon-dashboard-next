@@ -102,6 +102,14 @@ export const chatApi = {
     return res.data?.data ?? res.data;
   },
 
+  toggleReaction: async (
+    messageId: string,
+    emoji: string
+  ): Promise<{ messageId: string; reactions: any[] }> => {
+    const res = await api.post(`/chat/messages/${messageId}/reaction`, { emoji });
+    return res.data?.data ?? res.data;
+  },
+
   flagMessage: async (messageId: string, reason: string) => {
     const res = await api.patch(`/chat/messages/${messageId}/flag`, { reason });
     return res.data?.data ?? res.data;

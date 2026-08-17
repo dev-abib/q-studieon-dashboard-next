@@ -14,6 +14,19 @@ export interface ChatMention {
   mentioned: { id: string; name: string | null };
 }
 
+export interface ChatReaction {
+  id: string;
+  messageId: string;
+  userId: string;
+  emoji: string;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string | null;
+    profilePictureURL: string | null;
+  };
+}
+
 export interface ChatMessage {
   id: string;
   senderId: string;
@@ -35,6 +48,7 @@ export interface ChatMessage {
   createdAt: string;
   sender: StaffSummary;
   mentions: ChatMention[];
+  reactions?: ChatReaction[];
 }
 
 export interface ChatGroupMember {

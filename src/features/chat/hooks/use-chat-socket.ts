@@ -336,6 +336,14 @@ export function useChatSocket(
       }
     });
 
+    // ── Reactions ─────────────────────────────────────────────────────────────
+    socket.on(
+      "messageReactionUpdated",
+      ({ messageId, reactions }: { messageId: string; reactions: any[] }) => {
+        useChatStore.getState().updateMessageReactions(messageId, reactions);
+      }
+    );
+
     // ── Typing ────────────────────────────────────────────────────────────────
     socket.on(
       "typingIndicator",

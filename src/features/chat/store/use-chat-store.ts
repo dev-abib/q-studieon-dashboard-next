@@ -11,6 +11,7 @@ import type {
   ActiveConversation,
   TypingIndicator,
   MentionNotification,
+  ChatReaction,
 } from "../types/chat.types";
 
 export interface SystemNotification {
@@ -60,6 +61,7 @@ interface ChatState {
   appendMessage: (roomKey: string, msg: ChatMessage) => void;
   replaceMessage: (roomKey: string, msg: ChatMessage) => void;
   removeMessage: (roomKey: string, messageId: string) => void;
+  updateMessageReactions: (messageId: string, reactions: ChatReaction[]) => void;
   // Optimistic (temp-) message bookkeeping
   replaceTempMessage: (roomKey: string, tempId: string, msg: ChatMessage) => void;
   removeTempMessage: (roomKey: string, tempId: string) => void;
@@ -208,6 +210,18 @@ export const useChatStore = create<ChatState>()(
         state.messages[key] = state.messages[key].map((m) =>
           m.id === msg.id ? msg : m
         );
+      }),
+
+    updateMessageReactions: (messageId, reactions) =>
+      set((state) => {
+        for (const key of Object.keys(state.messages)) {
+          const list = state.messages[key];
+          if (!list) continue;
+          const idx = list.findIndex((m) => m.id === messageId);
+          if (idx >= 0) {
+            list[idx].reactions = reactions;
+          }
+        }
       }),
 
     removeMessage: (key, messageId) =>
