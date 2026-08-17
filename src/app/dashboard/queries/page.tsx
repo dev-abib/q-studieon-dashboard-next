@@ -1739,35 +1739,55 @@ function QueriesPageContent() {
 
                   {/* TAB 1: CONVERSATION */}
                   {activeTab === "reply" && (
-                    <div className="space-y-3.5">
-                      {/* Customer Message Bubble */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs text-slate-400">
-                          <span className="font-semibold text-slate-700 dark:text-slate-300">
-                            {activeQuery.name} wrote:
+                    <div className="space-y-4">
+                      {/* Customer Message Bubble - Prominent & Ultra-Readable */}
+                      <div className="bg-white dark:bg-slate-850 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-700/80 shadow-xs space-y-3">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                          <div className="flex items-center gap-2.5">
+                            <div className="h-9 w-9 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs ring-1 ring-primary/20 shrink-0">
+                              {activeQuery.name?.[0]?.toUpperCase() || "C"}
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                {activeQuery.name}
+                              </h4>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{activeQuery.email}</p>
+                            </div>
+                          </div>
+                          <span className="text-[11px] text-slate-400 font-medium shrink-0">
+                            {new Date(activeQuery.createdAt).toLocaleString([], {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
                           </span>
-                          <span>{new Date(activeQuery.createdAt).toLocaleString()}</span>
                         </div>
-                        <div className="p-4 rounded-2xl bg-slate-100/70 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 text-xs sm:text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap break-words leading-relaxed shadow-2xs">
+                        <div className="text-xs sm:text-sm text-slate-900 dark:text-slate-100 whitespace-pre-wrap break-words leading-relaxed font-normal pt-1">
                           {activeQuery.message}
                         </div>
                       </div>
 
                       {/* Previous Admin Reply */}
                       {activeQuery.replyMessage && (
-                        <div className="space-y-1.5 pl-3 border-l-2 border-emerald-500">
-                          <div className="flex items-center justify-between text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
-                            <span className="flex items-center gap-1">
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                              Sent Reply by {activeQuery.repliedByName || "Admin"}
-                            </span>
-                            <span className="text-slate-400 text-[10.5px]">
+                        <div className="bg-emerald-50/70 dark:bg-emerald-950/20 p-5 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/50 shadow-xs space-y-3">
+                          <div className="flex items-center justify-between pb-3 border-b border-emerald-200/50 dark:border-emerald-800/40">
+                            <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300 font-bold">
+                              <CheckCircle2 className="h-4 w-4" />
+                              <span>Official Reply by {activeQuery.repliedByName || "Admin"}</span>
+                            </div>
+                            <span className="text-emerald-600/70 dark:text-emerald-400/70 text-[11px] font-medium">
                               {activeQuery.repliedAt
-                                ? new Date(activeQuery.repliedAt).toLocaleString()
+                                ? new Date(activeQuery.repliedAt).toLocaleString([], {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })
                                 : ""}
                             </span>
                           </div>
-                          <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 text-xs sm:text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap break-words leading-relaxed shadow-2xs">
+                          <div className="text-xs sm:text-sm text-slate-900 dark:text-slate-100 whitespace-pre-wrap break-words leading-relaxed font-normal">
                             {activeQuery.replyMessage}
                           </div>
                         </div>
@@ -1868,9 +1888,9 @@ function QueriesPageContent() {
                   )}
                 </div>
 
-                {/* Bottom: Generous Sticky Live Composer in Conversation Tab */}
+                {/* Bottom: Streamlined Live Composer */}
                 {activeTab === "reply" && (
-                  <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 space-y-3">
+                  <div className="p-3.5 sm:p-4 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 space-y-2.5">
                     {/* Canned Templates */}
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 flex items-center gap-1">
@@ -1882,48 +1902,48 @@ function QueriesPageContent() {
                           key={tpl.title}
                           type="button"
                           onClick={() => handleApplyTemplate(tpl)}
-                          className="px-2.5 py-1 rounded-lg text-[10.5px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-all border border-slate-200/60 dark:border-slate-700/60 font-medium shrink-0 whitespace-nowrap"
+                          className="px-2 py-0.5 rounded-lg text-[10.5px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-all border border-slate-200/60 dark:border-slate-700/60 font-medium shrink-0 whitespace-nowrap"
                         >
                           + {tpl.title}
                         </button>
                       ))}
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <Input
                         value={customSubject}
                         onChange={e => setCustomSubject(e.target.value)}
                         placeholder="Subject for response email..."
-                        className="rounded-xl text-xs h-8.5 bg-slate-50/50 dark:bg-slate-800/40"
+                        className="rounded-xl text-xs h-7.5 bg-slate-50/70 dark:bg-slate-800/50 text-slate-900 dark:text-white"
                       />
                       <textarea
-                        rows={5}
+                        rows={3}
                         value={replyMessage}
                         onChange={e => setReplyMessage(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder={`Dear ${activeQuery.name},\n\nThank you for reaching out to Dwellr support...\n\n(Press Ctrl+Enter to send response email directly to customer)`}
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-y min-h-[140px] max-h-[260px] leading-relaxed"
+                        placeholder={`Dear ${activeQuery.name},\n\nThank you for reaching out to Dwellr support...\n\n(Press Ctrl+Enter to send response email)`}
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-850 p-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-y min-h-[75px] max-h-[160px] leading-relaxed"
                       />
                     </div>
 
                     <div className="flex items-center justify-between pt-0.5">
                       <span className="text-[11px] text-slate-400 truncate">
-                        Sending as official support email to <strong>{activeQuery.email}</strong> • <kbd className="font-mono text-[9.5px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border">Ctrl+Enter</kbd>
+                        Sending to <strong className="text-slate-700 dark:text-slate-300">{activeQuery.email}</strong> • <kbd className="font-mono text-[9.5px] bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded border">Ctrl+Enter</kbd>
                       </span>
                       <Button
                         type="button"
                         onClick={handleSendReply}
                         disabled={!replyMessage.trim() || replyMutation.isPending}
-                        className="rounded-xl h-9 px-5 text-xs font-semibold gap-1.5 shadow-xs shrink-0"
+                        className="rounded-xl h-8 px-4 text-xs font-semibold gap-1.5 shadow-xs shrink-0"
                       >
                         {replyMutation.isPending ? (
                           <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            <Loader2 className="h-3 w-3 animate-spin" />
                             <span>Sending...</span>
                           </>
                         ) : (
                           <>
-                            <Send className="h-3.5 w-3.5" />
+                            <Send className="h-3 w-3" />
                             <span>Send Response</span>
                           </>
                         )}

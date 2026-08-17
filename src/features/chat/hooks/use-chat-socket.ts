@@ -137,18 +137,37 @@ function showPushNotification(
   icon?: string,
   senderId?: string,
   messageId?: string,
-  targetUrl: string = "/dashboard/team-chat"
+  targetUrl: string = "/dashboard/queries"
 ) {
   if (typeof window === "undefined") return;
   if (!("Notification" in window)) return;
 
-  const sendNotification = () => {
+  const sendNotification = async () => {
     try {
       let absoluteIcon: string | undefined = undefined;
       if (icon && (icon.startsWith("http://") || icon.startsWith("https://") || icon.startsWith("data:"))) {
         absoluteIcon = icon;
       } else if (icon && icon.startsWith("/")) {
         absoluteIcon = window.location.origin + icon;
+      }
+
+      // Try Service Worker registration first (standard on Chrome, Edge, and mobile)
+      if ("serviceWorker" in navigator) {
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          if (reg && "showNotification" in reg) {
+            await reg.showNotification(title, {
+              body,
+              icon: absoluteIcon,
+              badge: absoluteIcon,
+              data: { url: targetUrl },
+              tag: `dwellr-${Date.now()}`,
+            });
+            return;
+          }
+        } catch (swErr) {
+          console.warn("[SW Notification Error, fallback to direct]:", swErr);
+        }
       }
 
       console.log("[Notification] Direct OS Notification trigger:", title);
