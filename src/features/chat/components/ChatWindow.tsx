@@ -11,7 +11,7 @@ import type {
   ChatMessage,
   StaffSummary,
 } from "../types/chat.types";
-import { Hash, User, Loader2, ChevronUp, Settings, Users, UserPlus, Info, ArrowLeft } from "lucide-react";
+import { Hash, User, Loader2, ChevronUp, Settings, Users, UserPlus, Info, ArrowLeft, MessagesSquare } from "lucide-react";
 import { chatApi } from "@/services/chat.api";
 import { useQueryClient } from "@tanstack/react-query";
 import { GroupManageModal } from "./GroupManageModal";
@@ -420,7 +420,7 @@ export function ChatWindow({
           </div>
         ) : roomMessages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 gap-2 text-slate-400">
-            <MessageSquarePlaceholder />
+            <MessagesSquare className="h-10 w-10 opacity-30 text-slate-400" />
             <p className="text-sm">No messages yet. Say hello! 👋</p>
           </div>
         ) : (
@@ -523,23 +523,5 @@ export function ChatWindow({
         />
       )}
     </div>
-  );
-}
-
-function MessageSquarePlaceholder() {
-  return (
-    <svg
-      className="h-10 w-10 opacity-20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"
-      />
-    </svg>
   );
 }
