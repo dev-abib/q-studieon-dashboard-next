@@ -80,6 +80,7 @@ export function useCreateComment(taskId: string) {
     mutationFn: (content: string) => tasksApi.addComment(taskId, content),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks", "detail", taskId] });
+      qc.invalidateQueries({ queryKey: ["tasks", "list"] });
     },
   });
 }

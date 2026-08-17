@@ -30,7 +30,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="flex flex-col h-full w-full bg-slate-50/50 dark:bg-slate-950 p-4 sm:p-6 overflow-hidden min-h-0">
+    <div className="flex flex-col h-[calc(100vh-4.25rem)] w-full bg-slate-50/50 dark:bg-slate-950 p-4 sm:p-6 overflow-hidden min-h-0">
       {/* Title block */}
       <div className="flex items-center gap-2.5 mb-4 shrink-0">
         <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0 shadow-2xs">
