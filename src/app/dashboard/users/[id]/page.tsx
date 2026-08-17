@@ -1134,7 +1134,7 @@ export default function UserDetailsPage() {
   const daysUntilPurge = getDaysRemaining(user.purgeAt);
 
   return (
-    <section className="w-full flex flex-col gap-6 min-h-screen pb-20">
+    <section className="w-full flex flex-col gap-6">
       {/* ─── REAL-TIME TEAM COLLISION WARNING ─────────────────────────────── */}
       {collisions.length > 0 && (
         <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 flex items-center justify-between gap-3 shadow-xs">

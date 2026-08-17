@@ -118,7 +118,7 @@ export default function SystemStatusPage() {
   ];
 
   return (
-    <section className="w-full flex flex-col gap-6 min-h-screen">
+    <section className="w-full flex flex-col gap-6">
       {/* ── Page Header matching Dashboard ── */}
       <PageHeader
         kicker="INFRASTRUCTURE & SERVICE AVAILABILITY"

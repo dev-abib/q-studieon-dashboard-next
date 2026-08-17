@@ -559,7 +559,7 @@ export default function QuestionsPage() {
     allCategories.find(c => c.id === id)?.name ?? "Uncategorized";
 
   return (
-    <section className="w-full flex flex-col gap-6 min-h-screen pb-20">
+    <section className="w-full flex flex-col gap-6">
       {/* ── Page Header ── */}
       <PageHeader
         kicker="Survey & Assessment Builder"

@@ -221,7 +221,7 @@ export default function AdminProfilePage() {
   ];
 
   return (
-    <section className="w-full flex flex-col gap-6 min-h-screen">
+    <section className="w-full flex flex-col gap-6">
       {/* ── Welcome / Page Header ── */}
       <PageHeader
         kicker="Staff Profile & Operational Duties"
@@ -376,7 +376,7 @@ export default function AdminProfilePage() {
       </div>
 
       {/* ── Navigation Sub-Tabs ── */}
-      <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2 overflow-x-auto [scrollbar-width:none]">
+      <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pt-1 pb-2.5 overflow-x-auto [scrollbar-width:none] shrink-0">
         <button
           type="button"
           onClick={() => setActiveTab("duties")}

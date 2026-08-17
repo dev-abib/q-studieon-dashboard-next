@@ -173,7 +173,7 @@ const RevenueBreakdownSkeleton = () => (
 const DashboardSkeleton = () => {
   const statBgs = ["#F0EFFE", "#ECFDF5", "#FFFBEB", "#EFF6FF", "#F5F3FF"];
   return (
-    <section className="w-full flex flex-col gap-6 min-h-screen">
+    <section className="w-full flex flex-col gap-6">
       <ShimmerStyle />
 
       {/* heading */}
@@ -502,7 +502,7 @@ const Page = () => {
   ];
 
   return (
-    <section className="w-full flex flex-col gap-6 min-h-screen">
+    <section className="w-full flex flex-col gap-6">
       {/* ── Welcome Header ── */}
       <PageHeader
         kicker="Live Executive Dashboard"

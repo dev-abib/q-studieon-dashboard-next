@@ -3378,7 +3378,7 @@ export default function QueriesPage() {
   return (
     <Suspense
       fallback={
-        <div className="w-full min-h-screen flex items-center justify-center">
+        <div className="w-full h-96 flex items-center justify-center">
           <Loader2 className="h-6 w-6 text-primary animate-spin" />
         </div>
       }

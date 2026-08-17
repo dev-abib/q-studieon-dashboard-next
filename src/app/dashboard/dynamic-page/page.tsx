@@ -759,7 +759,7 @@ export default function DynamicPagesPage() {
     filter === "all" ? pages.filter(p => !p.isPublished).length : null;
 
   return (
-    <section className="w-full flex flex-col gap-6 min-h-screen pb-20">
+    <section className="w-full flex flex-col gap-6">
       {/* ── Page Header ── */}
       <PageHeader
         kicker="CMS & Dynamic Content"
