@@ -14,7 +14,9 @@ self.addEventListener("push", (event) => {
     title: "Dwellr",
     body: "",
     tag: `push-${Date.now()}`,
-    url: "/dashboard/team-chat",
+    url: "/dashboard/queries",
+    icon: "/next.svg",
+    badge: "/next.svg",
     renotify: true,
   };
 
@@ -33,9 +35,12 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: payload.body,
+      icon: payload.icon || "/next.svg",
+      badge: payload.badge || "/next.svg",
       tag: payload.tag || `push-${Date.now()}`,
       renotify: payload.renotify !== false,
-      data: { url: payload.url || "/dashboard/team-chat" },
+      vibrate: [200, 100, 200],
+      data: { url: payload.url || "/dashboard/queries" },
     })
   );
 });
@@ -43,15 +48,18 @@ self.addEventListener("push", (event) => {
 // Listen to message post events from the frontend chat socket hook
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SHOW_NOTIFICATION") {
-    const { title, body, tag, url } = event.data.payload;
+    const { title, body, tag, url, icon } = event.data.payload;
 
     event.waitUntil(
       self.registration.showNotification(title, {
         body,
-        tag: tag || "chat-msg",
+        icon: icon || "/next.svg",
+        badge: icon || "/next.svg",
+        tag: tag || `msg-${Date.now()}`,
         renotify: true,
-        requireInteraction: true,
-        data: { url: url || "/dashboard/team-chat" },
+        vibrate: [200, 100, 200],
+        requireInteraction: false,
+        data: { url: url || "/dashboard/queries" },
       })
     );
   }

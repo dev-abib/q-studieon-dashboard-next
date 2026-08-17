@@ -11,7 +11,7 @@ import type {
   ChatMessage,
   StaffSummary,
 } from "../types/chat.types";
-import { Hash, User, Loader2, ChevronUp, Settings, Users, UserPlus, Info } from "lucide-react";
+import { Hash, User, Loader2, ChevronUp, Settings, Users, UserPlus, Info, ArrowLeft } from "lucide-react";
 import { chatApi } from "@/services/chat.api";
 import { useQueryClient } from "@tanstack/react-query";
 import { GroupManageModal } from "./GroupManageModal";
@@ -230,7 +230,17 @@ export function ChatWindow({
     <div className="flex h-full min-w-0 flex-1 overflow-hidden relative">
       <div className="flex flex-col h-full min-w-0 flex-1">
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900">
+      <div className="flex items-center gap-3 px-3 sm:px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900">
+        {/* Mobile Back to Conversations Button */}
+        <button
+          type="button"
+          onClick={() => useChatStore.getState().setActiveConversation(null)}
+          className="md:hidden p-1.5 -ml-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+          title="Back to conversations"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+
         {conversation.type === "group" ? (
           <>
             {group?.avatarUrl ? (

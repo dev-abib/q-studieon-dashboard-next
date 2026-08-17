@@ -391,7 +391,7 @@ export function TaskBoard({ currentUserId, userRole, isOwner }: Props) {
         )}
       </div>
 
-      {/* Main Board View: Expands 100% across the full available space */}
+      {/* Main Board View: Responsive Kanban Grid with mobile horizontal swipe */}
       {viewType === "list" ? (
         <div className="flex-1 min-h-0 w-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
           <TaskList
@@ -415,7 +415,7 @@ export function TaskBoard({ currentUserId, userRole, isOwner }: Props) {
           />
         </div>
       ) : (
-        <div className="flex-1 w-full min-h-0 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 overflow-hidden">
+        <div className="flex-1 w-full min-h-0 flex md:grid md:grid-cols-2 xl:grid-cols-4 gap-4 overflow-x-auto md:overflow-hidden pb-2 md:pb-0 snap-x snap-mandatory">
           {columns.map((col) => {
             const colTasks = tasks.filter((t) => t.status === col.status);
             const isDragTarget = dragOverCol === col.status;
@@ -433,7 +433,7 @@ export function TaskBoard({ currentUserId, userRole, isOwner }: Props) {
                   if (dragOverCol === col.status) setDragOverCol(null);
                 }}
                 onDrop={(e) => handleDropOnColumn(col.status, e)}
-                className={`flex flex-col h-full min-h-0 overflow-hidden rounded-2xl border transition-all duration-200 p-3.5 min-w-0 w-full ${col.bg} ${
+                className={`flex flex-col h-full min-h-0 overflow-hidden rounded-2xl border transition-all duration-200 p-3.5 w-[85vw] sm:w-[320px] shrink-0 md:w-auto md:shrink snap-center ${col.bg} ${
                   isDragTarget
                     ? "ring-2 ring-primary border-primary bg-primary/10 dark:bg-primary/15 shadow-xl scale-[1.008]"
                     : col.border

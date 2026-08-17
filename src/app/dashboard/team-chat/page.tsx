@@ -119,12 +119,20 @@ export default function TeamChatPage() {
 
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar — always visible */}
-        <ChatSidebar
-          currentUserId={admin?.id ?? ""}
-          currentUserRole={admin?.role ?? "admin"}
-          isOwner={admin?.isOwner}
-        />
+        {/* Sidebar — full width on mobile when no conversation is active */}
+        <div
+          className={`h-full ${
+            activeConversation && activeTab === "chat"
+              ? "hidden md:flex md:w-72"
+              : "flex w-full md:w-72"
+          } shrink-0`}
+        >
+          <ChatSidebar
+            currentUserId={admin?.id ?? ""}
+            currentUserRole={admin?.role ?? "admin"}
+            isOwner={admin?.isOwner}
+          />
+        </div>
 
         {/* Right panel */}
         {activeTab === "surveillance" && isSuperAdmin ? (
@@ -132,16 +140,18 @@ export default function TeamChatPage() {
             <SurveillancePanel />
           </div>
         ) : activeConversation ? (
-          <ChatWindow
-            conversation={activeConversation}
-            currentUserId={admin?.id ?? ""}
-            currentUserRole={admin?.role ?? "admin"}
-            isOwner={admin?.isOwner}
-            onStartDm={handleStartDm}
-          />
+          <div className="flex-1 h-full min-w-0 flex flex-col">
+            <ChatWindow
+              conversation={activeConversation}
+              currentUserId={admin?.id ?? ""}
+              currentUserRole={admin?.role ?? "admin"}
+              isOwner={admin?.isOwner}
+              onStartDm={handleStartDm}
+            />
+          </div>
         ) : (
-          /* Empty state */
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-white dark:bg-slate-900 text-slate-400">
+          /* Empty state — shown on desktop when no conversation is selected */
+          <div className="hidden md:flex flex-1 flex-col items-center justify-center gap-4 bg-white dark:bg-slate-900 text-slate-400">
             <div className="h-16 w-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
               <MessageSquare className="h-8 w-8 opacity-40" />
             </div>
