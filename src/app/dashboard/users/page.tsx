@@ -617,7 +617,7 @@ export default function UsersPage() {
       </PageHeader>
 
       {/* ── Stat Cards Grid (5-column layout matching dashboard) ── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard
           icon={Users}
           label="Total Users"

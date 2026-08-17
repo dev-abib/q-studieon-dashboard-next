@@ -730,7 +730,7 @@ const Page = () => {
 
       {/* ── users by role ── */}
       <Card>
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4 mb-6">
           <div>
             <h3 className="text-base font-semibold text-slate-900 dark:text-white">
               Users Breakdown by Role
@@ -739,7 +739,7 @@ const Page = () => {
               Active profile distribution across platform roles
             </p>
           </div>
-          <span className="text-xs font-medium px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+          <span className="self-start sm:self-auto text-xs font-medium px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 shrink-0">
             {roleData.reduce((acc, curr) => acc + curr.count, 0)} Total Role Accounts
           </span>
         </div>
