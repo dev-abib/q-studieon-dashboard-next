@@ -423,6 +423,16 @@ export function useChatSocket(
           return;
         }
 
+        // Always invalidate queries for instant real-time data sync across all tabs
+        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["contact-queries"] });
+
+        // If the actor is the current user themselves, skip the big in-app banner (they already get direct action toast)
+        if (data.data?.actorId && String(data.data.actorId) === String(currentUserId)) {
+          console.log("[Notification skipped for self-actor]:", data.title);
+          return;
+        }
+
         console.log("[Global System Notification Received]:", data);
 
         const notifType = (data.type as any) ??
@@ -439,9 +449,6 @@ export function useChatSocket(
         const targetUrl = data.url || data.data?.url || (notifType === "task" ? "/dashboard/tasks" : notifType === "inquiry" ? "/dashboard/queries" : "/dashboard");
 
         triggerSystemNotification(data.title, data.body, notifType, targetUrl);
-
-        queryClient.invalidateQueries({ queryKey: ["tasks"] });
-        queryClient.invalidateQueries({ queryKey: ["contact-queries"] });
       }
     );
 

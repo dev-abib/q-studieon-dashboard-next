@@ -166,7 +166,8 @@ function QueriesPageContent() {
   const searchParams = useSearchParams();
   const urlSearch = searchParams.get("search") || "";
   const urlStatus = (searchParams.get("status") as ContactQueryStatus) || "ALL";
-  const urlPriority = (searchParams.get("priority") as ContactQueryPriority) || "ALL";
+  const urlPriority =
+    (searchParams.get("priority") as ContactQueryPriority) || "ALL";
 
   // View mode (split inbox vs table)
   const [viewMode, setViewMode] = useState<ViewMode>("split");
@@ -175,9 +176,15 @@ function QueriesPageContent() {
   // Filters & State
   const [search, setSearch] = useState(urlSearch);
   const [searchVal, setSearchVal] = useState(urlSearch);
-  const [statusFilter, setStatusFilter] = useState<ContactQueryStatus | "ALL">(urlStatus);
-  const [priorityFilter, setPriorityFilter] = useState<ContactQueryPriority | "ALL">(urlPriority);
-  const [registeredFilter, setRegisteredFilter] = useState<"ALL" | "REGISTERED" | "GUEST">("ALL");
+  const [statusFilter, setStatusFilter] = useState<ContactQueryStatus | "ALL">(
+    urlStatus,
+  );
+  const [priorityFilter, setPriorityFilter] = useState<
+    ContactQueryPriority | "ALL"
+  >(urlPriority);
+  const [registeredFilter, setRegisteredFilter] = useState<
+    "ALL" | "REGISTERED" | "GUEST"
+  >("ALL");
   const [assignedFilter, setAssignedFilter] = useState<string>("ALL");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -209,7 +216,9 @@ function QueriesPageContent() {
   // Active / Selected Query
   const [activeQueryId, setActiveQueryId] = useState<string | null>(null);
   const [replyOpen, setReplyOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"reply" | "notes" | "timeline">("reply");
+  const [activeTab, setActiveTab] = useState<"reply" | "notes" | "timeline">(
+    "reply",
+  );
   const [replyMessage, setReplyMessage] = useState("");
   const [customSubject, setCustomSubject] = useState("");
   const [newStaffNote, setNewStaffNote] = useState("");
@@ -245,27 +254,45 @@ function QueriesPageContent() {
         registeredFilter === "REGISTERED"
           ? true
           : registeredFilter === "GUEST"
-          ? false
-          : undefined,
+            ? false
+            : undefined,
       assignedToId: assignedFilter !== "ALL" ? assignedFilter : undefined,
       sortBy,
       sortOrder,
     };
-  }, [page, limit, search, statusFilter, priorityFilter, registeredFilter, assignedFilter, sortBy, sortOrder]);
+  }, [
+    page,
+    limit,
+    search,
+    statusFilter,
+    priorityFilter,
+    registeredFilter,
+    assignedFilter,
+    sortBy,
+    sortOrder,
+  ]);
 
   const { data: currentUserRes } = useCurrentUser();
-  const { data: queriesRes, isLoading, isFetching, refetch } = useGetAllQueries(queryParams);
+  const {
+    data: queriesRes,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useGetAllQueries(queryParams);
   const { data: stats } = useQueryStats();
-  const { data: rawStaffMembers, isLoading: isLoadingStaff } = useStaffMembers();
+  const { data: rawStaffMembers, isLoading: isLoadingStaff } =
+    useStaffMembers();
 
   // Current User Permission Assessment
   const currentUser = currentUserRes?.data || currentUserRes;
-  const isSuperAdmin = currentUser?.role === "super_admin" || currentUser?.isOwner;
+  const isSuperAdmin =
+    currentUser?.role === "super_admin" || currentUser?.isOwner;
   const canDelete = isSuperAdmin || Boolean(currentUser?.canDeleteQueries);
 
   const staffMembers: StaffMember[] = useMemo(() => {
     if (Array.isArray(rawStaffMembers)) return rawStaffMembers;
-    if (Array.isArray((rawStaffMembers as any)?.data)) return (rawStaffMembers as any).data;
+    if (Array.isArray((rawStaffMembers as any)?.data))
+      return (rawStaffMembers as any).data;
     return [];
   }, [rawStaffMembers]);
 
@@ -302,14 +329,14 @@ function QueriesPageContent() {
     }
   }, [queries, activeQueryId]);
 
-
-
   // Reply mutation for active inquiry
   const replyMutation = useReplyQuery(activeQuery?.id || "");
 
   // Selection helpers
-  const isAllSelected = queries.length > 0 && selectedIds.length === queries.length;
-  const isSomeSelected = selectedIds.length > 0 && selectedIds.length < queries.length;
+  const isAllSelected =
+    queries.length > 0 && selectedIds.length === queries.length;
+  const isSomeSelected =
+    selectedIds.length > 0 && selectedIds.length < queries.length;
 
   const handleToggleSelectAll = () => {
     if (isAllSelected) {
@@ -321,7 +348,7 @@ function QueriesPageContent() {
 
   const handleToggleSelectRow = (id: string) => {
     setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id],
     );
   };
 
@@ -354,7 +381,7 @@ function QueriesPageContent() {
     setReplyOpen(true);
   };
 
-  const handleApplyTemplate = (tpl: typeof CANNED_TEMPLATES[0]) => {
+  const handleApplyTemplate = (tpl: (typeof CANNED_TEMPLATES)[0]) => {
     if (!activeQuery) return;
     setCustomSubject(tpl.subject);
     setReplyMessage(`Dear ${activeQuery.name},\n\n${tpl.body}`);
@@ -416,18 +443,22 @@ function QueriesPageContent() {
       });
       setReplyMessage("");
       if (replyOpen) setReplyOpen(false);
-
-
     } catch {
       // Handled by hook
     }
   };
 
-  const handleQuickStatusChange = (id: string, newStatus: ContactQueryStatus) => {
+  const handleQuickStatusChange = (
+    id: string,
+    newStatus: ContactQueryStatus,
+  ) => {
     updateStatusMutation.mutate({ id, status: newStatus });
   };
 
-  const handleQuickPriorityChange = (id: string, newPriority: ContactQueryPriority) => {
+  const handleQuickPriorityChange = (
+    id: string,
+    newPriority: ContactQueryPriority,
+  ) => {
     updatePriorityMutation.mutate({ id, priority: newPriority });
   };
 
@@ -475,11 +506,17 @@ function QueriesPageContent() {
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
     if (!canDelete) {
-      toast.error("Permission Denied: Only Super Admin or staff with delete privileges can delete inquiries.");
+      toast.error(
+        "Permission Denied: Only Super Admin or staff with delete privileges can delete inquiries.",
+      );
       return;
     }
 
-    if (confirm(`Are you sure you want to permanently delete ${selectedIds.length} inquiries?`)) {
+    if (
+      confirm(
+        `Are you sure you want to permanently delete ${selectedIds.length} inquiries?`,
+      )
+    ) {
       await bulkActionMutation.mutateAsync({
         ids: selectedIds,
         action: "DELETE",
@@ -491,7 +528,9 @@ function QueriesPageContent() {
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     if (!canDelete) {
-      toast.error("Permission Denied: Only Super Admin or staff with delete privileges can delete inquiries.");
+      toast.error(
+        "Permission Denied: Only Super Admin or staff with delete privileges can delete inquiries.",
+      );
       return;
     }
 
@@ -504,7 +543,10 @@ function QueriesPageContent() {
     }
   };
 
-  const handleToggleStaffDeletePermission = async (staffId: string, currentStatus: boolean) => {
+  const handleToggleStaffDeletePermission = async (
+    staffId: string,
+    currentStatus: boolean,
+  ) => {
     try {
       await togglePermissionMutation.mutateAsync({
         staffId,
@@ -515,7 +557,10 @@ function QueriesPageContent() {
     }
   };
 
-  const handleToggleStaffUserDetailsPermission = async (staffId: string, currentStatus: boolean) => {
+  const handleToggleStaffUserDetailsPermission = async (
+    staffId: string,
+    currentStatus: boolean,
+  ) => {
     try {
       await toggleUserDetailsMutation.mutateAsync({
         staffId,
@@ -585,7 +630,10 @@ function QueriesPageContent() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `inquiries-export-${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute(
+      "download",
+      `inquiries-export-${new Date().toISOString().slice(0, 10)}.csv`,
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -805,7 +853,9 @@ function QueriesPageContent() {
             disabled={isFetching}
             className="gap-1.5 rounded-xl text-xs h-8"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`}
+            />
             <span className="hidden sm:inline">Refresh</span>
           </Button>
         </div>
@@ -815,7 +865,12 @@ function QueriesPageContent() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {/* Total Inquiries */}
         {(() => {
-          const isTotalActive = statusFilter === "ALL" && priorityFilter === "ALL" && registeredFilter === "ALL" && assignedFilter === "ALL" && !search;
+          const isTotalActive =
+            statusFilter === "ALL" &&
+            priorityFilter === "ALL" &&
+            registeredFilter === "ALL" &&
+            assignedFilter === "ALL" &&
+            !search;
           return (
             <div
               onClick={() => {
@@ -850,7 +905,12 @@ function QueriesPageContent() {
 
         {/* Pending Response */}
         {(() => {
-          const isPendingActive = statusFilter === "PENDING" && priorityFilter === "ALL" && registeredFilter === "ALL" && assignedFilter === "ALL" && !search;
+          const isPendingActive =
+            statusFilter === "PENDING" &&
+            priorityFilter === "ALL" &&
+            registeredFilter === "ALL" &&
+            assignedFilter === "ALL" &&
+            !search;
           return (
             <div
               onClick={() => {
@@ -892,7 +952,12 @@ function QueriesPageContent() {
 
         {/* Resolved / Replied */}
         {(() => {
-          const isResolvedActive = statusFilter === "RESOLVED" && priorityFilter === "ALL" && registeredFilter === "ALL" && assignedFilter === "ALL" && !search;
+          const isResolvedActive =
+            statusFilter === "RESOLVED" &&
+            priorityFilter === "ALL" &&
+            registeredFilter === "ALL" &&
+            assignedFilter === "ALL" &&
+            !search;
           return (
             <div
               onClick={() => {
@@ -927,7 +992,12 @@ function QueriesPageContent() {
 
         {/* Registered App Users */}
         {(() => {
-          const isRegisteredActive = registeredFilter === "REGISTERED" && statusFilter === "ALL" && priorityFilter === "ALL" && assignedFilter === "ALL" && !search;
+          const isRegisteredActive =
+            registeredFilter === "REGISTERED" &&
+            statusFilter === "ALL" &&
+            priorityFilter === "ALL" &&
+            assignedFilter === "ALL" &&
+            !search;
           return (
             <div
               onClick={() => {
@@ -1003,28 +1073,56 @@ function QueriesPageContent() {
                     {statusFilter === "ALL"
                       ? "All Statuses"
                       : statusFilter === "PENDING"
-                      ? "Pending"
-                      : statusFilter === "IN_PROGRESS"
-                      ? "In Progress"
-                      : "Resolved"}
+                        ? "Pending"
+                        : statusFilter === "IN_PROGRESS"
+                          ? "In Progress"
+                          : "Resolved"}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44 rounded-xl text-xs">
-                <DropdownMenuLabel className="text-[11px] text-slate-400">Filter by Status</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => { setStatusFilter("ALL"); setPage(1); }}>
+              <DropdownMenuContent
+                align="end"
+                className="w-44 rounded-xl text-xs"
+              >
+                <DropdownMenuLabel className="text-[11px] text-slate-400">
+                  Filter by Status
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setStatusFilter("ALL");
+                    setPage(1);
+                  }}
+                >
                   All Statuses
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => { setStatusFilter("PENDING"); setPage(1); }} className="flex items-center justify-between">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setStatusFilter("PENDING");
+                    setPage(1);
+                  }}
+                  className="flex items-center justify-between"
+                >
                   <span>Pending</span>
                   {getStatusBadge("PENDING")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setStatusFilter("IN_PROGRESS"); setPage(1); }} className="flex items-center justify-between">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setStatusFilter("IN_PROGRESS");
+                    setPage(1);
+                  }}
+                  className="flex items-center justify-between"
+                >
                   <span>In Progress</span>
                   {getStatusBadge("IN_PROGRESS")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setStatusFilter("RESOLVED"); setPage(1); }} className="flex items-center justify-between">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setStatusFilter("RESOLVED");
+                    setPage(1);
+                  }}
+                  className="flex items-center justify-between"
+                >
                   <span>Resolved</span>
                   {getStatusBadge("RESOLVED")}
                 </DropdownMenuItem>
@@ -1041,12 +1139,19 @@ function QueriesPageContent() {
                 >
                   <Zap className="h-3.5 w-3.5 text-amber-500" />
                   <span>
-                    {priorityFilter === "ALL" ? "Priority" : `${priorityFilter}`}
+                    {priorityFilter === "ALL"
+                      ? "Priority"
+                      : `${priorityFilter}`}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44 rounded-xl text-xs">
-                <DropdownMenuLabel className="text-[11px] text-slate-400">Filter by Priority</DropdownMenuLabel>
+              <DropdownMenuContent
+                align="end"
+                className="w-44 rounded-xl text-xs"
+              >
+                <DropdownMenuLabel className="text-[11px] text-slate-400">
+                  Filter by Priority
+                </DropdownMenuLabel>
                 <DropdownMenuItem
                   onClick={() => {
                     setPriorityFilter("ALL");
@@ -1085,22 +1190,44 @@ function QueriesPageContent() {
                     {registeredFilter === "ALL"
                       ? "All User Types"
                       : registeredFilter === "REGISTERED"
-                      ? "Registered Users"
-                      : "Guests / Non-Users"}
+                        ? "Registered Users"
+                        : "Guests / Non-Users"}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44 rounded-xl text-xs">
-                <DropdownMenuLabel className="text-[11px] text-slate-400">Filter by User Type</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => { setRegisteredFilter("ALL"); setPage(1); }}>
+              <DropdownMenuContent
+                align="end"
+                className="w-44 rounded-xl text-xs"
+              >
+                <DropdownMenuLabel className="text-[11px] text-slate-400">
+                  Filter by User Type
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setRegisteredFilter("ALL");
+                    setPage(1);
+                  }}
+                >
                   All User Types
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => { setRegisteredFilter("REGISTERED"); setPage(1); }} className="flex items-center gap-2">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setRegisteredFilter("REGISTERED");
+                    setPage(1);
+                  }}
+                  className="flex items-center gap-2"
+                >
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
                   <span>Registered Users</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setRegisteredFilter("GUEST"); setPage(1); }} className="flex items-center gap-2">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setRegisteredFilter("GUEST");
+                    setPage(1);
+                  }}
+                  className="flex items-center gap-2"
+                >
                   <span className="h-2 w-2 rounded-full bg-slate-400" />
                   <span>Guests</span>
                 </DropdownMenuItem>
@@ -1120,12 +1247,17 @@ function QueriesPageContent() {
                     {assignedFilter === "ALL"
                       ? "Assignee"
                       : assignedFilter === "UNASSIGNED"
-                      ? "Unassigned"
-                      : staffMembers.find(s => s.id === assignedFilter)?.name?.split(" ")[0] || "Assigned"}
+                        ? "Unassigned"
+                        : staffMembers
+                            .find(s => s.id === assignedFilter)
+                            ?.name?.split(" ")[0] || "Assigned"}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 rounded-xl text-xs">
+              <DropdownMenuContent
+                align="end"
+                className="w-56 rounded-xl text-xs"
+              >
                 <DropdownMenuLabel className="text-[11px] text-slate-400">
                   Filter by Staff Assignee
                 </DropdownMenuLabel>
@@ -1134,7 +1266,9 @@ function QueriesPageContent() {
                     setAssignedFilter("ALL");
                     setPage(1);
                   }}
-                  className={assignedFilter === "ALL" ? "font-bold text-primary" : ""}
+                  className={
+                    assignedFilter === "ALL" ? "font-bold text-primary" : ""
+                  }
                 >
                   All Assignees
                 </DropdownMenuItem>
@@ -1143,7 +1277,11 @@ function QueriesPageContent() {
                     setAssignedFilter("UNASSIGNED");
                     setPage(1);
                   }}
-                  className={assignedFilter === "UNASSIGNED" ? "font-bold text-primary" : ""}
+                  className={
+                    assignedFilter === "UNASSIGNED"
+                      ? "font-bold text-primary"
+                      : ""
+                  }
                 >
                   Unassigned Cases
                 </DropdownMenuItem>
@@ -1156,10 +1294,14 @@ function QueriesPageContent() {
                       setPage(1);
                     }}
                     className={`flex items-center justify-between ${
-                      assignedFilter === staff.id ? "font-bold text-primary" : ""
+                      assignedFilter === staff.id
+                        ? "font-bold text-primary"
+                        : ""
                     }`}
                   >
-                    <span className="truncate">{staff.name || staff.email}</span>
+                    <span className="truncate">
+                      {staff.name || staff.email}
+                    </span>
                     <Badge variant="outline" className="text-[9px] py-0 px-1">
                       {getRoleLabel(staff.role)}
                     </Badge>
@@ -1193,12 +1335,21 @@ function QueriesPageContent() {
           assignedFilter !== "ALL" ||
           search) && (
           <div className="flex flex-wrap items-center gap-1.5 pt-1.5 text-[10.5px]">
-            <span className="text-slate-400 font-semibold uppercase tracking-wider text-[9px] mr-1">Active Filters:</span>
-            
+            <span className="text-slate-400 font-semibold uppercase tracking-wider text-[9px] mr-1">
+              Active Filters:
+            </span>
+
             {search && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-semibold border border-primary/20">
                 Search: "{search}"
-                <button type="button" onClick={() => { setSearchVal(""); setSearch(""); }} className="hover:text-slate-700 text-slate-400">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchVal("");
+                    setSearch("");
+                  }}
+                  className="hover:text-slate-700 text-slate-400"
+                >
                   <X className="h-2.5 w-2.5" />
                 </button>
               </span>
@@ -1207,7 +1358,11 @@ function QueriesPageContent() {
             {statusFilter !== "ALL" && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-semibold border border-blue-200/50 dark:border-blue-900/30">
                 Status: {statusFilter.toLowerCase()}
-                <button type="button" onClick={() => setStatusFilter("ALL")} className="hover:text-blue-700 text-blue-400">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("ALL")}
+                  className="hover:text-blue-700 text-blue-400"
+                >
                   <X className="h-2.5 w-2.5" />
                 </button>
               </span>
@@ -1216,7 +1371,11 @@ function QueriesPageContent() {
             {priorityFilter !== "ALL" && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-405 font-semibold border border-amber-200/50 dark:border-amber-900/30">
                 Priority: {priorityFilter.toLowerCase()}
-                <button type="button" onClick={() => setPriorityFilter("ALL")} className="hover:text-amber-700 text-amber-400">
+                <button
+                  type="button"
+                  onClick={() => setPriorityFilter("ALL")}
+                  className="hover:text-amber-700 text-amber-400"
+                >
                   <X className="h-2.5 w-2.5" />
                 </button>
               </span>
@@ -1224,8 +1383,13 @@ function QueriesPageContent() {
 
             {registeredFilter !== "ALL" && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-200/55 dark:border-emerald-900/30">
-                User: {registeredFilter === "REGISTERED" ? "registered" : "guest"}
-                <button type="button" onClick={() => setRegisteredFilter("ALL")} className="hover:text-emerald-700 text-emerald-400">
+                User:{" "}
+                {registeredFilter === "REGISTERED" ? "registered" : "guest"}
+                <button
+                  type="button"
+                  onClick={() => setRegisteredFilter("ALL")}
+                  className="hover:text-emerald-700 text-emerald-400"
+                >
                   <X className="h-2.5 w-2.5" />
                 </button>
               </span>
@@ -1233,8 +1397,16 @@ function QueriesPageContent() {
 
             {assignedFilter !== "ALL" && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 font-semibold border border-violet-200/50 dark:border-violet-900/30">
-                Assignee: {assignedFilter === "UNASSIGNED" ? "unassigned" : staffMembers.find(s => s.id === assignedFilter)?.name || "Staff"}
-                <button type="button" onClick={() => setAssignedFilter("ALL")} className="hover:text-violet-750 text-violet-400">
+                Assignee:{" "}
+                {assignedFilter === "UNASSIGNED"
+                  ? "unassigned"
+                  : staffMembers.find(s => s.id === assignedFilter)?.name ||
+                    "Staff"}
+                <button
+                  type="button"
+                  onClick={() => setAssignedFilter("ALL")}
+                  className="hover:text-violet-750 text-violet-400"
+                >
                   <X className="h-2.5 w-2.5" />
                 </button>
               </span>
@@ -1304,7 +1476,9 @@ function QueriesPageContent() {
                     {staff.staffName ? staff.staffName[0].toUpperCase() : "S"}
                   </div>
                   <span>{staff.staffName.split(" ")[0]}</span>
-                  <span className={`text-[9.5px] px-1 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-slate-100 dark:bg-slate-850 text-slate-400"}`}>
+                  <span
+                    className={`text-[9.5px] px-1 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-slate-100 dark:bg-slate-850 text-slate-400"}`}
+                  >
                     {staff.total}
                   </span>
                 </button>
@@ -1350,7 +1524,8 @@ function QueriesPageContent() {
                   onClick={() => toggleSort("createdAt")}
                   className="font-semibold text-slate-700 dark:text-slate-300 hover:text-primary flex items-center gap-0.5"
                 >
-                  Date {sortBy === "createdAt" && (sortOrder === "asc" ? "↑" : "↓")}
+                  Date{" "}
+                  {sortBy === "createdAt" && (sortOrder === "asc" ? "↑" : "↓")}
                 </button>
               </div>
             </div>
@@ -1360,7 +1535,9 @@ function QueriesPageContent() {
               {isLoading ? (
                 <div className="py-16 text-center text-slate-400 flex flex-col items-center gap-2">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  <span className="text-xs font-medium">Loading inquiries...</span>
+                  <span className="text-xs font-medium">
+                    Loading inquiries...
+                  </span>
                 </div>
               ) : queries.length === 0 ? (
                 <div className="py-16 text-center text-slate-400 flex flex-col items-center gap-2.5">
@@ -1414,7 +1591,10 @@ function QueriesPageContent() {
                             {q.name}
                           </span>
                           {q.isRegisteredUser && (
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" title="Registered User" />
+                            <span
+                              className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0"
+                              title="Registered User"
+                            />
                           )}
                         </div>
 
@@ -1487,7 +1667,9 @@ function QueriesPageContent() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage(prev => Math.min(prev + 1, meta.totalPages))}
+                  onClick={() =>
+                    setPage(prev => Math.min(prev + 1, meta.totalPages))
+                  }
                   disabled={!meta.hasNextPage}
                   className="h-7 px-2.5 text-[11px]"
                 >
@@ -1526,7 +1708,9 @@ function QueriesPageContent() {
                         {getPriorityBadge(activeQuery.priority)}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-slate-500 truncate mt-0.5">
-                        <span>From: <strong>{activeQuery.name}</strong></span>
+                        <span>
+                          From: <strong>{activeQuery.name}</strong>
+                        </span>
                         <span>•</span>
                         <button
                           type="button"
@@ -1541,8 +1725,8 @@ function QueriesPageContent() {
                             <Copy className="h-3 w-3" />
                           )}
                         </button>
-                        {activeQuery.isRegisteredUser && (
-                          activeQuery.userId || activeQuery.user?.id ? (
+                        {activeQuery.isRegisteredUser &&
+                          (activeQuery.userId || activeQuery.user?.id ? (
                             <Link
                               href={`/dashboard/users/${activeQuery.userId || activeQuery.user?.id}`}
                               className="inline-flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 border border-emerald-200 dark:border-emerald-800 text-[10px] px-1.5 py-0.2 rounded-md font-semibold transition-colors shrink-0"
@@ -1552,28 +1736,31 @@ function QueriesPageContent() {
                               <ExternalLink className="h-2.5 w-2.5 opacity-70" />
                             </Link>
                           ) : (
-                            <Badge variant="outline" className="bg-emerald-50 text-emerald-600 text-[9.5px] py-0">
+                            <Badge
+                              variant="outline"
+                              className="bg-emerald-50 text-emerald-600 text-[9.5px] py-0"
+                            >
                               Registered User
                             </Badge>
-                          )
-                        )}
+                          ))}
                       </div>
                     </div>
                   </div>
 
                   {/* Fast Navigation & Quick Actions */}
                   <div className="flex items-center gap-1.5 shrink-0">
-                    {activeQuery.isRegisteredUser && (activeQuery.userId || activeQuery.user?.id) && (
-                      <Link
-                        href={`/dashboard/users/${activeQuery.userId || activeQuery.user?.id}`}
-                        className="h-8 px-2.5 inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/80 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-semibold transition-colors"
-                        title="View registered user account details"
-                      >
-                        <User className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">View Profile</span>
-                        <ExternalLink className="h-3 w-3 opacity-60" />
-                      </Link>
-                    )}
+                    {activeQuery.isRegisteredUser &&
+                      (activeQuery.userId || activeQuery.user?.id) && (
+                        <Link
+                          href={`/dashboard/users/${activeQuery.userId || activeQuery.user?.id}`}
+                          className="h-8 px-2.5 inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/80 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-semibold transition-colors"
+                          title="View registered user account details"
+                        >
+                          <User className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">View Profile</span>
+                          <ExternalLink className="h-3 w-3 opacity-60" />
+                        </Link>
+                      )}
 
                     <Button
                       variant="outline"
@@ -1619,29 +1806,50 @@ function QueriesPageContent() {
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48 rounded-xl text-xs">
-                        {activeQuery.isRegisteredUser && (activeQuery.userId || activeQuery.user?.id) && (
-                          <>
-                            <DropdownMenuItem asChild>
-                              <Link
-                                href={`/dashboard/users/${activeQuery.userId || activeQuery.user?.id}`}
-                                className="flex items-center gap-2 cursor-pointer font-semibold text-emerald-600 dark:text-emerald-400"
-                              >
-                                <User className="h-3.5 w-3.5" />
-                                <span>View User Profile</span>
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                          </>
-                        )}
-                        <DropdownMenuLabel className="text-[11px]">Quick Status</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleQuickStatusChange(activeQuery.id, "RESOLVED")}>
+                      <DropdownMenuContent
+                        align="end"
+                        className="w-48 rounded-xl text-xs"
+                      >
+                        {activeQuery.isRegisteredUser &&
+                          (activeQuery.userId || activeQuery.user?.id) && (
+                            <>
+                              <DropdownMenuItem asChild>
+                                <Link
+                                  href={`/dashboard/users/${activeQuery.userId || activeQuery.user?.id}`}
+                                  className="flex items-center gap-2 cursor-pointer font-semibold text-emerald-600 dark:text-emerald-400"
+                                >
+                                  <User className="h-3.5 w-3.5" />
+                                  <span>View User Profile</span>
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                            </>
+                          )}
+                        <DropdownMenuLabel className="text-[11px]">
+                          Quick Status
+                        </DropdownMenuLabel>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleQuickStatusChange(activeQuery.id, "RESOLVED")
+                          }
+                        >
                           Mark Resolved
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleQuickStatusChange(activeQuery.id, "IN_PROGRESS")}>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleQuickStatusChange(
+                              activeQuery.id,
+                              "IN_PROGRESS",
+                            )
+                          }
+                        >
                           Mark In Progress
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleQuickStatusChange(activeQuery.id, "PENDING")}>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleQuickStatusChange(activeQuery.id, "PENDING")
+                          }
+                        >
                           Mark Pending
                         </DropdownMenuItem>
                         {canDelete && (
@@ -1751,16 +1959,21 @@ function QueriesPageContent() {
                               <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
                                 {activeQuery.name}
                               </h4>
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{activeQuery.email}</p>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                {activeQuery.email}
+                              </p>
                             </div>
                           </div>
                           <span className="text-[11px] text-slate-400 font-medium shrink-0">
-                            {new Date(activeQuery.createdAt).toLocaleString([], {
-                              month: "short",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
+                            {new Date(activeQuery.createdAt).toLocaleString(
+                              [],
+                              {
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              },
+                            )}
                           </span>
                         </div>
                         <div className="text-xs sm:text-sm text-slate-900 dark:text-slate-100 whitespace-pre-wrap break-words leading-relaxed font-normal pt-1">
@@ -1774,11 +1987,16 @@ function QueriesPageContent() {
                           <div className="flex items-center justify-between pb-3 border-b border-emerald-200/50 dark:border-emerald-800/40">
                             <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300 font-bold">
                               <CheckCircle2 className="h-4 w-4" />
-                              <span>Official Reply by {activeQuery.repliedByName || "Admin"}</span>
+                              <span>
+                                Official Reply by{" "}
+                                {activeQuery.repliedByName || "Admin"}
+                              </span>
                             </div>
                             <span className="text-emerald-600/70 dark:text-emerald-400/70 text-[11px] font-medium">
                               {activeQuery.repliedAt
-                                ? new Date(activeQuery.repliedAt).toLocaleString([], {
+                                ? new Date(
+                                    activeQuery.repliedAt,
+                                  ).toLocaleString([], {
                                     month: "short",
                                     day: "numeric",
                                     hour: "2-digit",
@@ -1801,7 +2019,10 @@ function QueriesPageContent() {
                             Compose Response Email
                           </h4>
                           <span className="text-[11px] text-slate-400">
-                            Sending to: <strong className="text-slate-700 dark:text-slate-300">{activeQuery.email}</strong>
+                            Sending to:{" "}
+                            <strong className="text-slate-700 dark:text-slate-300">
+                              {activeQuery.email}
+                            </strong>
                           </span>
                         </div>
 
@@ -1842,12 +2063,18 @@ function QueriesPageContent() {
 
                         <div className="flex items-center justify-between pt-1">
                           <span className="text-[11px] text-slate-400">
-                            Press <kbd className="font-mono text-[9.5px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border">Ctrl+Enter</kbd> to send directly
+                            Press{" "}
+                            <kbd className="font-mono text-[9.5px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border">
+                              Ctrl+Enter
+                            </kbd>{" "}
+                            to send directly
                           </span>
                           <Button
                             type="button"
                             onClick={handleSendReply}
-                            disabled={!replyMessage.trim() || replyMutation.isPending}
+                            disabled={
+                              !replyMessage.trim() || replyMutation.isPending
+                            }
                             className="rounded-xl h-9 px-5 text-xs font-semibold gap-1.5 shadow-xs shrink-0"
                           >
                             {replyMutation.isPending ? (
@@ -1869,43 +2096,84 @@ function QueriesPageContent() {
 
                   {/* TAB 2: TEAM NOTES */}
                   {activeTab === "notes" && (
-                    <div className="space-y-3.5">
+                    <div className="space-y-4">
                       {activeQuery.internalNotes ? (
-                        <div className="p-3.5 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/80 space-y-2">
-                          <span className="text-xs font-bold text-amber-800 dark:text-amber-400 flex items-center gap-1.5">
-                            <StickyNote className="h-3.5 w-3.5" />
-                            Internal Notes Log:
-                          </span>
-                          <div className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                            {activeQuery.internalNotes}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between pb-1 border-b border-slate-150 dark:border-slate-800">
+                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                              <StickyNote className="h-4 w-4 text-amber-500" />
+                              Private Team Collaboration Notes
+                            </span>
+                            <span className="text-[10.5px] text-slate-400 font-medium">
+                              Visible only to staff & admins
+                            </span>
                           </div>
+
+                          {activeQuery.internalNotes
+                            .split("\n\n")
+                            .map((noteChunk, idx) => (
+                              <div
+                                key={idx}
+                                className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40 shadow-2xs space-y-1.5"
+                              >
+                                <div className="flex items-center gap-2 text-xs text-amber-800 dark:text-amber-300 font-bold">
+                                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                                  <span>Note #{idx + 1}</span>
+                                </div>
+                                <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                                  {noteChunk}
+                                </p>
+                              </div>
+                            ))}
                         </div>
                       ) : (
-                        <div className="p-6 rounded-xl bg-slate-50 dark:bg-slate-800/40 text-center text-slate-400 text-xs py-8">
-                          No private team notes recorded yet.
+                        <div className="p-8 rounded-2xl bg-slate-50 dark:bg-slate-850/50 border border-slate-200/60 dark:border-slate-800 text-center text-slate-400 text-xs py-10 flex flex-col items-center gap-2">
+                          <StickyNote className="h-8 w-8 text-slate-300 dark:text-slate-600" />
+                          <p className="font-medium text-slate-600 dark:text-slate-400">
+                            No internal staff notes recorded yet.
+                          </p>
+                          <p className="text-[11px]">
+                            Add private notes, customer context, or delegation
+                            instructions below.
+                          </p>
                         </div>
                       )}
 
-                      <div className="space-y-2 pt-1">
-                        <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                          Add New Team Note:
+                      {/* Add Note Form */}
+                      <div className="bg-white dark:bg-slate-850 p-4.5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-xs space-y-3">
+                        <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <MessageSquareText className="h-3.5 w-3.5 text-primary" />
+                          Add New Team Note
                         </label>
                         <textarea
                           rows={3}
                           value={newStaffNote}
                           onChange={e => setNewStaffNote(e.target.value)}
                           placeholder="Add private instructions, customer call summary, or discount notes..."
-                          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-y min-h-[80px]"
+                          className="w-full rounded-xl border border-slate-200 dark:border-slate-750 bg-slate-50/50 dark:bg-slate-850 p-3 text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-y min-h-[85px] leading-relaxed"
                         />
                         <div className="flex justify-end">
                           <Button
                             type="button"
                             size="sm"
                             onClick={handleSaveInternalNote}
-                            disabled={!newStaffNote.trim() || addInternalNoteMutation.isPending}
-                            className="rounded-xl h-8 px-3.5 text-xs font-semibold"
+                            disabled={
+                              !newStaffNote.trim() ||
+                              addInternalNoteMutation.isPending
+                            }
+                            className="rounded-xl h-8.5 px-4 text-xs font-semibold gap-1.5 shadow-xs"
                           >
-                            {addInternalNoteMutation.isPending ? "Saving..." : "Save Note"}
+                            {addInternalNoteMutation.isPending ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                <span>Saving...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-3.5 w-3.5" />
+                                <span>Save Note</span>
+                              </>
+                            )}
                           </Button>
                         </div>
                       </div>
@@ -1915,27 +2183,33 @@ function QueriesPageContent() {
                   {/* TAB 3: AUDIT TRAIL */}
                   {activeTab === "timeline" && (
                     <div className="space-y-3.5">
-                      {Array.isArray(activeQuery.activityLog) && activeQuery.activityLog.length > 0 ? (
+                      {Array.isArray(activeQuery.activityLog) &&
+                      activeQuery.activityLog.length > 0 ? (
                         <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
                           {activeQuery.activityLog.map((log, idx) => (
-                            <div key={idx} className="relative text-xs space-y-1">
+                            <div
+                              key={idx}
+                              className="relative text-xs space-y-1"
+                            >
                               <div className="absolute -left-[27px] top-0.5 h-3.5 w-3.5 rounded-full bg-primary border-2 border-white dark:border-slate-900" />
                               <div className="flex items-center justify-between text-[11px]">
                                 <span className="font-bold text-slate-800 dark:text-slate-200">
                                   {log.action === "SUBMITTED"
                                     ? "Inquiry Submitted"
                                     : log.action === "TRANSFERRED"
-                                    ? `Delegated to ${log.toName}`
-                                    : log.action === "REPLIED"
-                                    ? `Replied by ${log.byName}`
-                                    : log.action === "PRIORITY_CHANGED"
-                                    ? `Priority Changed to ${log.newPriority}`
-                                    : log.action === "NOTE_ADDED"
-                                    ? `Internal Note by ${log.byName}`
-                                    : log.action}
+                                      ? `Delegated to ${log.toName}`
+                                      : log.action === "REPLIED"
+                                        ? `Replied by ${log.byName}`
+                                        : log.action === "PRIORITY_CHANGED"
+                                          ? `Priority Changed to ${log.newPriority}`
+                                          : log.action === "NOTE_ADDED"
+                                            ? `Internal Note by ${log.byName}`
+                                            : log.action}
                                 </span>
                                 <span className="text-slate-400 text-[10px]">
-                                  {log.timestamp ? formatTimeAgo(log.timestamp) : ""}
+                                  {log.timestamp
+                                    ? formatTimeAgo(log.timestamp)
+                                    : ""}
                                 </span>
                               </div>
                               {log.transferNote && (
@@ -1953,7 +2227,8 @@ function QueriesPageContent() {
                         </div>
                       ) : (
                         <div className="text-slate-400 text-xs py-4 text-center">
-                          Initial case created on {new Date(activeQuery.createdAt).toLocaleString()}.
+                          Initial case created on{" "}
+                          {new Date(activeQuery.createdAt).toLocaleString()}.
                         </div>
                       )}
                     </div>
@@ -1963,8 +2238,12 @@ function QueriesPageContent() {
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-400 gap-2">
                 <Inbox className="h-10 w-10 text-slate-300 dark:text-slate-600" />
-                <p className="text-sm font-semibold">Select an inquiry on the left</p>
-                <p className="text-xs">Click any conversation card to review and compose replies.</p>
+                <p className="text-sm font-semibold">
+                  Select an inquiry on the left
+                </p>
+                <p className="text-xs">
+                  Click any conversation card to review and compose replies.
+                </p>
               </div>
             )}
           </div>
@@ -2015,7 +2294,9 @@ function QueriesPageContent() {
                     </button>
                   </th>
 
-                  <th className="py-3 px-4 max-w-xs sm:max-w-sm">Inquiry / Subject</th>
+                  <th className="py-3 px-4 max-w-xs sm:max-w-sm">
+                    Inquiry / Subject
+                  </th>
 
                   <th className="py-3 px-4">
                     <button
@@ -2045,19 +2326,29 @@ function QueriesPageContent() {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-slate-400">
+                    <td
+                      colSpan={9}
+                      className="py-12 text-center text-slate-400"
+                    >
                       <div className="flex flex-col items-center justify-center gap-2">
                         <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                        <span className="text-xs font-medium">Loading inquiries...</span>
+                        <span className="text-xs font-medium">
+                          Loading inquiries...
+                        </span>
                       </div>
                     </td>
                   </tr>
                 ) : queries.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-slate-400">
+                    <td
+                      colSpan={9}
+                      className="py-12 text-center text-slate-400"
+                    >
                       <div className="flex flex-col items-center justify-center gap-2">
                         <MailQuestion className="h-8 w-8 text-slate-300 dark:text-slate-600" />
-                        <p className="text-sm font-semibold">No inquiries found</p>
+                        <p className="text-sm font-semibold">
+                          No inquiries found
+                        </p>
                       </div>
                     </td>
                   </tr>
@@ -2099,16 +2390,17 @@ function QueriesPageContent() {
                                 <span className="font-semibold text-slate-900 dark:text-white truncate block">
                                   {q.name}
                                 </span>
-                                {q.isRegisteredUser && (q.userId || q.user?.id) && (
-                                  <Link
-                                    href={`/dashboard/users/${q.userId || q.user?.id}`}
-                                    className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 text-[10px] font-bold transition-colors"
-                                    title="View Registered User Details Page"
-                                  >
-                                    <span>Profile</span>
-                                    <ExternalLink className="h-2.5 w-2.5 opacity-60" />
-                                  </Link>
-                                )}
+                                {q.isRegisteredUser &&
+                                  (q.userId || q.user?.id) && (
+                                    <Link
+                                      href={`/dashboard/users/${q.userId || q.user?.id}`}
+                                      className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 text-[10px] font-bold transition-colors"
+                                      title="View Registered User Details Page"
+                                    >
+                                      <span>Profile</span>
+                                      <ExternalLink className="h-2.5 w-2.5 opacity-60" />
+                                    </Link>
+                                  )}
                               </div>
                               <span className="text-[10.5px] text-slate-400 truncate block">
                                 {q.email}
@@ -2152,7 +2444,9 @@ function QueriesPageContent() {
                               ✓ Replied
                             </span>
                           ) : (
-                            <span className="text-slate-400 text-[11px]">Pending</span>
+                            <span className="text-slate-400 text-[11px]">
+                              Pending
+                            </span>
                           )}
                         </td>
 
@@ -2206,7 +2500,10 @@ function QueriesPageContent() {
       )}
 
       {/* ─── Super Admin Staff Permissions Modal ────────────────────────────── */}
-      <Dialog open={permissionsModalOpen} onOpenChange={setPermissionsModalOpen}>
+      <Dialog
+        open={permissionsModalOpen}
+        onOpenChange={setPermissionsModalOpen}
+      >
         <DialogContent className="sm:max-w-2xl w-[95vw] rounded-2xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
           <DialogHeader className="pb-2">
             <div className="flex items-center gap-3">
@@ -2218,7 +2515,8 @@ function QueriesPageContent() {
                   Staff Admin Privileges
                 </DialogTitle>
                 <DialogDescription className="text-xs text-slate-500 mt-0.5">
-                  As Super Admin, grant or restrict staff privileges for inquiry deletion and user profile inspection.
+                  As Super Admin, grant or restrict staff privileges for inquiry
+                  deletion and user profile inspection.
                 </DialogDescription>
               </div>
             </div>
@@ -2227,7 +2525,8 @@ function QueriesPageContent() {
           <div className="space-y-3 my-2 text-xs">
             <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1 [scrollbar-width:thin] overscroll-contain">
               {staffMembers.map(staff => {
-                const isMemberSuperAdmin = staff.role === "super_admin" || staff.isOwner;
+                const isMemberSuperAdmin =
+                  staff.role === "super_admin" || staff.isOwner;
                 return (
                   <div
                     key={staff.id}
@@ -2250,11 +2549,16 @@ function QueriesPageContent() {
                           <p className="font-semibold text-slate-900 dark:text-white truncate text-xs">
                             {staff.name || "Staff Member"}
                           </p>
-                          <Badge variant="outline" className="text-[9.5px] py-0 px-1.5 shrink-0">
+                          <Badge
+                            variant="outline"
+                            className="text-[9.5px] py-0 px-1.5 shrink-0"
+                          >
                             {getRoleLabel(staff.role)}
                           </Badge>
                         </div>
-                        <p className="text-[10.5px] text-slate-400 truncate mt-0.5">{staff.email}</p>
+                        <p className="text-[10.5px] text-slate-400 truncate mt-0.5">
+                          {staff.email}
+                        </p>
                       </div>
                     </div>
 
@@ -2269,11 +2573,16 @@ function QueriesPageContent() {
                           {/* Delete Permission */}
                           <Button
                             type="button"
-                            variant={staff.canDeleteQueries ? "default" : "outline"}
+                            variant={
+                              staff.canDeleteQueries ? "default" : "outline"
+                            }
                             size="sm"
                             disabled={togglePermissionMutation.isPending}
                             onClick={() =>
-                              handleToggleStaffDeletePermission(staff.id, Boolean(staff.canDeleteQueries))
+                              handleToggleStaffDeletePermission(
+                                staff.id,
+                                Boolean(staff.canDeleteQueries),
+                              )
                             }
                             className={`h-7 px-2.5 rounded-lg text-[11px] gap-1 font-semibold transition-all ${
                               staff.canDeleteQueries
@@ -2298,11 +2607,16 @@ function QueriesPageContent() {
                           {/* View User Details Permission */}
                           <Button
                             type="button"
-                            variant={staff.canViewUserDetails ? "default" : "outline"}
+                            variant={
+                              staff.canViewUserDetails ? "default" : "outline"
+                            }
                             size="sm"
                             disabled={toggleUserDetailsMutation.isPending}
                             onClick={() =>
-                              handleToggleStaffUserDetailsPermission(staff.id, Boolean(staff.canViewUserDetails))
+                              handleToggleStaffUserDetailsPermission(
+                                staff.id,
+                                Boolean(staff.canViewUserDetails),
+                              )
                             }
                             className={`h-7 px-2.5 rounded-lg text-[11px] gap-1 font-medium transition-all ${
                               staff.canViewUserDetails
@@ -2360,7 +2674,9 @@ function QueriesPageContent() {
                       {getPriorityBadge(activeQuery.priority)}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
-                      <span>From: <strong>{activeQuery.name}</strong></span>
+                      <span>
+                        From: <strong>{activeQuery.name}</strong>
+                      </span>
                       <span>•</span>
                       <button
                         type="button"
@@ -2371,8 +2687,8 @@ function QueriesPageContent() {
                         <span>{activeQuery.email}</span>
                         <Copy className="h-3 w-3" />
                       </button>
-                      {activeQuery.isRegisteredUser && (
-                        activeQuery.userId || activeQuery.user?.id ? (
+                      {activeQuery.isRegisteredUser &&
+                        (activeQuery.userId || activeQuery.user?.id ? (
                           <Link
                             href={`/dashboard/users/${activeQuery.userId || activeQuery.user?.id}`}
                             target="_blank"
@@ -2383,27 +2699,30 @@ function QueriesPageContent() {
                             <ExternalLink className="h-2.5 w-2.5 opacity-70" />
                           </Link>
                         ) : (
-                          <Badge variant="outline" className="bg-emerald-50 text-emerald-600 text-[9.5px] py-0">
+                          <Badge
+                            variant="outline"
+                            className="bg-emerald-50 text-emerald-600 text-[9.5px] py-0"
+                          >
                             Registered User
                           </Badge>
-                        )
-                      )}
+                        ))}
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {activeQuery.isRegisteredUser && (activeQuery.userId || activeQuery.user?.id) && (
-                      <Link
-                        href={`/dashboard/users/${activeQuery.userId || activeQuery.user?.id}`}
-                        target="_blank"
-                        className="h-8 px-2.5 inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/80 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-semibold transition-colors"
-                        title="View user details in new tab"
-                      >
-                        <User className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">View Profile</span>
-                        <ExternalLink className="h-3 w-3 opacity-60" />
-                      </Link>
-                    )}
+                    {activeQuery.isRegisteredUser &&
+                      (activeQuery.userId || activeQuery.user?.id) && (
+                        <Link
+                          href={`/dashboard/users/${activeQuery.userId || activeQuery.user?.id}`}
+                          target="_blank"
+                          className="h-8 px-2.5 inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/80 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-xs font-semibold transition-colors"
+                          title="View user details in new tab"
+                        >
+                          <User className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">View Profile</span>
+                          <ExternalLink className="h-3 w-3 opacity-60" />
+                        </Link>
+                      )}
 
                     <Button
                       variant="outline"
@@ -2470,7 +2789,9 @@ function QueriesPageContent() {
                         <span className="font-semibold text-slate-700 dark:text-slate-300">
                           {activeQuery.name} wrote:
                         </span>
-                        <span>{new Date(activeQuery.createdAt).toLocaleString()}</span>
+                        <span>
+                          {new Date(activeQuery.createdAt).toLocaleString()}
+                        </span>
                       </div>
                       <div className="p-4 rounded-2xl bg-slate-100/70 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 text-xs sm:text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap break-words leading-relaxed">
                         {activeQuery.message}
@@ -2486,7 +2807,9 @@ function QueriesPageContent() {
                             Sent Reply by {activeQuery.repliedByName || "Admin"}
                           </span>
                           <span className="text-slate-400 text-[10.5px]">
-                            {activeQuery.repliedAt ? new Date(activeQuery.repliedAt).toLocaleString() : ""}
+                            {activeQuery.repliedAt
+                              ? new Date(activeQuery.repliedAt).toLocaleString()
+                              : ""}
                           </span>
                         </div>
                         <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 text-xs sm:text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap break-words leading-relaxed">
@@ -2531,10 +2854,15 @@ function QueriesPageContent() {
                           type="button"
                           size="sm"
                           onClick={handleSaveInternalNote}
-                          disabled={!newStaffNote.trim() || addInternalNoteMutation.isPending}
+                          disabled={
+                            !newStaffNote.trim() ||
+                            addInternalNoteMutation.isPending
+                          }
                           className="rounded-xl h-8 px-3 text-xs font-semibold"
                         >
-                          {addInternalNoteMutation.isPending ? "Saving..." : "Save Note"}
+                          {addInternalNoteMutation.isPending
+                            ? "Saving..."
+                            : "Save Note"}
                         </Button>
                       </div>
                     </div>
@@ -2543,7 +2871,8 @@ function QueriesPageContent() {
 
                 {activeTab === "timeline" && (
                   <div className="space-y-3.5">
-                    {Array.isArray(activeQuery.activityLog) && activeQuery.activityLog.length > 0 ? (
+                    {Array.isArray(activeQuery.activityLog) &&
+                    activeQuery.activityLog.length > 0 ? (
                       <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
                         {activeQuery.activityLog.map((log, idx) => (
                           <div key={idx} className="relative text-xs space-y-1">
@@ -2553,17 +2882,19 @@ function QueriesPageContent() {
                                 {log.action === "SUBMITTED"
                                   ? "Inquiry Submitted"
                                   : log.action === "TRANSFERRED"
-                                  ? `Delegated to ${log.toName}`
-                                  : log.action === "REPLIED"
-                                  ? `Replied by ${log.byName}`
-                                  : log.action === "PRIORITY_CHANGED"
-                                  ? `Priority Changed to ${log.newPriority}`
-                                  : log.action === "NOTE_ADDED"
-                                  ? `Internal Note by ${log.byName}`
-                                  : log.action}
+                                    ? `Delegated to ${log.toName}`
+                                    : log.action === "REPLIED"
+                                      ? `Replied by ${log.byName}`
+                                      : log.action === "PRIORITY_CHANGED"
+                                        ? `Priority Changed to ${log.newPriority}`
+                                        : log.action === "NOTE_ADDED"
+                                          ? `Internal Note by ${log.byName}`
+                                          : log.action}
                               </span>
                               <span className="text-slate-400 text-[10px]">
-                                {log.timestamp ? formatTimeAgo(log.timestamp) : ""}
+                                {log.timestamp
+                                  ? formatTimeAgo(log.timestamp)
+                                  : ""}
                               </span>
                             </div>
                             {log.transferNote && (
@@ -2581,7 +2912,8 @@ function QueriesPageContent() {
                       </div>
                     ) : (
                       <div className="text-slate-400 text-xs py-4 text-center">
-                        Initial case created on {new Date(activeQuery.createdAt).toLocaleString()}.
+                        Initial case created on{" "}
+                        {new Date(activeQuery.createdAt).toLocaleString()}.
                       </div>
                     )}
                   </div>
@@ -2628,7 +2960,10 @@ function QueriesPageContent() {
 
                   <div className="flex items-center justify-between pt-0.5">
                     <span className="text-[11px] text-slate-400 truncate">
-                      Delivered to <strong>{activeQuery.email}</strong> • <kbd className="font-mono text-[9.5px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border">Ctrl+Enter</kbd>
+                      Delivered to <strong>{activeQuery.email}</strong> •{" "}
+                      <kbd className="font-mono text-[9.5px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border">
+                        Ctrl+Enter
+                      </kbd>
                     </span>
                     <Button
                       type="button"
@@ -2696,7 +3031,10 @@ function QueriesPageContent() {
                   <span>Set Priority</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="center" className="w-40 rounded-xl text-xs">
+              <DropdownMenuContent
+                align="center"
+                className="w-40 rounded-xl text-xs"
+              >
                 <DropdownMenuItem onClick={() => handleBulkPriority("URGENT")}>
                   Urgent (🔴)
                 </DropdownMenuItem>
@@ -2724,11 +3062,16 @@ function QueriesPageContent() {
                   <span>Set Status</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="center" className="w-40 rounded-xl text-xs">
+              <DropdownMenuContent
+                align="center"
+                className="w-40 rounded-xl text-xs"
+              >
                 <DropdownMenuItem onClick={() => handleBulkStatus("RESOLVED")}>
                   Mark Resolved
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleBulkStatus("IN_PROGRESS")}>
+                <DropdownMenuItem
+                  onClick={() => handleBulkStatus("IN_PROGRESS")}
+                >
                   Mark In Progress
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleBulkStatus("PENDING")}>
@@ -2803,7 +3146,9 @@ function QueriesPageContent() {
                       <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
                         {staff.name?.charAt(0).toUpperCase() || "A"}
                       </div>
-                      <span className="truncate">{staff.name || staff.email}</span>
+                      <span className="truncate">
+                        {staff.name || staff.email}
+                      </span>
                     </div>
                     <Badge variant="outline" className="text-[9px] py-0 px-1">
                       {getRoleLabel(staff.role)}
@@ -2843,7 +3188,9 @@ function QueriesPageContent() {
               disabled={!bulkStaffId || bulkActionMutation.isPending}
               className="rounded-xl h-8.5 text-xs font-semibold"
             >
-              {bulkActionMutation.isPending ? "Assigning..." : "Assign Selected"}
+              {bulkActionMutation.isPending
+                ? "Assigning..."
+                : "Assign Selected"}
             </Button>
           </div>
         </DialogContent>
@@ -2875,7 +3222,8 @@ function QueriesPageContent() {
                   {queryToAssign.subject}
                 </p>
                 <p className="text-slate-500 text-[11px]">
-                  From: <strong>{queryToAssign.name}</strong> ({queryToAssign.email})
+                  From: <strong>{queryToAssign.name}</strong> (
+                  {queryToAssign.email})
                 </p>
               </div>
 
@@ -2913,11 +3261,16 @@ function QueriesPageContent() {
                             <p className="font-semibold text-slate-900 dark:text-white truncate text-xs">
                               {staff.name || "Staff Member"}
                             </p>
-                            <p className="text-[10.5px] text-slate-400 truncate">{staff.email}</p>
+                            <p className="text-[10.5px] text-slate-400 truncate">
+                              {staff.email}
+                            </p>
                           </div>
                         </div>
 
-                        <Badge variant="outline" className="text-[10px] py-0.5 px-2">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] py-0.5 px-2"
+                        >
                           {getRoleLabel(staff.role)}
                         </Badge>
                       </div>
@@ -2990,7 +3343,8 @@ function QueriesPageContent() {
                 {deleteTarget.subject}
               </p>
               <p className="text-slate-500 dark:text-slate-400">
-                From: <strong>{deleteTarget.name}</strong> ({deleteTarget.email})
+                From: <strong>{deleteTarget.name}</strong> ({deleteTarget.email}
+                )
               </p>
             </div>
           )}
